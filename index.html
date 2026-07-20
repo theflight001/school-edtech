@@ -73,6 +73,11 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .pk-btn.primary { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .pk-btn.primary:disabled { opacity: .4; cursor: default; }
 .pk-hint { font-size: 12.5px; color: var(--muted); }
+.sc-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+@media (max-width: 620px) { .sc-grid { grid-template-columns: repeat(2, 1fr); } }
+.sc-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 6px; }
+.sc-cell .sc-n { font-size: 12px; color: var(--muted); font-weight: 400; }
+.sc-cell.end .sc-n { color: rgba(255,255,255,.85); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
@@ -195,6 +200,61 @@ window.pkApply = () => {
   PF = ymStr(pkS); PT = ymStr(pkE !== null ? pkE : pkS);
   closePicker(); render();
 };
+// ---- 학교 계열 필터 ----
+const GROUPS = [
+  {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
+  {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "과학고·영재학교·특목고"}, {k: "aut", label: "자율고"},
+];
+function typeGroup(t) {
+  if (t === "초등학교") return "elem";
+  if (t === "중학교") return "mid";
+  if (t === "일반고") return "gen";
+  if (t === "특성화고" || t === "마이스터고" || t === "특성화고·마이스터고") return "voc";
+  if (t === "과학고" || t === "영재학교" || t === "특목고") return "spc";
+  if (t === "자율고") return "aut";
+  return null;
+}
+const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
+  : s.h === "특성화고" ? "voc" : s.h === "특목고" ? "spc" : s.h === "자율고" ? "aut" : "gen";
+const IDX_GROUP_COUNT = {};
+IDX.forEach(s => { const g = idxGroup(s); IDX_GROUP_COUNT[g] = (IDX_GROUP_COUNT[g] || 0) + 1; });
+let SF = new Set();
+const sfMatch = r => { if (!SF.size) return true; const g = typeGroup(r.type); return g !== null && SF.has(g); };
+const sfIdxCount = () => SF.size ? IDX.filter(s => SF.has(idxGroup(s))).length : IDX.length;
+const sfLabel = () => {
+  if (!SF.size) return "전국";
+  const names = GROUPS.filter(g => SF.has(g.k)).map(g => g.label);
+  return names.length <= 2 ? names.join("·") : `${names[0]} 외 ${names.length - 1}개 계열`;
+};
+let scSel = null;
+window.openSchoolPicker = () => { scSel = new Set(SF); drawSchoolPicker(); };
+window.scToggle = k => { scSel.has(k) ? scSel.delete(k) : scSel.add(k); drawSchoolPicker(); };
+window.scAll = () => { SF = new Set(); closePicker(); render(); };
+window.scApply = () => { SF = scSel.size === GROUPS.length ? new Set() : scSel; closePicker(); render(); };
+function drawSchoolPicker() {
+  const cells = GROUPS.map(g => `
+    <button class="pk-cell sc-cell${scSel.has(g.k) ? " end" : ""}" onclick="scToggle('${g.k}')">
+      <span>${g.label}</span><span class="sc-n">${(IDX_GROUP_COUNT[g.k] || 0).toLocaleString()}개교</span>
+    </button>`).join("");
+  const picked = GROUPS.filter(g => scSel.has(g.k)).map(g => g.label).join(" · ");
+  document.getElementById("pickerRoot").innerHTML = `
+    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+      <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
+        <div class="pk-top"><span></span>
+          <div style="text-align:center"><div class="pk-title">학교 계열 선택</div><div class="pk-range">${picked || "전체 (전국 모든 계열)"}</div></div>
+        <span></span></div>
+        <div class="pk-grid sc-grid">${cells}</div>
+        <div class="pk-foot">
+          <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다</span>
+          <span style="display:flex;gap:8px">
+            <button class="pk-btn" onclick="scAll()">전체 계열</button>
+            <button class="pk-btn primary" onclick="scApply()" ${scSel.size ? "" : "disabled"}>적용</button>
+          </span>
+        </div>
+      </div>
+    </div>`;
+}
+
 function pkYearHTML(y) {
   let cells = "";
   for (let m = 1; m <= 12; m++) {
@@ -240,7 +300,8 @@ function inPeriod(r) {
 // ---- 뷰 ----
 function homeView() {
   const active = PF || PT;
-  const RF = active ? R.filter(inPeriod) : R;
+  const scActive = SF.size > 0;
+  const RF = (active || scActive) ? R.filter(r => inPeriod(r) && sfMatch(r)) : R;
   const byType = count(RF, r => r.type);
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
@@ -248,15 +309,22 @@ function homeView() {
   const fSchools = uniq(RF.map(r => r.school)).length;
   return `
     <div class="tiles">
-      <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${active ? " (선택 기간)" : ""}</div></div>
-      <div class="tile"><div class="v">${fSchools}</div><div class="l">기록 보유 학교${active ? " (선택 기간)" : ""}</div></div>
-      <div class="tile"><div class="v">${IDX.length.toLocaleString()}</div><div class="l">검색 가능 학교 (전국)</div></div>
+      <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${active || scActive ? " (선택 조건)" : ""}</div></div>
+      <div class="tile"><div class="v">${fSchools}</div><div class="l">기록 보유 학교${active || scActive ? " (선택 조건)" : ""}</div></div>
+      <div class="tile clickable" onclick="openSchoolPicker()" role="button" aria-label="학교 계열 선택">
+        <div class="v">${sfIdxCount().toLocaleString()}</div>
+        <div class="l">검색 가능 학교 (${sfLabel()}) <span class="hint">변경 ▾</span></div>
+      </div>
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
         <div class="v">${active ? `${PF || "2023-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
-    ${active ? `<div class="fnote"><span>선택 기간 사례 ${RF.length.toLocaleString()}건 · 월 미상 기록은 연 단위로 포함</span><button onclick="clearPeriod()">전체 기간 보기</button></div>` : ""}
+    ${active || scActive ? `<div class="fnote">
+      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${scActive ? ` · 계열: ${sfLabel()}` : ""}</span>
+      ${active ? `<button onclick="clearPeriod()">전체 기간</button>` : ""}
+      ${scActive ? `<button onclick="scAll()">전체 계열</button>` : ""}
+    </div>` : ""}
     <div class="grid2">
       <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교</span></h2>${barChart(topTags, {linkFn: t => `#/tag/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>계열별 사례 수</h2>${barChart(byType)}</div>
@@ -335,10 +403,12 @@ window.addEventListener("hashchange", render);
 render();
 
 // ---- 자동완성 ----
+const groupBySchool = {};
+R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = typeGroup(r.type); });
 const suggItems = [
   ...tags.map(([t]) => ({label: t, kind: "제품군", href: `#/tag/${encodeURIComponent(t)}`})),
-  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`})),
-  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`})),
+  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s]})),
+  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s)})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 let selIdx = -1, current = [];
@@ -346,7 +416,7 @@ q.addEventListener("input", () => {
   const v = q.value.trim().toLowerCase();
   selIdx = -1;
   if (!v) { sugg.hidden = true; return; }
-  current = suggItems.filter(it => it.label.toLowerCase().includes(v)).slice(0, 12);
+  current = suggItems.filter(it => it.label.toLowerCase().includes(v) && (!SF.size || !it.g || SF.has(it.g))).slice(0, 12);
   sugg.innerHTML = current.map((it, i) => `<div data-i="${i}"><span>${esc(it.label)}</span><span class="kind">${it.kind}</span></div>`).join("")
     + `<div data-i="-2"><span>“${esc(q.value.trim())}” 전체 검색</span><span class="kind">↵</span></div>`;
   sugg.hidden = false;
