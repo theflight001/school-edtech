@@ -89,6 +89,13 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .sc-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 6px; }
 .sc-cell .sc-n { font-size: 12px; color: var(--muted); font-weight: 400; }
 .sc-cell.end .sc-n { color: rgba(255,255,255,.85); }
+.sc-cell.part { outline: 2px solid var(--bar); background: var(--sky); color: var(--accent); }
+.sc-subrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.sc-sublabel { font-size: 12.5px; color: var(--muted); margin-right: 2px; }
+.sc-chip { font: inherit; font-size: 13px; border: 1px solid var(--grid); background: var(--plane); color: var(--ink-2); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
+.sc-chip span { opacity: .65; font-size: 11.5px; }
+.sc-chip.on { background: var(--bar); border-color: var(--bar); color: #fff; }
+.sc-chip:hover:not(.on) { border-color: var(--bar); }
 .rg-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
 @media (max-width: 620px) { .rg-grid { grid-template-columns: repeat(3, 1fr); } }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -146,7 +153,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260721a"></script>
+<script src="data.js?b=20260721b"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -221,31 +228,74 @@ window.pkApply = () => {
   PF = ymStr(pkS); PT = ymStr(pkE !== null ? pkE : pkS);
   closePicker(); render();
 };
-// ---- 학교 계열 필터 ----
-const GROUPS = [
-  {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
-  {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "특목고 (과학·외국어·예체능 등)"}, {k: "aut", label: "자율고"},
+// ---- 학교 계열 필터 (부모 6칸 + 세부 잎사귀) ----
+const LEAVES = [
+  {k: "elem", label: "초등학교", parent: "elem"},
+  {k: "mid", label: "중학교", parent: "mid"},
+  {k: "gen", label: "일반고", parent: "gen"},
+  {k: "voc_v", label: "특성화고", parent: "voc"},
+  {k: "voc_m", label: "마이스터고", parent: "voc"},
+  {k: "spc_sci", label: "과학고·영재학교", parent: "spc"},
+  {k: "spc_lang", label: "외국어고·국제고", parent: "spc"},
+  {k: "spc_art", label: "예술고·체육고", parent: "spc"},
+  {k: "aut", label: "자율고", parent: "aut"},
 ];
-function typeGroup(t) {
+const PARENTS = [
+  {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
+  {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "특목고"}, {k: "aut", label: "자율고"},
+];
+const leafLabel = {}, parentOf = {}, parentLabel = {};
+LEAVES.forEach(l => { leafLabel[l.k] = l.label; parentOf[l.k] = l.parent; });
+PARENTS.forEach(p => parentLabel[p.k] = p.label);
+const leavesOf = p => LEAVES.filter(l => l.parent === p).map(l => l.k);
+
+function spcLeaf(name, detail) {
+  const d = detail || "";
+  if (d.includes("과학")) return "spc_sci";
+  if (d.includes("외국어") || d.includes("국제")) return "spc_lang";
+  if (d.includes("예술") || d.includes("체육")) return "spc_art";
+  if (/영재|과학고/.test(name)) return "spc_sci";
+  if (/외국어고|국제고/.test(name)) return "spc_lang";
+  if (/예술고|예고|체육고|국악고/.test(name)) return "spc_art";
+  return "spc_sci";
+}
+const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
+  : s.m ? "voc_m" : s.h === "특성화고" ? "voc_v"
+  : s.h === "특목고" ? spcLeaf(s.n, s.d) : s.h === "자율고" ? "aut" : "gen";
+function recLeaf(r) {
+  const t = r.type;
   if (t === "초등학교") return "elem";
   if (t === "중학교") return "mid";
   if (t === "일반고") return "gen";
-  if (t === "특성화고" || t === "마이스터고" || t === "특성화고·마이스터고") return "voc";
-  if (t === "과학고" || t === "영재학교" || t === "특목고") return "spc";
   if (t === "자율고") return "aut";
+  if (t === "특성화고" || t === "특성화고·마이스터고") return "voc_v";
+  if (t === "마이스터고") return "voc_m";
+  if (t === "과학고" || t === "영재학교") return "spc_sci";
+  if (t === "특목고") {
+    const s = r.schoolCode ? idxByCode.get(r.schoolCode) : null;
+    return s ? idxGroup(s) : "spc_sci";
+  }
   return null;
 }
-const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
-  : s.h === "특성화고" || s.m ? "voc" : s.h === "특목고" ? "spc" : s.h === "자율고" ? "aut" : "gen";
 const IDX_GROUP_COUNT = {};
 IDX.forEach(s => { const g = idxGroup(s); IDX_GROUP_COUNT[g] = (IDX_GROUP_COUNT[g] || 0) + 1; });
-let SF = new Set();
-const sfMatch = r => { if (!SF.size) return true; const g = typeGroup(r.type); return g !== null && SF.has(g); };
+let SF = new Set();  // 선택된 잎사귀 키들
+const sfMatch = r => { if (!SF.size) return true; const g = recLeaf(r); return g !== null && SF.has(g); };
 const sfIdxCount = () => IDX.filter(s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))).length;
+function setParts(set) {
+  const parts = [];
+  for (const p of PARENTS) {
+    const ls = leavesOf(p.k), sel = ls.filter(k => set.has(k));
+    if (!sel.length) continue;
+    if (sel.length === ls.length) parts.push(p.label);
+    else parts.push(...sel.map(k => leafLabel[k]));
+  }
+  return parts;
+}
 const sfLabel = () => {
   if (!SF.size) return "전국";
-  const names = GROUPS.filter(g => SF.has(g.k)).map(g => g.label);
-  return names.length <= 2 ? names.join("·") : `${names[0]} 외 ${names.length - 1}개 계열`;
+  const parts = setParts(SF);
+  return parts.length <= 2 ? parts.join("·") : `${parts[0]} 외 ${parts.length - 1}`;
 };
 // ---- 지역(시도) 필터 ----
 const SIDOS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
@@ -293,14 +343,29 @@ function drawRegionPicker() {
 let scSel = null;
 window.openSchoolPicker = () => { scSel = new Set(SF); drawSchoolPicker(); };
 window.scToggle = k => { scSel.has(k) ? scSel.delete(k) : scSel.add(k); drawSchoolPicker(); };
+window.scParent = p => {
+  const ls = leavesOf(p);
+  const all = ls.every(k => scSel.has(k));
+  ls.forEach(k => all ? scSel.delete(k) : scSel.add(k));
+  drawSchoolPicker();
+};
 window.scAll = () => { SF = new Set(); closePicker(); render(); };
-window.scApply = () => { SF = scSel.size === GROUPS.length ? new Set() : scSel; closePicker(); render(); };
+window.scApply = () => { SF = scSel.size === LEAVES.length ? new Set() : scSel; closePicker(); render(); };
 function drawSchoolPicker() {
-  const cells = GROUPS.map(g => `
-    <button class="pk-cell sc-cell${scSel.has(g.k) ? " end" : ""}" onclick="scToggle('${g.k}')">
-      <span>${g.label}</span><span class="sc-n">${(IDX_GROUP_COUNT[g.k] || 0).toLocaleString()}개교</span>
-    </button>`).join("");
-  const picked = GROUPS.filter(g => scSel.has(g.k)).map(g => g.label).join(" · ");
+  const cells = PARENTS.map(p => {
+    const ls = leavesOf(p.k);
+    const sel = ls.filter(k => scSel.has(k)).length;
+    const cls = sel === ls.length ? " end" : sel ? " part" : "";
+    const cnt = ls.reduce((a, k) => a + (IDX_GROUP_COUNT[k] || 0), 0);
+    return `<button class="pk-cell sc-cell${cls}" onclick="scParent('${p.k}')">
+      <span>${p.label}</span><span class="sc-n">${cnt.toLocaleString()}개교</span></button>`;
+  }).join("");
+  const subRows = PARENTS.filter(p => leavesOf(p.k).length > 1 && leavesOf(p.k).some(k => scSel.has(k)))
+    .map(p => `<div class="sc-subrow"><span class="sc-sublabel">${p.label} 세부</span>` +
+      LEAVES.filter(l => l.parent === p.k).map(l =>
+        `<button class="sc-chip${scSel.has(l.k) ? " on" : ""}" onclick="scToggle('${l.k}')">${l.label} <span>${(IDX_GROUP_COUNT[l.k] || 0).toLocaleString()}</span></button>`).join("") +
+      `</div>`).join("");
+  const picked = setParts(scSel).join(" · ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
@@ -309,8 +374,9 @@ function drawSchoolPicker() {
           <div style="text-align:center"><div class="pk-title">학교 계열 선택</div><div class="pk-range">${picked || "전체 (전국 모든 계열)"}</div></div>
         <span></span></div>
         <div class="pk-grid sc-grid">${cells}</div>
+        ${subRows}
         <div class="pk-foot">
-          <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다<br>분류 기준: NEIS 학교유형 · 마이스터고(산업수요맞춤형고)는 특성화고·마이스터고 항목에 포함</span>
+          <span class="pk-hint">계열을 누르면 선택되고, 특성화고·마이스터고와 특목고는 아래에서 세부 선택할 수 있습니다<br>분류 기준: NEIS 학교유형 · 마이스터고(산업수요맞춤형고)는 특성화고·마이스터고 항목에 포함</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="scAll()">전체 계열</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
@@ -372,9 +438,7 @@ function homeView() {
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
   const RF = anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R;
-  const groupLabel = {};
-  GROUPS.forEach(g => groupLabel[g.k] = g.label);
-  const byType = count(RF, r => { const g = typeGroup(r.type); return g ? groupLabel[g] : "기타·미분류"; });
+  const byType = count(RF, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
@@ -501,7 +565,7 @@ render();
 
 // ---- 자동완성 ----
 const groupBySchool = {};
-R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = typeGroup(r.type); });
+R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
 const suggItems = [
   ...tags.map(([t]) => ({label: t, kind: "제품군", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),

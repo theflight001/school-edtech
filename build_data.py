@@ -210,6 +210,8 @@ for cands in master_by_name.values():
             }
             if is_meister(s):
                 rec["m"] = 1
+            elif s.get("hsType") == "특목고":
+                rec["d"] = s.get("hsDetail") or ""
             school_index.append(rec)
 print(f"전국 학교 인덱스: {len(school_index)}개교")
 
