@@ -46,11 +46,33 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .tile { background: var(--surface); border-radius: 20px; padding: 14px 16px; }
 .tile .v { font-size: 28px; font-weight: 700; color: var(--accent); }
 .tile .l { color: var(--ink-2); font-size: 13px; }
-.filterbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; font-size: 13.5px; color: var(--ink-2); }
-.filterbar input[type="month"] { font: inherit; color: var(--ink); background: var(--input-bg); border: 1px solid var(--grid); border-radius: 10px; padding: 6px 10px; }
-.filterbar button { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 1px solid var(--grid); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
-.filterbar button:hover { border-color: var(--accent); }
-.filterbar .fnote { color: var(--muted); font-size: 12.5px; }
+.fnote { color: var(--muted); font-size: 12.5px; margin: -8px 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fnote button { font: inherit; font-size: 12.5px; color: var(--accent); background: none; border: 1px solid var(--grid); border-radius: 999px; padding: 3px 12px; cursor: pointer; }
+.fnote button:hover { border-color: var(--accent); }
+.tile.clickable { cursor: pointer; transition: box-shadow .15s; }
+.tile.clickable:hover { box-shadow: inset 0 0 0 2px var(--bar); }
+.tile .hint { font-size: 11.5px; color: var(--accent); font-weight: 500; }
+.pk-overlay { position: fixed; inset: 0; background: rgba(15,20,26,.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.pk-panel { background: var(--plane); border-radius: 24px; padding: 22px 24px; width: min(660px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.pk-top { display: flex; justify-content: space-between; align-items: center; }
+.pk-title { font-size: 16px; font-weight: 700; }
+.pk-range { color: var(--accent); font-weight: 600; font-size: 14px; min-height: 20px; margin-top: 4px; }
+.pk-years { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 14px 0 4px; }
+@media (max-width: 620px) { .pk-years { grid-template-columns: 1fr; } .pk-y:last-child { display: none; } }
+.pk-yh { font-weight: 700; text-align: center; margin-bottom: 10px; }
+.pk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pk-cell { padding: 11px 0; border-radius: 12px; cursor: pointer; font-size: 14px; color: var(--ink); background: var(--surface); border: none; font: inherit; }
+.pk-cell:hover:not(:disabled) { outline: 2px solid var(--bar); }
+.pk-cell:disabled { color: var(--muted); opacity: .35; cursor: default; background: none; }
+.pk-cell.inrange { background: var(--sky); color: var(--accent); font-weight: 500; }
+.pk-cell.end { background: var(--bar); color: #fff; font-weight: 700; }
+.pk-nav { border: none; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink-2); padding: 2px 10px; }
+.pk-nav:disabled { opacity: .25; cursor: default; }
+.pk-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 10px; flex-wrap: wrap; }
+.pk-btn { font: inherit; font-size: 14px; border-radius: 999px; padding: 8px 18px; cursor: pointer; border: 1px solid var(--grid); background: var(--plane); color: var(--ink-2); }
+.pk-btn.primary { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
+.pk-btn.primary:disabled { opacity: .4; cursor: default; }
+.pk-hint { font-size: 12.5px; color: var(--muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
@@ -100,6 +122,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   </div>
 </main>
 <footer>기준: 2026-07-20 · 조사 기간 2023.1~2026.7 · 출처: 나라장터, S2B 학교장터, 교육청 계약공개, KERIS, 학교 공식자료, 언론</footer>
+<div id="pickerRoot"></div>
 <script src="data.js"></script>
 <script>
 const R = DB.records;
@@ -150,6 +173,62 @@ window.setPF = v => { PF = v; render(); };
 window.setPT = v => { PT = v; render(); };
 window.clearPeriod = () => { PF = ""; PT = ""; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
+const YM_MIN = 202301, YM_MAX = 202607;
+let pkS = null, pkE = null, pkBase = 2025;
+const ymStr = ym => `${Math.floor(ym / 100)}-${String(ym % 100).padStart(2, "0")}`;
+const ymKo = ym => `${Math.floor(ym / 100)}.${String(ym % 100).padStart(2, "0")}`;
+window.openPicker = () => {
+  pkS = ymInt(PF); pkE = ymInt(PT);
+  pkBase = pkS ? Math.min(Math.max(Math.floor(pkS / 100), 2023), 2025) : 2025;
+  drawPicker();
+};
+window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = ""; };
+window.pkShift = d => { pkBase = Math.min(2025, Math.max(2023, pkBase + d)); drawPicker(); };
+window.pkPick = ym => {
+  if (pkS !== null && pkE === null && ym >= pkS) pkE = ym;
+  else { pkS = ym; pkE = null; }
+  drawPicker();
+};
+window.pkAll = () => { PF = ""; PT = ""; closePicker(); render(); };
+window.pkApply = () => {
+  if (pkS === null) return;
+  PF = ymStr(pkS); PT = ymStr(pkE !== null ? pkE : pkS);
+  closePicker(); render();
+};
+function pkYearHTML(y) {
+  let cells = "";
+  for (let m = 1; m <= 12; m++) {
+    const ym = y * 100 + m;
+    const off = ym < YM_MIN || ym > YM_MAX;
+    const isEnd = ym === pkS || ym === pkE;
+    const inR = pkS !== null && pkE !== null && ym > pkS && ym < pkE;
+    cells += `<button class="pk-cell${isEnd ? " end" : inR ? " inrange" : ""}" ${off ? "disabled" : `onclick="pkPick(${ym})"`}>${m}월</button>`;
+  }
+  return `<div class="pk-y"><div class="pk-yh">${y}년</div><div class="pk-grid">${cells}</div></div>`;
+}
+function drawPicker() {
+  const rangeTxt = pkS === null ? "시작 월을 선택하세요"
+    : pkE === null ? `${ymKo(pkS)} ~ <span style="color:var(--muted)">종료 월 선택</span>`
+    : `${ymKo(pkS)} ~ ${ymKo(pkE)}`;
+  document.getElementById("pickerRoot").innerHTML = `
+    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+      <div class="pk-panel" role="dialog" aria-label="조사 기간 선택">
+        <div class="pk-top">
+          <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2023 ? "disabled" : ""} aria-label="이전 해">‹</button>
+          <div style="text-align:center"><div class="pk-title">조사 기간 선택</div><div class="pk-range">${rangeTxt}</div></div>
+          <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
+        </div>
+        <div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
+        <div class="pk-foot">
+          <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2023.01 ~ 2026.07)</span>
+          <span style="display:flex;gap:8px">
+            <button class="pk-btn" onclick="pkAll()">전체 기간</button>
+            <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
+          </span>
+        </div>
+      </div>
+    </div>`;
+}
 function inPeriod(r) {
   const f = ymInt(PF), t = ymInt(PT);
   if (!f && !t) return true;
@@ -168,19 +247,16 @@ function homeView() {
   const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
   const fSchools = uniq(RF.map(r => r.school)).length;
   return `
-    <div class="filterbar">
-      <span>조사 기간</span>
-      <input type="month" min="2023-01" max="2026-07" value="${PF}" onchange="setPF(this.value)" aria-label="시작 월">
-      <span>~</span>
-      <input type="month" min="2023-01" max="2026-07" value="${PT}" onchange="setPT(this.value)" aria-label="종료 월">
-      ${active ? `<button onclick="clearPeriod()">전체 기간 보기</button><span class="fnote">선택 기간 사례 ${RF.length.toLocaleString()}건 · 월 미상 기록은 연 단위로 포함</span>` : `<span class="fnote">월을 선택하면 아래 통계가 해당 기간으로 다시 집계됩니다</span>`}
-    </div>
     <div class="tiles">
       <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${active ? " (선택 기간)" : ""}</div></div>
       <div class="tile"><div class="v">${fSchools}</div><div class="l">기록 보유 학교${active ? " (선택 기간)" : ""}</div></div>
       <div class="tile"><div class="v">${IDX.length.toLocaleString()}</div><div class="l">검색 가능 학교 (전국)</div></div>
-      <div class="tile"><div class="v">${active ? `${PF || "2023.1"} ~ ${PT || "2026.7"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div><div class="l" style="margin-top:6px">조사 기간</div></div>
+      <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
+        <div class="v">${active ? `${PF || "2023-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
+        <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
+      </div>
     </div>
+    ${active ? `<div class="fnote"><span>선택 기간 사례 ${RF.length.toLocaleString()}건 · 월 미상 기록은 연 단위로 포함</span><button onclick="clearPeriod()">전체 기간 보기</button></div>` : ""}
     <div class="grid2">
       <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교</span></h2>${barChart(topTags, {linkFn: t => `#/tag/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>계열별 사례 수</h2>${barChart(byType)}</div>
