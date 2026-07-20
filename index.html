@@ -36,7 +36,8 @@ header { background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--plane
 .hero-r img { height: 150px; width: auto; display: block; }
 @media (max-width: 1080px) { .hero-deco { display: none; } }
 header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.2; }
-header h1 a { color: var(--ink); }
+.homebtn { position: absolute; top: 18px; left: 20px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px; border-radius: 999px; background: var(--plane); border: 1px solid var(--grid); color: var(--ink-2); font-size: 14px; z-index: 5; }
+.homebtn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 header .sub { color: var(--ink-2); font-size: clamp(14px, 1.6vw, 17px); margin-top: 10px; }
 main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .searchwrap { position: relative; margin: 20px 0 8px; background: var(--sky); border-radius: 24px; padding: 16px; }
@@ -122,7 +123,11 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   <div class="hero-deco hero-r" aria-hidden="true"><div>
     <img src="hero_person.png" width="192" height="150" alt="">
   </div></div>
-  <h1><a href="#/">공교육 에듀테크 활용 현황</a></h1>
+  <a class="homebtn" href="#/" aria-label="홈으로">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 L12 3 L21 10.5"/><path d="M5.5 9 V20 h13 V9"/></svg>
+    홈
+  </a>
+  <h1>공교육 에듀테크 활용 현황</h1>
   <div class="sub">전국 초·중·고등학교의 에듀테크 (학습지원 소프트웨어) 도입 기록을 조달·공개자료 기반으로 제공합니다</div>
 </header>
 <main>
@@ -504,6 +509,7 @@ sugg.addEventListener("mousedown", e => {
   sugg.hidden = true; q.blur();
 });
 q.addEventListener("keydown", e => {
+  if (e.isComposing || e.keyCode === 229) return;  // 한글 IME 조합 중 Enter/방향키 무시 (글자 중복 방지)
   if (sugg.hidden) { if (e.key === "Enter" && q.value.trim()) { location.hash = `/search/${encodeURIComponent(q.value.trim())}`; } return; }
   const n = current.length;
   if (e.key === "ArrowDown") { selIdx = (selIdx + 1) % n; }
