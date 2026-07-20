@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "Bash(brew --version)",
+      "Bash(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh)",
+      "Bash(bash)",
+      "Bash(python3 -c ' *)",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "Bash(python3 build_data.py)",
+      "mcp__visualize__read_me",
+      "Bash(python3 fetch_schools.py f2bcc892f6f5424396a6e92a79383bf9)",
+      "Bash(python3 match_schools.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{size_download}\\\\n\" \"http://127.0.0.1:8734/index.html?v=2\")",
+      "Bash(curl -s \"http://127.0.0.1:8734/data.js\")",
+      "Read(//Applications/Google Chrome.app/Contents/MacOS/**)",
+      "Read(//Applications/**)",
+      "Bash(curl -s \"https://apis.data.go.kr/1230000/ao/CntrctInfoService/getCntrctInfoListThng?serviceKey=9a9e3a162edaff27f3d6ada94ff218e60ca6d6b4f843a71f8c52029708a7490e&inqryDiv=1&inqryBgnDt=202607010000&inqryEndDt=202607200000&numOfRows=3&pageNo=1&type=json\")",
+      "Bash(NARA_KEY=9a9e3a162edaff27f3d6ada94ff218e60ca6d6b4f843a71f8c52029708a7490e python3 collect_nara.py --begin 20260620 --end 20260720)"
+    ]
+  }
+}

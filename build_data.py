@@ -1,0 +1,177 @@
+# CSV → data.js 변환 스크립트 (정적 프로토타입용)
+# 사용: python3 build_data.py  → data.js 생성
+import csv, json, re, collections, os
+
+SRC = "db_export.csv"
+OUT = "data.js"
+MASTER = "school_master.json"
+
+# 개명 확인된 학교 별칭 (DB 표기 → NEIS 현재 교명). NEIS 대조로 확정된 것만 넣을 것.
+ALIAS = {
+    "한국과학영재학교(KSA)": "한국과학영재학교",
+    "미림여자정보과학고등학교": "미림마이스터고등학교",
+    "부산자동차고등학교": "부산자동차마이스터고등학교",
+    "광주자동화설비공업고등학교": "광주자동화설비마이스터고등학교",
+}
+
+SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
+               "대전": "대전", "울산": "울산", "세종": "세종", "경기": "경기", "강원": "강원",
+               "충북": "충청북", "충남": "충청남", "전북": "전라북|전북", "전남": "전라남",
+               "경북": "경상북", "경남": "경상남", "제주": "제주"}
+
+master_by_name = collections.defaultdict(list)
+if os.path.exists(MASTER):
+    for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
+        master_by_name[s["name"]].append(s)
+
+def find_school(name, region):
+    cands = master_by_name.get(ALIAS.get(name, name), [])
+    if len(cands) == 1:
+        return cands[0]
+    if len(cands) > 1:
+        tok = region.split()[0] if region else ""
+        pat = SIDO_PREFIX.get(tok)
+        if pat:
+            f = [c for c in cands if re.match(pat, c["sido"])]
+            if len(f) == 1:
+                return f[0]
+    return None
+
+# 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
+TAG_RULES = [
+    ("ChatGPT",            r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI"),
+    ("Gemini",             r"Gemini|제미나이"),
+    ("Claude",             r"Claude|클로드"),
+    ("Replit",             r"Replit|리플릿"),
+    ("카피킬러(무하유)",     r"카피킬러|무하유"),
+    ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
+    ("AI 디지털교과서(AIDT)", r"AIDT|AI ?디지털 ?교과서|디지털교과서"),
+    ("리로스쿨",            r"리로스쿨|riroschool"),
+    ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
+    ("구름(goorm)",         r"구름 ?EDU|goorm|구름에듀"),
+    ("이음AI(화이트소프트)",  r"이음 ?AI|화이트소프트"),
+    ("Microsoft/MS Office", r"\bMS\b|Microsoft|마이크로소프트|MS ?Office|오피스 ?365|M365"),
+    ("Google Workspace",   r"구글 ?워크스페이스|Google Workspace|구글 ?클래스룸|Google Classroom"),
+    ("Notion",             r"노션|Notion"),
+    ("Zoom",               r"\bZoom\b|줌 ?프로"),
+    ("Canva/미리캔버스",     r"Canva|캔바|미리캔버스"),
+    ("Padlet",             r"Padlet|패들렛"),
+    ("코스웨어(기타)",       r"코스웨어"),
+    ("VR/XR 장비",          r"\bVR\b|\bXR\b|가상현실|메타버스"),
+    ("AI 로봇·자율주행 장비",  r"AI ?로봇|자율주행|로봇팔|협동로봇|비전 ?로봇|로봇 ?제어"),
+    ("드론",                r"드론"),
+    ("3D 프린팅/CAD",       r"3D ?프린|3D ?CAD|\bCAD\b|\bCAM\b|인벤터|Inventor"),
+]
+
+def sido(region):
+    if not region:
+        return "미상"
+    t = region.split()[0]
+    return {"전국": "전국(공동)"}.get(t, t)
+
+def year_of(period):
+    m = re.search(r"(20\d\d)", period or "")
+    return int(m.group(1)) if m else None
+
+def tags_of(name, content):
+    hay = f"{name} {content}"
+    return [t for t, pat in TAG_RULES if re.search(pat, hay, re.I)]
+
+rows = list(csv.reader(open(SRC, encoding="utf-8-sig")))
+header = rows[2]
+records = []
+for i, r in enumerate(rows[3:]):
+    if len(r) < 11 or not r[0].strip():
+        continue
+    r = [c.strip() for c in r]
+    m = find_school(r[1], r[3])
+    records.append({
+        "id": int(r[0]) if r[0].isdigit() else i,
+        "school": r[1], "type": r[2], "region": r[3], "sido": sido(r[3]),
+        "product": r[4], "category": r[5], "period": r[6],
+        "year": year_of(r[6]), "content": r[7], "sourceType": r[8],
+        "url": r[9], "confidence": r[10], "note": r[11] if len(r) > 11 else "",
+        "tags": tags_of(r[4], r[7]),
+        "schoolCode": m["code"] if m else None,
+        "schoolName": m["name"] if m else None,     # NEIS 현재 교명(개명 반영)
+        "hsType": (m.get("hsType") or "") if m else "",
+        "founding": (m.get("founding") or "") if m else "",
+        "neisAddress": (m.get("address") or "") if m else "",
+    })
+
+# --- 파일럿 자동수집분(나라장터 API) 병합: refined_*.csv → 기존 형식으로 변환 ---
+NEIS_SIDO_SHORT = {"서울특별시": "서울", "부산광역시": "부산", "대구광역시": "대구",
+    "인천광역시": "인천", "대전광역시": "대전", "울산광역시": "울산", "세종특별자치시": "세종",
+    "경기도": "경기", "강원특별자치도": "강원", "충청북도": "충북", "충청남도": "충남",
+    "전북특별자치도": "전북", "경상북도": "경북", "경상남도": "경남", "제주특별자치도": "제주",
+    "전남광주통합특별시(전남)": "전남", "전남광주통합특별시(광주)": "광주", "재외한국학교": "재외"}
+
+master_by_code = {}
+for cands in master_by_name.values():
+    for c in cands:
+        master_by_code[c["code"]] = c
+
+import glob
+pilot_count = 0
+seen_pilot = set()
+for path in sorted(glob.glob("refined_*.csv")):
+    for row in csv.DictReader(open(path, encoding="utf-8-sig")):
+        key = (row["계약번호"], row["학교명"])
+        if key in seen_pilot:
+            continue
+        seen_pilot.add(key)
+        m = master_by_code.get(row["학교코드"])
+        level = row["급별"]
+        if level == "고등학교":
+            stype = (m.get("hsType") if m else "") or "고등학교"
+        elif level in ("초등학교", "중학교"):
+            stype = level
+        else:
+            stype = level or "미확정"
+        s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
+        amt = int(row["금액"] or 0)
+        amt_txt = f"({amt/10000:,.0f}만원)" if amt else ""
+        year = int(row["계약일"][:4]) if row.get("계약일") else None
+        records.append({
+            "id": 100000 + pilot_count,
+            "school": row["학교명"], "type": stype,
+            "region": s_short, "sido": s_short,
+            "product": row["계약명"], "category": f"자동수집({row['구분']})",
+            "period": row.get("계약일") or "", "year": year,
+            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}",
+            "sourceType": "나라장터 API(자동수집)",
+            "url": row.get("상세URL") or "", "confidence": "중",
+            "note": "파일럿 자동수집분 — 제품명·내용 검증 전",
+            "tags": tags_of(row["계약명"], ""),
+            "schoolCode": row["학교코드"] or None,
+            "schoolName": m["name"] if m else row["학교명"],
+            "hsType": (m.get("hsType") or "") if m else "",
+            "founding": (m.get("founding") or "") if m else "",
+            "neisAddress": (m.get("address") or "") if m else "",
+        })
+        pilot_count += 1
+print(f"파일럿 자동수집분 병합: {pilot_count}건")
+
+# 태깅 커버리지 리포트
+tagged = sum(1 for rec in records if rec["tags"])
+coded = len({rec["school"] for rec in records if rec["schoolCode"]})
+total_schools = len({rec["school"] for rec in records})
+print(f"총 {len(records)}건, 태그 부여 {tagged}건 ({tagged/len(records):.0%}), 학교코드 매칭 {coded}/{total_schools}교")
+tag_counts = collections.Counter(t for rec in records for t in rec["tags"])
+for t, c in tag_counts.most_common():
+    schools = len({rec["school"] for rec in records if t in rec["tags"]})
+    print(f"  {t}: {c}건 / {schools}개교")
+
+meta = {
+    "asOf": "2026-07-20",
+    "total": len(records),
+    "schools": len({rec["school"] for rec in records}),
+    "coveragePeriod": "2023.1 ~ 2026.7",
+    "pilot": pilot_count,
+}
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
+    f.write("const DB = ")
+    json.dump({"meta": meta, "records": records}, f, ensure_ascii=False)
+    f.write(";\n")
+print(f"\n{OUT} 생성 완료")
