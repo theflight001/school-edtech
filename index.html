@@ -107,6 +107,9 @@ const uniq = arr => [...new Set(arr)];
 const schools = uniq(R.map(r => r.school)).sort();
 const tags = count(R.flatMap(r => r.tags.map(t => [t])), x => x[0]);
 const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(r => r.school)).length;
+const IDX = DB.schoolIndex || [];
+const idxByCode = new Map(IDX.map(s => [s.c, s]));
+const recordCodes = new Set(R.map(r => r.schoolCode).filter(Boolean));
 
 // ---- 차트 부품 ----
 const BAR_FROM = [43, 89, 216], BAR_TO = [79, 197, 150];
@@ -144,9 +147,9 @@ function homeView() {
   const topTags = tags.slice(0, 12).map(([t]) => [t, schoolCountByTag(t)]).sort((a,b)=>b[1]-a[1]);
   return `
     <div class="tiles">
-      <div class="tile"><div class="v">${DB.meta.total}</div><div class="l">활용 사례</div></div>
-      <div class="tile"><div class="v">${DB.meta.schools}</div><div class="l">학교 수</div></div>
-      <div class="tile"><div class="v">${tags.length}</div><div class="l">주요 제품군</div></div>
+      <div class="tile"><div class="v">${DB.meta.total.toLocaleString()}</div><div class="l">활용 사례</div></div>
+      <div class="tile"><div class="v">${DB.meta.schools}</div><div class="l">기록 보유 학교</div></div>
+      <div class="tile"><div class="v">${IDX.length.toLocaleString()}</div><div class="l">검색 가능 학교 (전국)</div></div>
       <div class="tile"><div class="v">${DB.meta.coveragePeriod}</div><div class="l" style="margin-top:6px">조사 기간</div></div>
     </div>
     <div class="grid2">
@@ -185,6 +188,23 @@ function tagView(tag) {
     </div>
     <div class="card"><h2>도입 학교 목록</h2>${recordTable(recs)}</div>`;
 }
+function codeView(code) {
+  const s = idxByCode.get(code);
+  if (!s) return `<div class="empty">학교를 찾을 수 없습니다 (코드: ${esc(code)})</div>`;
+  const recs = R.filter(r => r.schoolCode === code);
+  if (recs.length) {
+    const names = uniq(recs.map(r => r.school));
+    return schoolView(names[0]);
+  }
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 학교 상세</div>
+    <div class="pagehead"><h2>${esc(s.n)}</h2>
+      <div class="meta">${esc(s.l)}${s.h ? " · " + esc(s.h) : ""} · ${esc(s.s)}
+        <div class="conf">NEIS ${[s.f, s.a, "학교코드 " + s.c].filter(Boolean).map(esc).join(" · ")}</div>
+      </div></div>
+    <div class="card"><div class="empty">아직 수집된 에듀테크 활용 기록이 없습니다.<br>
+      <span style="font-size:12.5px">본 서비스는 공개 조달 기록 기반의 <b>하한 추정치</b>입니다 — 기록이 없다는 것이 에듀테크를 사용하지 않는다는 뜻은 아닙니다.</span></div></div>`;
+}
 function searchView(q) {
   const ql = q.toLowerCase();
   const recs = R.filter(r => (r.school + r.product + r.content + r.tags.join("")).toLowerCase().includes(ql));
@@ -201,6 +221,7 @@ function render() {
   const [, kind, arg] = h.split("/");
   const view = $("#view");
   if (kind === "school") view.innerHTML = schoolView(arg);
+  else if (kind === "code") view.innerHTML = codeView(arg);
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "search") view.innerHTML = searchView(arg);
   else view.innerHTML = homeView();
@@ -211,8 +232,9 @@ render();
 
 // ---- 자동완성 ----
 const suggItems = [
-  ...schools.map(s => ({label: s, kind: "학교", href: `#/school/${encodeURIComponent(s)}`})),
   ...tags.map(([t]) => ({label: t, kind: "제품군", href: `#/tag/${encodeURIComponent(t)}`})),
+  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`})),
+  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 let selIdx = -1, current = [];

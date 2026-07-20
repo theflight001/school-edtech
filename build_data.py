@@ -162,6 +162,19 @@ for t, c in tag_counts.most_common():
     schools = len({rec["school"] for rec in records if t in rec["tags"]})
     print(f"  {t}: {c}건 / {schools}개교")
 
+# 전국 학교 검색 인덱스(초·중·고) — 기록 없는 학교도 검색·열람 가능하게
+school_index = []
+for cands in master_by_name.values():
+    for s in cands:
+        if s["level"] in ("초등학교", "중학교", "고등학교"):
+            school_index.append({
+                "c": s["code"], "n": s["name"], "l": s["level"],
+                "s": NEIS_SIDO_SHORT.get(s["sido"], s["sido"]),
+                "h": s.get("hsType") or "", "f": s.get("founding") or "",
+                "a": s.get("address") or "",
+            })
+print(f"전국 학교 인덱스: {len(school_index)}개교")
+
 meta = {
     "asOf": "2026-07-20",
     "total": len(records),
@@ -172,6 +185,6 @@ meta = {
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB = ")
-    json.dump({"meta": meta, "records": records}, f, ensure_ascii=False)
+    json.dump({"meta": meta, "records": records, "schoolIndex": school_index}, f, ensure_ascii=False)
     f.write(";\n")
 print(f"\n{OUT} 생성 완료")
