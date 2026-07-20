@@ -106,6 +106,18 @@ for i, r in enumerate(rows[3:]):
         "neisAddress": (m.get("address") or "") if m else "",
     })
 
+# 마이스터고 판별: NEIS는 법령대로 특목고로 분류하지만 서비스는 특성화고와 묶음
+MEISTER_EXTRA = {"인천해사고등학교", "합덕제철고등학교", "군산기계공업고등학교"}
+def is_meister(s):
+    if s.get("hsType") != "특목고":
+        return False
+    d = s.get("hsDetail") or ""
+    if "산업수요" in d:
+        return True
+    if d:
+        return False
+    return "마이스터" in s["name"] or s["name"] in MEISTER_EXTRA
+
 # --- 파일럿 자동수집분(나라장터 API) 병합: refined_*.csv → 기존 형식으로 변환 ---
 NEIS_SIDO_SHORT = {"서울특별시": "서울", "부산광역시": "부산", "대구광역시": "대구",
     "인천광역시": "인천", "대전광역시": "대전", "울산광역시": "울산", "세종특별자치시": "세종",
@@ -130,7 +142,10 @@ for path in sorted(glob.glob("refined_*.csv")):
         m = master_by_code.get(row["학교코드"])
         level = row["급별"]
         if level == "고등학교":
-            stype = (m.get("hsType") if m else "") or "고등학교"
+            if m and is_meister(m):
+                stype = "마이스터고"
+            else:
+                stype = (m.get("hsType") if m else "") or "고등학교"
         elif level in ("초등학교", "중학교"):
             stype = level
         else:
@@ -160,6 +175,18 @@ for path in sorted(glob.glob("refined_*.csv")):
         pilot_count += 1
 print(f"파일럿 자동수집분 병합: {pilot_count}건")
 
+# 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
+seen_exact = set()
+deduped = []
+for rec in records:
+    key = (rec["school"], rec["product"], rec["period"], rec["content"])
+    if key in seen_exact:
+        continue
+    seen_exact.add(key)
+    deduped.append(rec)
+print(f"완전 중복 제거: {len(records) - len(deduped)}건")
+records = deduped
+
 # 태깅 커버리지 리포트
 tagged = sum(1 for rec in records if rec["tags"])
 coded = len({rec["school"] for rec in records if rec["schoolCode"]})
@@ -175,12 +202,15 @@ school_index = []
 for cands in master_by_name.values():
     for s in cands:
         if s["level"] in ("초등학교", "중학교", "고등학교"):
-            school_index.append({
+            rec = {
                 "c": s["code"], "n": s["name"], "l": s["level"],
                 "s": NEIS_SIDO_SHORT.get(s["sido"], s["sido"]),
                 "h": s.get("hsType") or "", "f": s.get("founding") or "",
                 "a": s.get("address") or "",
-            })
+            }
+            if is_meister(s):
+                rec["m"] = 1
+            school_index.append(rec)
 print(f"전국 학교 인덱스: {len(school_index)}개교")
 
 meta = {

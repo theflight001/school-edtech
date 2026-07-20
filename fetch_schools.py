@@ -33,6 +33,7 @@ while True:
             "address": r.get("ORG_RDNMA") or "",
             "founding": r.get("FOND_SC_NM") or "",   # 공립/사립/국립
             "hsType": r.get("HS_SC_NM") or "",       # 일반고/특성화고/특목고/자율고 (고교만)
+            "hsDetail": r.get("SPCLY_PURPS_HS_ORD_NM") or "",  # 특목고 계열(과학/외국어/산업수요맞춤형 등)
             "homepage": r.get("HMPG_ADRES") or "",
         })
     print(f"페이지 {page}: 누적 {len(schools)}/{total}")

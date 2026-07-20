@@ -18,7 +18,10 @@
       "Read(//Applications/Google Chrome.app/Contents/MacOS/**)",
       "Read(//Applications/**)",
       "Bash(curl -s \"https://apis.data.go.kr/1230000/ao/CntrctInfoService/getCntrctInfoListThng?serviceKey=9a9e3a162edaff27f3d6ada94ff218e60ca6d6b4f843a71f8c52029708a7490e&inqryDiv=1&inqryBgnDt=202607010000&inqryEndDt=202607200000&numOfRows=3&pageNo=1&type=json\")",
-      "Bash(NARA_KEY=9a9e3a162edaff27f3d6ada94ff218e60ca6d6b4f843a71f8c52029708a7490e python3 collect_nara.py --begin 20260620 --end 20260720)"
+      "Bash(NARA_KEY=9a9e3a162edaff27f3d6ada94ff218e60ca6d6b4f843a71f8c52029708a7490e python3 collect_nara.py --begin 20260620 --end 20260720)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m '팝업 바깥 클릭으로 닫히는 동작 제거 — 버튼으로만 닫기 *)",
+      "Bash(git push *)"
     ]
   }
 }
