@@ -32,13 +32,8 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 header { background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--plane) 92%), linear-gradient(90deg, rgba(45,160,223,.30), rgba(119,236,119,.26)); padding: 56px 24px 44px; position: relative; text-align: center; overflow: hidden; }
 .hero-deco { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; }
-.hero-l { left: 3%; top: 50%; }
-.hero-r { right: 2.5%; }
-.hero-deco > div { animation: bob 7s ease-in-out infinite; }
-.hero-r > div { animation-delay: 3.5s; }
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.hero-r { right: 3%; }
 @media (max-width: 1080px) { .hero-deco { display: none; } }
-@media (prefers-reduced-motion: reduce) { .hero-deco > div { animation: none; } }
 header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.2; }
 header h1 a { color: var(--ink); }
 header .sub { color: var(--ink-2); font-size: clamp(14px, 1.6vw, 17px); margin-top: 10px; }
@@ -123,55 +118,24 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </head>
 <body>
 <header>
-  <div class="hero-deco hero-l" aria-hidden="true"><div>
-    <svg width="100" height="183" viewBox="0 0 120 220" xmlns="http://www.w3.org/2000/svg">
-      <g transform="rotate(-6 42 42)">
-        <rect x="10" y="10" width="60" height="60" rx="15" fill="#3aa0e8"/>
-        <rect x="24" y="26" width="32" height="24" rx="5" fill="none" stroke="#fff" stroke-width="4"/>
-        <path d="M36 32 L48 38 L36 44 Z" fill="#fff"/>
-      </g>
-      <g transform="rotate(5 88 122)">
-        <rect x="52" y="86" width="60" height="60" rx="15" fill="#6fd8b2"/>
-        <circle cx="82" cy="112" r="13" fill="#fff"/>
-        <rect x="74" y="120" width="16" height="14" rx="5" fill="#fff"/>
-        <text x="82" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#6fd8b2" font-family="inherit">AI</text>
-      </g>
-      <g transform="rotate(-4 42 188)">
-        <rect x="8" y="152" width="60" height="60" rx="15" fill="#f5c542"/>
-        <path d="M38 168 L62 179 L38 190 L14 179 Z" fill="#fff"/>
-        <path d="M28 184 v10 q10 7 20 0 v-10" fill="#fff"/>
-        <line x1="60" y1="181" x2="60" y2="196" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      </g>
-    </svg>
-  </div></div>
   <div class="hero-deco hero-r" aria-hidden="true"><div>
-    <svg width="250" height="180" viewBox="0 0 250 180" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="196" cy="38" rx="22" ry="12" fill="#dbe9f5"/>
-      <ellipse cx="212" cy="43" rx="15" ry="9" fill="#dbe9f5"/>
-      <rect x="18" y="96" width="60" height="62" fill="#fff" stroke="#dfe7f0"/>
-      <rect x="14" y="86" width="68" height="12" rx="3" fill="#4a90d9"/>
-      <rect x="172" y="96" width="60" height="62" fill="#fff" stroke="#dfe7f0"/>
-      <rect x="168" y="86" width="68" height="12" rx="3" fill="#4a90d9"/>
-      <rect x="30" y="108" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="54" y="108" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="30" y="134" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="54" y="134" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="184" y="108" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="208" y="108" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="184" y="134" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="208" y="134" width="14" height="18" rx="2" fill="#cfe3f6"/>
-      <rect x="88" y="70" width="74" height="88" fill="#fff" stroke="#dfe7f0"/>
-      <path d="M80 72 L125 38 L170 72 Z" fill="#4a90d9"/>
-      <rect x="123" y="16" width="4" height="24" fill="#8fa8c4"/>
-      <path d="M127 16 L152 22 L127 29 Z" fill="#6fd8b2"/>
-      <circle cx="125" cy="88" r="13" fill="#fff" stroke="#c9d8ea" stroke-width="3"/>
-      <line x1="125" y1="88" x2="125" y2="80" stroke="#4a90d9" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="125" y1="88" x2="131" y2="91" stroke="#4a90d9" stroke-width="2.5" stroke-linecap="round"/>
-      <rect x="117" y="126" width="16" height="32" rx="2" fill="#cfe3f6"/>
-      <circle cx="20" cy="150" r="14" fill="#7ed9a3"/>
-      <circle cx="240" cy="148" r="16" fill="#7ed9a3"/>
-      <circle cx="228" cy="156" r="11" fill="#9be3b8"/>
-      <rect x="0" y="156" width="250" height="3" rx="1.5" fill="#e3ecf5"/>
+    <svg width="220" height="170" viewBox="0 0 240 185" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="120" cy="174" rx="92" ry="8" fill="#e5edf4"/>
+      <path d="M78 52 q-14 26 -4 52 l14 4 q-8 -30 2 -50 Z" fill="#26262b"/>
+      <path d="M162 52 q14 26 4 52 l-14 4 q8 -30 -2 -50 Z" fill="#26262b"/>
+      <circle cx="120" cy="54" r="26" fill="#f7d8c3"/>
+      <path d="M92 50 q2 -30 28 -30 q26 0 28 30 q-8 -16 -28 -16 q-20 0 -28 16 Z" fill="#26262b"/>
+      <circle cx="110" cy="54" r="3" fill="#26262b"/>
+      <circle cx="130" cy="54" r="3" fill="#26262b"/>
+      <path d="M114 66 q6 5 12 0 q-3 7 -12 0 Z" fill="#e2574c"/>
+      <path d="M84 168 q-6 -62 36 -64 q42 2 36 64 Z" fill="#7ed9a3"/>
+      <path d="M96 108 q-24 6 -26 34 l12 8 q4 -22 18 -30 Z" fill="#7ed9a3"/>
+      <path d="M144 108 q24 6 26 34 l-12 8 q-4 -22 -18 -30 Z" fill="#7ed9a3"/>
+      <circle cx="70" cy="148" r="8" fill="#f7d8c3"/>
+      <circle cx="170" cy="148" r="8" fill="#f7d8c3"/>
+      <path d="M62 170 L74 118 q1 -5 6 -5 h80 q5 0 6 5 L178 170 Z" fill="#aab3bf"/>
+      <circle cx="120" cy="142" r="7" fill="#8f99a6"/>
+      <path d="M52 170 h136 q6 0 4 6 q-1 4 -8 4 h-128 q-7 0 -8 -4 q-2 -6 4 -6 Z" fill="#c3cbd5"/>
     </svg>
   </div></div>
   <h1><a href="#/">공교육 에듀테크 활용 현황</a></h1>
@@ -184,13 +148,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   </div>
   <div id="view"></div>
   <div class="disclaimer">
-    <b>데이터 한계 고지</b> — 본 데이터는 웹에 공개된 조달 기록(나라장터·S2B)과 공식자료·언론보도를 기반으로 한 <b>하한 추정치</b>입니다.
-    제품명 미확인 계약, 해외 직접결제(예: OpenAI), 사비 구매 등은 포착되지 않으며, 실제 활용 규모는 이보다 클 수 있습니다.
-    각 사례는 출처 링크로 확인할 수 있습니다.
-    출처가 "나라장터 API(자동수집)"인 기록은 최근 도입된 전국 자동수집 파일럿 결과로, <b>아직 사람의 검증을 거치지 않은</b> 계약 원자료입니다(신뢰도 '중').
+    <b>데이터 한계 고지</b> — 본 데이터는 웹에 공개된 조달 기록(나라장터·S2B)과 공식자료·언론보도를 기반으로 한 추정치입니다.
+    제품명 미확인 계약, 해외 직접결제, 사비 구매 등은 포함되지 않으며, 실제 활용 규모는 제공된 자료와 다를 수 있습니다.
   </div>
 </main>
-<footer>기준: 2026-07-20 · 조사 기간 2023.1~2026.7 · 출처: 나라장터, S2B 학교장터, 교육청 계약공개, KERIS, 학교 공식자료, 언론</footer>
 <div id="pickerRoot"></div>
 <script src="data.js"></script>
 <script>
