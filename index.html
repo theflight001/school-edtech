@@ -46,6 +46,11 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .tile { background: var(--surface); border-radius: 20px; padding: 14px 16px; }
 .tile .v { font-size: 28px; font-weight: 700; color: var(--accent); }
 .tile .l { color: var(--ink-2); font-size: 13px; }
+.filterbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; font-size: 13.5px; color: var(--ink-2); }
+.filterbar input[type="month"] { font: inherit; color: var(--ink); background: var(--input-bg); border: 1px solid var(--grid); border-radius: 10px; padding: 6px 10px; }
+.filterbar button { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 1px solid var(--grid); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.filterbar button:hover { border-color: var(--accent); }
+.filterbar .fnote { color: var(--muted); font-size: 12.5px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
@@ -139,17 +144,42 @@ function recordTable(recs, {showSchool = true} = {}) {
     </tr>`).join("") + `</tbody></table></div>`;
 }
 
+// ---- 기간 필터 ----
+let PF = "", PT = "";  // "YYYY-MM"
+window.setPF = v => { PF = v; render(); };
+window.setPT = v => { PT = v; render(); };
+window.clearPeriod = () => { PF = ""; PT = ""; render(); };
+const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
+function inPeriod(r) {
+  const f = ymInt(PF), t = ymInt(PT);
+  if (!f && !t) return true;
+  if (r.ym) return (!f || r.ym >= f) && (!t || r.ym <= t);
+  if (r.year) return (!f || r.year >= Math.floor(f / 100)) && (!t || r.year <= Math.floor(t / 100));
+  return false;
+}
+
 // ---- 뷰 ----
 function homeView() {
-  const byType = count(R, r => r.type);
-  const bySido = count(R, r => r.sido).slice(0, 12);
-  const topTags = tags.slice(0, 12).map(([t]) => [t, schoolCountByTag(t)]).sort((a,b)=>b[1]-a[1]);
+  const active = PF || PT;
+  const RF = active ? R.filter(inPeriod) : R;
+  const byType = count(RF, r => r.type);
+  const bySido = count(RF, r => r.sido).slice(0, 12);
+  const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
+  const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
+  const fSchools = uniq(RF.map(r => r.school)).length;
   return `
+    <div class="filterbar">
+      <span>조사 기간</span>
+      <input type="month" min="2023-01" max="2026-07" value="${PF}" onchange="setPF(this.value)" aria-label="시작 월">
+      <span>~</span>
+      <input type="month" min="2023-01" max="2026-07" value="${PT}" onchange="setPT(this.value)" aria-label="종료 월">
+      ${active ? `<button onclick="clearPeriod()">전체 기간 보기</button><span class="fnote">선택 기간 사례 ${RF.length.toLocaleString()}건 · 월 미상 기록은 연 단위로 포함</span>` : `<span class="fnote">월을 선택하면 아래 통계가 해당 기간으로 다시 집계됩니다</span>`}
+    </div>
     <div class="tiles">
-      <div class="tile"><div class="v">${DB.meta.total.toLocaleString()}</div><div class="l">활용 사례</div></div>
-      <div class="tile"><div class="v">${DB.meta.schools}</div><div class="l">기록 보유 학교</div></div>
+      <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${active ? " (선택 기간)" : ""}</div></div>
+      <div class="tile"><div class="v">${fSchools}</div><div class="l">기록 보유 학교${active ? " (선택 기간)" : ""}</div></div>
       <div class="tile"><div class="v">${IDX.length.toLocaleString()}</div><div class="l">검색 가능 학교 (전국)</div></div>
-      <div class="tile"><div class="v">${DB.meta.coveragePeriod}</div><div class="l" style="margin-top:6px">조사 기간</div></div>
+      <div class="tile"><div class="v">${active ? `${PF || "2023.1"} ~ ${PT || "2026.7"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div><div class="l" style="margin-top:6px">조사 기간</div></div>
     </div>
     <div class="grid2">
       <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교</span></h2>${barChart(topTags, {linkFn: t => `#/tag/${encodeURIComponent(t)}`})}</div>
