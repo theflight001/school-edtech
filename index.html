@@ -8,7 +8,7 @@
 <style>
 :root {
   color-scheme: light;
-  --surface: #ffffff; --plane: #f7fafd;
+  --surface: #f7fafd; --plane: #ffffff; --sky: #ebfaff; --input-bg: #ffffff;
   --ink: #1d2733; --ink-2: #384250; --muted: #9298a2;
   --grid: #e5e7eb; --baseline: #d6e0eb; --ring: rgba(29,39,51,0.08);
   --bar: #0d84c8; --bar-soft: #d9effb; --accent: #046ab8;
@@ -18,7 +18,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --surface: #1b232d; --plane: #10161d;
+    --surface: #1a232e; --plane: #0f141a; --sky: #12303f; --input-bg: #1b2734;
     --ink: #f2f6fa; --ink-2: #c0c9d4; --muted: #8a94a1;
     --grid: #2b3542; --baseline: #37455a; --ring: rgba(255,255,255,0.10);
     --bar: #3aa7e8; --bar-soft: #14486b; --accent: #5cbcf0;
@@ -29,26 +29,26 @@
 body { font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--plane); color: var(--ink); line-height: 1.55; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-header { background: var(--surface); border-bottom: 1px solid var(--grid); padding: 20px 24px 16px; position: relative; }
+header { background: var(--plane); border-bottom: 1px solid var(--grid); padding: 20px 24px 16px; position: relative; }
 header::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brand-grad); }
 header h1 { font-size: 20px; }
 header h1 a { color: var(--ink); }
 header .sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
 main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
-.searchwrap { position: relative; margin: 20px auto 8px; max-width: 640px; }
-#q { width: 100%; font-size: 16px; padding: 12px 16px; border: 1px solid var(--baseline); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.searchwrap { position: relative; margin: 20px auto 8px; max-width: 680px; background: var(--sky); border-radius: 24px; padding: 16px; }
+#q { width: 100%; font-size: 16px; padding: 12px 16px; border: 1px solid var(--grid); border-radius: 16px; background: var(--input-bg); color: var(--ink); }
 #q:focus { outline: 2px solid #04a7e1; border-color: transparent; }
-#sugg { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.12); z-index: 10; overflow: hidden; max-height: 320px; overflow-y: auto; }
+#sugg { position: absolute; left: 16px; right: 16px; top: 100%; margin-top: 2px; background: var(--plane); border: 1px solid var(--grid); border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.12); z-index: 10; overflow: hidden; max-height: 320px; overflow-y: auto; }
 #sugg div { padding: 9px 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
-#sugg div:hover, #sugg div.sel { background: var(--plane); }
+#sugg div:hover, #sugg div.sel { background: var(--surface); }
 #sugg .kind { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 24px 0; }
-.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 16px; }
+.tile { background: var(--surface); border-radius: 20px; padding: 14px 16px; }
 .tile .v { font-size: 28px; font-weight: 700; color: var(--accent); }
 .tile .l { color: var(--ink-2); font-size: 13px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
-.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+.card { background: var(--surface); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
 .card h2 { font-size: 15px; margin-bottom: 12px; }
 .card h2 .note { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 6px; }
 .bars { display: grid; gap: 10px; }
@@ -71,7 +71,7 @@ a.chip:hover { border-color: var(--mint); text-decoration: none; }
 .crumb { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 .pagehead h2 { font-size: 22px; }
 .pagehead .meta { color: var(--ink-2); font-size: 13.5px; margin: 4px 0 16px; }
-.disclaimer { border-left: 3px solid var(--baseline); padding: 10px 14px; color: var(--ink-2); font-size: 13px; background: var(--surface); border-radius: 0 8px 8px 0; margin-top: 32px; }
+.disclaimer { border-left: 3px solid var(--baseline); padding: 12px 16px; color: var(--ink-2); font-size: 13px; background: var(--surface); border-radius: 0 16px 16px 0; margin-top: 32px; }
 .empty { color: var(--muted); padding: 30px 0; text-align: center; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
 </style>
