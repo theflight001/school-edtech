@@ -110,6 +110,9 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .brow .track { display: flex; align-items: center; gap: 9px; height: 20px; }
 .brow .fill { display: block; height: 100%; border-radius: 999px; min-width: 8px; max-width: calc(100% - 44px); flex: 0 0 auto; transition: opacity .1s; }
 .brow:hover .fill { opacity: .82; }
+.brow.rowlink { cursor: pointer; border-radius: 12px; }
+.brow.rowlink:hover .lbl { color: var(--accent); }
+.brow.rowlink:hover .val { color: var(--accent); }
 .brow .val { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .tablewrap { overflow-x: auto; }
 table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 13.5px; }
@@ -176,11 +179,11 @@ function barColor(i, n) {
   const c = BAR_FROM.map((f, j) => Math.round(f + (BAR_TO[j] - f) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
-function barChart(pairs, {linkFn, max: mx} = {}) {
+function barChart(pairs, {linkFn, max: mx, drillFn} = {}) {
   const max = mx || Math.max(...pairs.map(p => p[1]), 1);
   const n = pairs.length;
   return `<div class="bars">` + pairs.map(([k, v], i) => `
-    <div class="brow">
+    <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="location.hash='${drillFn(k)}'" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
       <span class="lbl" title="${esc(k)}">${linkFn ? `<a href="${linkFn(k)}">${esc(k)}</a>` : esc(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
     </div>`).join("") + `</div>`;
@@ -465,10 +468,10 @@ function homeView() {
     </div>` : ""}
     <div class="section-div">통계 결과</div>
     <div class="grid2">
-      <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교</span></h2>${barChart(topTags, {linkFn: t => `#/tag/${encodeURIComponent(t)}`})}</div>
-      <div class="card"><h2>계열별 사례 수</h2>${barChart(byType)}</div>
+      <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교 · 막대를 누르면 학교 목록</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 사례 수<span class="note">막대를 누르면 목록</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도</span></h2>${barChart(bySido)}</div>`;
+    <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도 · 막대를 누르면 목록</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
 function schoolView(name) {
   const recs = R.filter(r => r.school === name);
@@ -516,6 +519,25 @@ function codeView(code) {
     <div class="card"><div class="empty">아직 수집된 에듀테크 활용 기록이 없습니다.<br>
       <span style="font-size:12.5px">본 서비스는 공개 조달 기록 기반의 <b>하한 추정치</b>입니다 — 기록이 없다는 것이 에듀테크를 사용하지 않는다는 뜻은 아닙니다.</span></div></div>`;
 }
+function drillView(kind, value) {
+  const base = R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r));
+  let recs, what;
+  if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = `${value} 제품군`; }
+  else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${value} 계열`; }
+  else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${value} 지역`; }
+  else return `<div class="empty">알 수 없는 조건입니다</div>`;
+  const nSchools = uniq(recs.map(r => r.school)).length;
+  const conds = [];
+  if (PF || PT) conds.push(`기간 ${(PF || "2023-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
+  if (SF.size) conds.push(`계열 ${sfLabel()}`);
+  if (RG.size) conds.push(`지역 ${rgLabel()}`);
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 통계 상세</div>
+    <div class="pagehead"><h2>${esc(what)}</h2>
+      <div class="meta">${conds.length ? "적용 조건: " + esc(conds.join(" · ")) + " · " : ""}학교 ${nSchools}개교 · 기록 ${recs.length.toLocaleString()}건</div></div>
+    <div class="card">${recordTable(recs.slice(0, 300))}</div>
+    ${recs.length > 300 ? `<div class="empty">상위 300건만 표시합니다</div>` : ""}`;
+}
 function searchView(q) {
   const ql = q.toLowerCase();
   const recs = R.filter(r => (r.school + r.product + r.content + r.tags.join("")).toLowerCase().includes(ql));
@@ -543,12 +565,14 @@ function animateCount() {
 
 // ---- 라우팅 ----
 function render() {
-  const h = decodeURIComponent(location.hash.slice(1) || "/");
-  const [, kind, arg] = h.split("/");
+  const seg = (location.hash.slice(1) || "/").split("/");
+  const kind = seg[1];
+  const arg = seg.length > 2 ? decodeURIComponent(seg.slice(2).join("/")) : undefined;
   const view = $("#view");
   if (kind === "school") view.innerHTML = schoolView(arg);
   else if (kind === "code") view.innerHTML = codeView(arg);
   else if (kind === "tag") view.innerHTML = tagView(arg);
+  else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
   else if (kind === "search") view.innerHTML = searchView(arg);
   else {
     view.innerHTML = homeView();
