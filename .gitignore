@@ -1,3 +1,4 @@
 .DS_Store
 .ckpt_*.json
 __pycache__/
+backfill.log
