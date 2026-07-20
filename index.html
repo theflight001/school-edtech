@@ -475,7 +475,14 @@ function render() {
   else if (kind === "code") view.innerHTML = codeView(arg);
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "search") view.innerHTML = searchView(arg);
-  else { view.innerHTML = homeView(); animateCount(); }
+  else {
+    view.innerHTML = homeView();
+    animateCount();
+    const qEl = document.querySelector("#q");
+    if (qEl) { qEl.value = ""; }
+    const sEl = document.querySelector("#sugg");
+    if (sEl) { sEl.hidden = true; }
+  }
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", render);
