@@ -443,7 +443,7 @@ function animateCount() {
   const el = document.getElementById("cntSchools");
   if (!el) return;
   const target = +el.dataset.target;
-  const dur = 900, t0 = performance.now();
+  const dur = 1500, t0 = performance.now();
   function tick(t) {
     const p = Math.min((t - t0) / dur, 1);
     const eased = 1 - Math.pow(1 - p, 3);
