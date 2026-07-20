@@ -61,7 +61,9 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .tile.clickable:hover { box-shadow: inset 0 0 0 2px var(--bar); }
 .tile .hint { font-size: 11.5px; color: var(--accent); font-weight: 500; }
 .pk-overlay { position: fixed; inset: 0; background: rgba(15,20,26,.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.pk-panel { background: var(--plane); border-radius: 24px; padding: 22px 24px; width: min(660px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.3); max-height: 92vh; overflow-y: auto; }
+.pk-panel { background: var(--plane); border-radius: 24px; padding: 22px 24px; width: min(660px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.3); max-height: 92vh; overflow-y: auto; position: relative; }
+.pk-x { position: absolute; top: 12px; right: 14px; border: none; background: none; font-size: 17px; line-height: 1; color: var(--muted); cursor: pointer; padding: 7px; border-radius: 10px; }
+.pk-x:hover { color: var(--ink); background: var(--surface); }
 .pk-top { display: flex; justify-content: space-between; align-items: center; }
 .pk-title { font-size: 16px; font-weight: 700; }
 .pk-range { color: var(--accent); font-weight: 600; font-size: 14px; min-height: 20px; margin-top: 4px; }
@@ -203,6 +205,9 @@ window.openPicker = () => {
   drawPicker();
 };
 window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = ""; };
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("pickerRoot").innerHTML) closePicker();
+});
 window.pkShift = d => { pkBase = Math.min(2025, Math.max(2023, pkBase + d)); drawPicker(); };
 window.pkPick = ym => {
   if (pkS !== null && pkE === null && ym >= pkS) pkE = ym;
@@ -267,6 +272,7 @@ function drawRegionPicker() {
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="지역 선택">
+        <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">지역 선택</div><div class="pk-range">${picked || "전국 (17개 시도 전체)"}</div></div>
         <span></span></div>
@@ -275,8 +281,8 @@ function drawRegionPicker() {
           <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="rgAll()">전국</button>
-            <button class="pk-btn primary" onclick="rgApply()" ${rgSel.size ? "" : "disabled"}>적용</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
+            <button class="pk-btn primary" onclick="rgApply()" ${rgSel.size ? "" : "disabled"}>적용</button>
           </span>
         </div>
       </div>
@@ -297,6 +303,7 @@ function drawSchoolPicker() {
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
+        <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">학교 계열 선택</div><div class="pk-range">${picked || "전체 (전국 모든 계열)"}</div></div>
         <span></span></div>
@@ -305,8 +312,8 @@ function drawSchoolPicker() {
           <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="scAll()">전체 계열</button>
-            <button class="pk-btn primary" onclick="scApply()" ${scSel.size ? "" : "disabled"}>적용</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
+            <button class="pk-btn primary" onclick="scApply()" ${scSel.size ? "" : "disabled"}>적용</button>
           </span>
         </div>
       </div>
@@ -331,6 +338,7 @@ function drawPicker() {
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="조사 기간 선택">
+        <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top">
           <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2023 ? "disabled" : ""} aria-label="이전 해">‹</button>
           <div style="text-align:center"><div class="pk-title">조사 기간 선택</div><div class="pk-range">${rangeTxt}</div></div>
@@ -341,8 +349,8 @@ function drawPicker() {
           <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2023.01 ~ 2026.07)</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="pkAll()">전체 기간</button>
-            <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
+            <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
           </span>
         </div>
       </div>
