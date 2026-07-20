@@ -47,10 +47,10 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 #sugg div:hover, #sugg div.sel { background: var(--surface); }
 #sugg .kind { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
-.tile { background: var(--surface); border-radius: 24px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 16px; }
+.tile { background: var(--surface); border-radius: 24px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px 16px 64px; position: relative; }
 .tile .v { font-size: clamp(30px, 4.6vw, 52px); font-weight: 700; color: var(--ink); letter-spacing: -0.8px; line-height: 1.15; }
-.tile .l { color: var(--ink-2); font-size: clamp(13px, 1.5vw, 15px); }
-@media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } .tile { aspect-ratio: auto; padding: 28px 16px; } }
+.tile .l { color: var(--ink-2); font-size: clamp(13px, 1.5vw, 15px); position: absolute; bottom: 30px; left: 12px; right: 12px; margin-top: 0 !important; }
+@media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } .tile { aspect-ratio: auto; padding: 28px 16px 64px; } }
 .section-div { display: flex; align-items: center; gap: 14px; margin: 36px 0 18px; color: var(--muted); font-size: 13.5px; }
 .section-div::before, .section-div::after { content: ""; flex: 1; border-top: 1px solid var(--grid); }
 .fnote { color: var(--muted); font-size: 12.5px; margin: -8px 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -178,7 +178,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip" href="#/tag/${encodeURIComponent(t)}">${esc(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}<div class="conf">신뢰도 ${esc(r.confidence)}</div></td>
-      <td>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
+      <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
 
