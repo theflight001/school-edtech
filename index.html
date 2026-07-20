@@ -223,7 +223,7 @@ window.pkApply = () => {
 // ---- 학교 계열 필터 ----
 const GROUPS = [
   {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
-  {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "과학고·영재학교·특목고"}, {k: "aut", label: "자율고"},
+  {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "특목고 (과학고·영재학교)"}, {k: "aut", label: "자율고"},
 ];
 function typeGroup(t) {
   if (t === "초등학교") return "elem";
@@ -309,7 +309,7 @@ function drawSchoolPicker() {
         <span></span></div>
         <div class="pk-grid sc-grid">${cells}</div>
         <div class="pk-foot">
-          <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다</span>
+          <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다<br>분류 기준: NEIS 학교유형 · 마이스터고는 특성화고와 통합 표기</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="scAll()">전체 계열</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
