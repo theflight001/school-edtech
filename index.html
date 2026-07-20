@@ -262,9 +262,9 @@ function drawRegionPicker() {
         <div class="pk-foot">
           <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn" onclick="rgAll()">전국</button>
             <button class="pk-btn primary" onclick="rgApply()" ${rgSel.size ? "" : "disabled"}>적용</button>
+            <button class="pk-btn" onclick="closePicker()">취소</button>
           </span>
         </div>
       </div>
@@ -292,9 +292,9 @@ function drawSchoolPicker() {
         <div class="pk-foot">
           <span class="pk-hint">여러 계열을 함께 선택할 수 있습니다</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn" onclick="scAll()">전체 계열</button>
             <button class="pk-btn primary" onclick="scApply()" ${scSel.size ? "" : "disabled"}>적용</button>
+            <button class="pk-btn" onclick="closePicker()">취소</button>
           </span>
         </div>
       </div>
@@ -328,9 +328,9 @@ function drawPicker() {
         <div class="pk-foot">
           <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2023.01 ~ 2026.07)</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn" onclick="pkAll()">전체 기간</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
+            <button class="pk-btn" onclick="closePicker()">취소</button>
           </span>
         </div>
       </div>
