@@ -53,7 +53,7 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .tile.clickable:hover { box-shadow: inset 0 0 0 2px var(--bar); }
 .tile .hint { font-size: 11.5px; color: var(--accent); font-weight: 500; }
 .pk-overlay { position: fixed; inset: 0; background: rgba(15,20,26,.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.pk-panel { background: var(--plane); border-radius: 24px; padding: 22px 24px; width: min(660px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.pk-panel { background: var(--plane); border-radius: 24px; padding: 22px 24px; width: min(660px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.3); max-height: 92vh; overflow-y: auto; }
 .pk-top { display: flex; justify-content: space-between; align-items: center; }
 .pk-title { font-size: 16px; font-weight: 700; }
 .pk-range { color: var(--accent); font-weight: 600; font-size: 14px; min-height: 20px; margin-top: 4px; }
@@ -78,6 +78,8 @@ main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .sc-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 6px; }
 .sc-cell .sc-n { font-size: 12px; color: var(--muted); font-weight: 400; }
 .sc-cell.end .sc-n { color: rgba(255,255,255,.85); }
+.rg-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+@media (max-width: 620px) { .rg-grid { grid-template-columns: repeat(3, 1fr); } }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
@@ -220,12 +222,53 @@ const IDX_GROUP_COUNT = {};
 IDX.forEach(s => { const g = idxGroup(s); IDX_GROUP_COUNT[g] = (IDX_GROUP_COUNT[g] || 0) + 1; });
 let SF = new Set();
 const sfMatch = r => { if (!SF.size) return true; const g = typeGroup(r.type); return g !== null && SF.has(g); };
-const sfIdxCount = () => SF.size ? IDX.filter(s => SF.has(idxGroup(s))).length : IDX.length;
+const sfIdxCount = () => IDX.filter(s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))).length;
 const sfLabel = () => {
   if (!SF.size) return "전국";
   const names = GROUPS.filter(g => SF.has(g.k)).map(g => g.label);
   return names.length <= 2 ? names.join("·") : `${names[0]} 외 ${names.length - 1}개 계열`;
 };
+// ---- 지역(시도) 필터 ----
+const SIDOS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
+               "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
+const IDX_SIDO_COUNT = {};
+IDX.forEach(s => { IDX_SIDO_COUNT[s.s] = (IDX_SIDO_COUNT[s.s] || 0) + 1; });
+let RG = new Set();
+const rgMatch = r => !RG.size || RG.has(r.sido);
+const rgLabel = () => {
+  if (!RG.size) return "전국";
+  const names = SIDOS.filter(s => RG.has(s));
+  return names.length <= 3 ? names.join("·") : `${names[0]} 외 ${names.length - 1}개 지역`;
+};
+let rgSel = null;
+window.openRegionPicker = () => { rgSel = new Set(RG); drawRegionPicker(); };
+window.rgToggle = s => { rgSel.has(s) ? rgSel.delete(s) : rgSel.add(s); drawRegionPicker(); };
+window.rgAll = () => { RG = new Set(); closePicker(); render(); };
+window.rgApply = () => { RG = rgSel.size === SIDOS.length ? new Set() : rgSel; closePicker(); render(); };
+function drawRegionPicker() {
+  const cells = SIDOS.map(s => `
+    <button class="pk-cell sc-cell${rgSel.has(s) ? " end" : ""}" onclick="rgToggle('${s}')">
+      <span>${s}</span><span class="sc-n">${(IDX_SIDO_COUNT[s] || 0).toLocaleString()}개교</span>
+    </button>`).join("");
+  const picked = SIDOS.filter(s => rgSel.has(s)).join(" · ");
+  document.getElementById("pickerRoot").innerHTML = `
+    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+      <div class="pk-panel" role="dialog" aria-label="지역 선택">
+        <div class="pk-top"><span></span>
+          <div style="text-align:center"><div class="pk-title">지역 선택</div><div class="pk-range">${picked || "전국 (17개 시도 전체)"}</div></div>
+        <span></span></div>
+        <div class="pk-grid rg-grid">${cells}</div>
+        <div class="pk-foot">
+          <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다</span>
+          <span style="display:flex;gap:8px">
+            <button class="pk-btn" onclick="rgAll()">전국</button>
+            <button class="pk-btn primary" onclick="rgApply()" ${rgSel.size ? "" : "disabled"}>적용</button>
+          </span>
+        </div>
+      </div>
+    </div>`;
+}
+
 let scSel = null;
 window.openSchoolPicker = () => { scSel = new Set(SF); drawSchoolPicker(); };
 window.scToggle = k => { scSel.has(k) ? scSel.delete(k) : scSel.add(k); drawSchoolPicker(); };
@@ -301,16 +344,20 @@ function inPeriod(r) {
 function homeView() {
   const active = PF || PT;
   const scActive = SF.size > 0;
-  const RF = (active || scActive) ? R.filter(r => inPeriod(r) && sfMatch(r)) : R;
+  const rgActive = RG.size > 0;
+  const anyF = active || scActive || rgActive;
+  const RF = anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R;
   const byType = count(RF, r => r.type);
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
-  const fSchools = uniq(RF.map(r => r.school)).length;
   return `
     <div class="tiles">
-      <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${active || scActive ? " (선택 조건)" : ""}</div></div>
-      <div class="tile"><div class="v">${fSchools}</div><div class="l">기록 보유 학교${active || scActive ? " (선택 조건)" : ""}</div></div>
+      <div class="tile"><div class="v">${RF.length.toLocaleString()}</div><div class="l">활용 사례${anyF ? " (선택 조건)" : ""}</div></div>
+      <div class="tile clickable" onclick="openRegionPicker()" role="button" aria-label="지역 선택">
+        <div class="v">${rgLabel()}</div>
+        <div class="l" style="margin-top:6px">지역 (시도교육청) <span class="hint">변경 ▾</span></div>
+      </div>
       <div class="tile clickable" onclick="openSchoolPicker()" role="button" aria-label="학교 계열 선택">
         <div class="v">${sfIdxCount().toLocaleString()}</div>
         <div class="l">검색 가능 학교 (${sfLabel()}) <span class="hint">변경 ▾</span></div>
@@ -320,10 +367,11 @@ function homeView() {
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
-    ${active || scActive ? `<div class="fnote">
-      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${scActive ? ` · 계열: ${sfLabel()}` : ""}</span>
+    ${anyF ? `<div class="fnote">
+      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${scActive ? ` · 계열: ${sfLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
       ${active ? `<button onclick="clearPeriod()">전체 기간</button>` : ""}
       ${scActive ? `<button onclick="scAll()">전체 계열</button>` : ""}
+      ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
     <div class="grid2">
       <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교</span></h2>${barChart(topTags, {linkFn: t => `#/tag/${encodeURIComponent(t)}`})}</div>
@@ -407,8 +455,8 @@ const groupBySchool = {};
 R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = typeGroup(r.type); });
 const suggItems = [
   ...tags.map(([t]) => ({label: t, kind: "제품군", href: `#/tag/${encodeURIComponent(t)}`})),
-  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s]})),
-  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s)})),
+  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
+  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 let selIdx = -1, current = [];
@@ -416,7 +464,9 @@ q.addEventListener("input", () => {
   const v = q.value.trim().toLowerCase();
   selIdx = -1;
   if (!v) { sugg.hidden = true; return; }
-  current = suggItems.filter(it => it.label.toLowerCase().includes(v) && (!SF.size || !it.g || SF.has(it.g))).slice(0, 12);
+  current = suggItems.filter(it => it.label.toLowerCase().includes(v)
+    && (!SF.size || !it.g || SF.has(it.g))
+    && (!RG.size || !it.rg || RG.has(it.rg))).slice(0, 12);
   sugg.innerHTML = current.map((it, i) => `<div data-i="${i}"><span>${esc(it.label)}</span><span class="kind">${it.kind}</span></div>`).join("")
     + `<div data-i="-2"><span>“${esc(q.value.trim())}” 전체 검색</span><span class="kind">↵</span></div>`;
   sugg.hidden = false;
