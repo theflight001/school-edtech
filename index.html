@@ -265,7 +265,7 @@ function drawRegionPicker() {
     </button>`).join("");
   const picked = SIDOS.filter(s => rgSel.has(s)).join(" · ");
   document.getElementById("pickerRoot").innerHTML = `
-    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+    <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="지역 선택">
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">지역 선택</div><div class="pk-range">${picked || "전국 (17개 시도 전체)"}</div></div>
@@ -295,7 +295,7 @@ function drawSchoolPicker() {
     </button>`).join("");
   const picked = GROUPS.filter(g => scSel.has(g.k)).map(g => g.label).join(" · ");
   document.getElementById("pickerRoot").innerHTML = `
-    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+    <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">학교 계열 선택</div><div class="pk-range">${picked || "전체 (전국 모든 계열)"}</div></div>
@@ -329,7 +329,7 @@ function drawPicker() {
     : pkE === null ? `${ymKo(pkS)} ~ <span style="color:var(--muted)">종료 월 선택</span>`
     : `${ymKo(pkS)} ~ ${ymKo(pkE)}`;
   document.getElementById("pickerRoot").innerHTML = `
-    <div class="pk-overlay" onclick="if(event.target===this)closePicker()">
+    <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="조사 기간 선택">
         <div class="pk-top">
           <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2023 ? "disabled" : ""} aria-label="이전 해">‹</button>
