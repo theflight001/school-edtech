@@ -371,7 +371,9 @@ function homeView() {
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
   const RF = anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R;
-  const byType = count(RF, r => r.type);
+  const groupLabel = {};
+  GROUPS.forEach(g => groupLabel[g.k] = g.label);
+  const byType = count(RF, r => { const g = typeGroup(r.type); return g ? groupLabel[g] : "기타·미분류"; });
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
