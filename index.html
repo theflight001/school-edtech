@@ -135,6 +135,10 @@ a.chip:hover { border-color: var(--mint); text-decoration: none; }
 .pagehead h2 { font-size: 22px; }
 .pagehead .meta { color: var(--ink-2); font-size: 13.5px; margin: 4px 0 16px; }
 .disclaimer { border-left: 3px solid var(--baseline); padding: 12px 16px; color: var(--ink-2); font-size: 13px; background: var(--surface); border-radius: 0 16px 16px 0; margin-top: 32px; }
+.notice { background: var(--sky); border-radius: 16px; padding: 14px 18px; margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2); }
+.notice b { color: var(--accent); display: block; margin-bottom: 4px; }
+.notice p { margin: 2px 0; }
+.notice .cv { color: var(--muted); font-size: 12.5px; }
 .empty { color: var(--muted); padding: 30px 0; text-align: center; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
 </style>
@@ -521,15 +525,24 @@ function schoolView(name) {
       </div></div>
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
 }
+// 교육청 등이 무상 보급하는 플랫폼 — 조달 기록에 나타나지 않아 공식 발표로 보완
+const PLATFORM_NOTES = {
+  "하이러닝": {
+    body: "하이러닝(Hi-Learning)은 경기도교육청이 개발해 무상 운영하는 AI 교수학습 플랫폼입니다. 교육청 발표 기준 운영 1년 만에 관내 학교의 97%가 활용하고 있습니다(2024).",
+    caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여줍니다.",
+  },
+};
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
   if (!recs.length) return `<div class="empty">제품군을 찾을 수 없습니다: ${esc(tag)}</div>`;
+  const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
   return `
     <div class="crumb"><a href="#/">홈</a> › 제품군 상세</div>
     <div class="pagehead"><h2>${esc(tag)}</h2>
-      <div class="meta">도입 학교 ${uniq(recs.map(r=>r.school)).length}개교 · 기록 ${recs.length}건</div></div>
+      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.map(r=>r.school)).length}개교 · 기록 ${recs.length}건</div></div>
+    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p></div>` : ""}
     <div class="grid2">
       <div class="card"><h2>계열별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
