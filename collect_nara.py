@@ -103,10 +103,16 @@ def main():
                                 if len(f) == 1:
                                     mm = f[0]
                                 break
+                    corp = ""
+                    corp_raw = it.get("corpList") or ""
+                    corp_parts = corp_raw.strip("[]").split("^")
+                    if len(corp_parts) > 3:
+                        corp = corp_parts[3]
                     rows_out.append({
                         "계약번호": it.get("untyCntrctNo"), "구분": it.get("bsnsDivNm"),
                         "계약명": name, "계약일": it.get("cntrctDate"),
                         "금액": it.get("thtmCntrctAmt"), "수요기관": org_clean, "학교명": school,
+                        "업체명": corp,
                         "학교코드": mm["code"] if mm else "",
                         "급별": mm["level"] if mm else "",
                         "시도": mm["sido"] if mm else "",

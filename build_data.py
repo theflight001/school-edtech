@@ -194,7 +194,9 @@ for path in sorted(glob.glob("refined_*.csv")):
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": year,
             "ym": int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None,
-            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}" + (f" · 실제 제품: {ov['실제제품명']} (수동 확인)" if ov else ""),
+            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}"
+                + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else "")
+                + (f" · 실제 제품: {ov['실제제품명']} (수동 확인)" if ov else ""),
             "sourceType": "나라장터 API(자동수집)",
             "url": row.get("상세URL") or "", "confidence": "상" if ov else "중",
             "note": (f"실제 제품 수동 확인: {ov['실제제품명']}" + (f" — 근거: {ov['근거']}" if ov.get("근거") else "")) if ov else "파일럿 자동수집분 — 제품명·내용 검증 전",
