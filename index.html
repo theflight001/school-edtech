@@ -538,12 +538,35 @@ function drillView(kind, value) {
     <div class="card">${recordTable(recs.slice(0, 300))}</div>
     ${recs.length > 300 ? `<div class="empty">상위 300건만 표시합니다</div>` : ""}`;
 }
+// 한·영 표기 동의어 그룹 — 검색어를 모든 표기로 확장
+const ALIAS_GROUPS = [
+  ["chatgpt", "챗gpt", "챗지피티", "쳇gpt"],
+  ["adobe", "어도비"], ["photoshop", "포토샵"], ["illustrator", "일러스트레이터"],
+  ["claude", "클로드"], ["gemini", "제미나이", "제미니"], ["copilot", "코파일럿"],
+  ["microsoft", "마이크로소프트"], ["office", "오피스"], ["zoom", "줌"],
+  ["notion", "노션"], ["padlet", "패들렛"], ["canva", "캔바"],
+  ["goorm", "구름"], ["replit", "리플릿"], ["copykiller", "카피킬러"],
+  ["google", "구글"], ["classroom", "클래스룸"], ["workspace", "워크스페이스"],
+  ["suno", "수노"], ["aidt", "디지털교과서"],
+];
+function queryTerms(q) {
+  const terms = new Set([q]);
+  for (const g of ALIAS_GROUPS) {
+    for (const m of g) {
+      if (q.includes(m)) g.forEach(o => { if (o !== m) terms.add(q.replace(m, o)); });
+    }
+  }
+  return [...terms];
+}
 function searchView(q) {
-  const ql = q.toLowerCase();
-  const recs = R.filter(r => (r.school + r.product + r.content + r.tags.join("")).toLowerCase().includes(ql));
+  const terms = queryTerms(q.toLowerCase());
+  const recs = R.filter(r => {
+    const hay = (r.school + r.product + r.content + r.tags.join("")).toLowerCase();
+    return terms.some(t => hay.includes(t));
+  });
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length}건</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}</div></div>
     <div class="card">${recordTable(recs.slice(0, 200))}</div>
     ${recs.length > 200 ? `<div class="empty">상위 200건만 표시합니다</div>` : ""}`;
 }
@@ -601,7 +624,8 @@ q.addEventListener("input", () => {
   const v = q.value.trim().toLowerCase();
   selIdx = -1;
   if (!v) { sugg.hidden = true; return; }
-  current = suggItems.filter(it => it.label.toLowerCase().includes(v)
+  const vTerms = queryTerms(v);
+  current = suggItems.filter(it => vTerms.some(t => it.label.toLowerCase().includes(t))
     && (!SF.size || !it.g || SF.has(it.g))
     && (!RG.size || !it.rg || RG.has(it.rg))).slice(0, 12);
   sugg.innerHTML = current.map((it, i) => `<div data-i="${i}"><span>${esc(it.label)}</span><span class="kind">${it.kind}</span></div>`).join("")
