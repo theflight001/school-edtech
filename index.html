@@ -643,11 +643,12 @@ function render() {
   else {
     view.innerHTML = homeView();
     animateCount();
-    const qEl = document.querySelector("#q");
-    if (qEl) { qEl.value = ""; }
-    const sEl = document.querySelector("#sugg");
-    if (sEl) { sEl.hidden = true; }
   }
+  // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
+  const qEl = document.querySelector("#q");
+  if (qEl) qEl.value = kind === "search" ? (arg || "") : "";
+  const sEl = document.querySelector("#sugg");
+  if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", () => { PAGE = 1; render(); });
