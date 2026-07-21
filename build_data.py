@@ -38,24 +38,41 @@ def find_school(name, region):
     return None
 
 # 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
-TAG_RULES = [
+# 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
+SPECIFIC_RULES = [
     ("ChatGPT",            r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI"),
     ("Gemini",             r"Gemini|제미나이"),
     ("Claude",             r"Claude|클로드"),
     ("Replit",             r"Replit|리플릿"),
-    ("카피킬러(무하유)",     r"카피킬러|무하유"),
+    ("카피킬러",            r"카피킬러|무하유"),
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
     ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:] ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
-    ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
-    ("구름(goorm)",         r"구름 ?EDU|goorm|구름에듀"),
-    ("이음AI(화이트소프트)",  r"이음 ?AI|화이트소프트"),
-    ("Microsoft/MS Office", r"\bMS\b|Microsoft|마이크로소프트|MS ?Office|오피스 ?365|M365"),
+    ("구름EDU",            r"구름 ?EDU|goorm|구름에듀"),
+    ("이음AI",             r"이음 ?AI|화이트소프트"),
+    ("MS Office",          r"\bMS\b|Microsoft|마이크로소프트|MS ?Office|오피스 ?365|M365"),
     ("Google Workspace",   r"구글 ?워크스페이스|Google Workspace|구글 ?클래스룸|Google Classroom"),
     ("Notion",             r"노션|Notion"),
     ("Zoom",               r"\bZoom\b|줌 ?프로"),
-    ("Canva/미리캔버스",     r"Canva|캔바|미리캔버스"),
+    ("Canva",              r"Canva|캔바"),
+    ("미리캔버스",          r"미리캔버스"),
     ("Padlet",             r"Padlet|패들렛"),
+    ("하이러닝",            r"하이러닝|Hi-?Learning"),
+    ("클래스팅",            r"클래스팅|Classting"),
+    ("코디마스터",          r"코디마스터"),
+    ("아이스크림",          r"아이스크림|i-?Scream"),
+    ("젭(ZEP)",            r"젭|\bZEP\b"),
+    ("매쓰플랫",            r"매쓰플랫"),
+    ("스쿨플랫",            r"스쿨플랫"),
+    ("퀴즈앤",             r"퀴즈앤|QuizN"),
+    ("Cursor",             r"\bCursor\b|커서 ?(AI|프로|Pro)"),
+    ("엘리스",             r"엘리스|\belice\b"),
+    ("니어팟",             r"니어팟|Nearpod"),
+    ("밀크T",              r"밀크티|밀크T"),
+]
+# 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
+GENERIC_RULES = [
+    ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
     ("코스웨어(기타)",       r"코스웨어"),
     ("VR/XR 장비",          r"\bVR\b|\bXR\b|가상현실|메타버스"),
     ("AI 로봇·자율주행 장비",  r"AI ?로봇|자율주행|로봇팔|협동로봇|비전 ?로봇|로봇 ?제어"),
@@ -82,7 +99,9 @@ def ym_of(period):
 
 def tags_of(name, content):
     hay = f"{name} {content}"
-    return [t for t, pat in TAG_RULES if re.search(pat, hay, re.I)]
+    tags = [t for t, pat in SPECIFIC_RULES if re.search(pat, hay, re.I)]
+    tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    return tags
 
 rows = list(csv.reader(open(SRC, encoding="utf-8-sig")))
 header = rows[2]
