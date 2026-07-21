@@ -12,6 +12,8 @@ if not KEY:
 KEYWORD = re.compile(
     r"AI|인공지능|에듀테크|구독|소프트웨어|라이선스|라이센스|코스웨어|플랫폼|GPT|Adobe|어도비"
     r"|디지털교과서|AIDT|Claude|클로드|Gemini|제미나이|챗봇|메타버스|코딩|SW|S/W", re.I)
+# 행사·캠프 용역, 비제품 계약은 수집 단계에서 제외
+EXCLUDE = re.compile(r"전세버스|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행")
 SCHOOL_PAT = re.compile(r"(초등학교|중학교|고등학교|영재학교|학교)$")
 LEVEL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교)$")
 SIDO_HINT = [("서울", "서울"), ("부산", "부산"), ("대구", "대구"), ("인천", "인천"),
@@ -78,7 +80,7 @@ def main():
                 name = it.get("cntrctNm") or ""
                 orgs = demand_orgs(it)
                 school_orgs = [o for o in orgs if SCHOOL_PAT.search(o)]
-                if not school_orgs or not KEYWORD.search(name):
+                if not school_orgs or not KEYWORD.search(name) or EXCLUDE.search(name):
                     continue
                 for org in school_orgs:
                     org_clean = org.strip()

@@ -69,7 +69,11 @@ SPECIFIC_RULES = [
     ("엘리스",             r"엘리스|\belice\b"),
     ("니어팟",             r"니어팟|Nearpod"),
     ("밀크T",              r"밀크티|밀크T"),
+    ("넷클래스",            r"넷클래스|NetClass"),
 ]
+
+# 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
+EXCLUDE_EVENT = re.compile(r"전세버스|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
@@ -193,6 +197,11 @@ for path in sorted(glob.glob("refined_*.csv")):
         })
         pilot_count += 1
 print(f"파일럿 자동수집분 병합: {pilot_count}건")
+
+# 행사·캠프 용역 등 비제품 계약 제외
+before = len(records)
+records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
+print(f"행사·캠프·임대성 계약 제외: {before - len(records)}건")
 
 # 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
 seen_exact = set()
