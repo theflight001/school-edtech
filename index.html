@@ -36,8 +36,10 @@ header { background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--plane
 .hero-r img { height: 150px; width: auto; display: block; }
 @media (max-width: 1080px) { .hero-deco { display: none; } }
 header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.2; }
-.homebtn { position: absolute; top: 18px; left: 20px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px; border-radius: 999px; border: 1.5px solid transparent; background: linear-gradient(var(--plane), var(--plane)) padding-box, linear-gradient(90deg, #2da0df, #77ec77) border-box; color: var(--ink-2); font-size: 14px; font-weight: 500; z-index: 5; transition: color .15s, background .15s; }
-.homebtn:hover { background: linear-gradient(90deg, #2da0df, #5fd89a) padding-box, linear-gradient(90deg, #2da0df, #77ec77) border-box; color: #fff; text-decoration: none; }
+.brand { position: absolute; top: 20px; left: 22px; display: inline-flex; align-items: center; gap: 9px; z-index: 5; transition: opacity .15s; }
+.brand:hover { text-decoration: none; opacity: .8; }
+.brand svg { display: block; box-shadow: 0 2px 8px rgba(45,160,223,.25); border-radius: 9px; }
+.brand-name { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.4px; }
 header .sub { color: var(--ink-2); font-size: clamp(14px, 1.6vw, 17px); margin-top: 10px; }
 main { max-width: 980px; margin: 0 auto; padding: 24px 24px 60px; }
 .searchwrap { position: relative; margin: 20px 0 8px; background: var(--sky); border-radius: 24px; padding: 16px; }
@@ -136,9 +138,16 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   <div class="hero-deco hero-r" aria-hidden="true"><div>
     <img src="hero_person.png" width="192" height="150" alt="">
   </div></div>
-  <a class="homebtn" href="#/" aria-label="홈으로">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 L12 3 L21 10.5"/><path d="M5.5 9 V20 h13 V9"/></svg>
-    홈
+  <a class="brand" href="#/" aria-label="홈으로">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+      <defs><linearGradient id="brandg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2da0df"/><stop offset="1" stop-color="#5fd89a"/>
+      </linearGradient></defs>
+      <rect width="30" height="30" rx="9" fill="url(#brandg)"/>
+      <path d="M6.6 9.9 C9.4 8.5 12.1 8.6 14.3 10 V20.6 C12.1 19.3 9.4 19.2 6.6 20.4 Z" fill="#fff"/>
+      <path d="M23.4 9.9 C20.6 8.5 17.9 8.6 15.7 10 V20.6 C17.9 19.3 20.6 19.2 23.4 20.4 Z" fill="#fff"/>
+    </svg>
+    <span class="brand-name">공교육 에듀테크</span>
   </a>
   <h1>공교육 에듀테크 활용 현황</h1>
   <div class="sub">전국 초·중·고등학교의 에듀테크 (학습지원 소프트웨어) 도입 기록을 조달·공개자료 기반으로 제공합니다</div>
