@@ -45,7 +45,7 @@ TAG_RULES = [
     ("Replit",             r"Replit|리플릿"),
     ("카피킬러(무하유)",     r"카피킬러|무하유"),
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
-    ("AI 디지털교과서(AIDT)", r"AIDT|AI ?디지털 ?교과서|디지털교과서"),
+    ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:] ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
     ("구름(goorm)",         r"구름 ?EDU|goorm|구름에듀"),
