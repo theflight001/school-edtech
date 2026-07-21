@@ -155,6 +155,13 @@ for cands in master_by_name.values():
         master_by_code[c["code"]] = c
 
 import glob
+# 수동 보정: 계약번호 → 실제 제품명 (조달 기록에 브랜드가 없는 계약을 사람이 확인해 채움)
+OVERRIDES = {}
+if os.path.exists("manual_overrides.csv"):
+    for row in csv.DictReader(open("manual_overrides.csv", encoding="utf-8-sig")):
+        if row.get("계약번호") and row.get("실제제품명"):
+            OVERRIDES[row["계약번호"].strip()] = row
+
 pilot_count = 0
 seen_pilot = set()
 for path in sorted(glob.glob("refined_*.csv")):
@@ -178,6 +185,8 @@ for path in sorted(glob.glob("refined_*.csv")):
         amt = int(row["금액"] or 0)
         amt_txt = f"({amt/10000:,.0f}만원)" if amt else ""
         year = int(row["계약일"][:4]) if row.get("계약일") else None
+        ov = OVERRIDES.get((row.get("계약번호") or "").strip())
+        ov_tags = tags_of(ov["실제제품명"], "") if ov else []
         records.append({
             "id": 100000 + pilot_count,
             "school": row["학교명"], "type": stype,
@@ -185,11 +194,11 @@ for path in sorted(glob.glob("refined_*.csv")):
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": year,
             "ym": int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None,
-            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}",
+            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}" + (f" · 실제 제품: {ov['실제제품명']} (수동 확인)" if ov else ""),
             "sourceType": "나라장터 API(자동수집)",
-            "url": row.get("상세URL") or "", "confidence": "중",
-            "note": "파일럿 자동수집분 — 제품명·내용 검증 전",
-            "tags": tags_of(row["계약명"], ""),
+            "url": row.get("상세URL") or "", "confidence": "상" if ov else "중",
+            "note": (f"실제 제품 수동 확인: {ov['실제제품명']}" + (f" — 근거: {ov['근거']}" if ov.get("근거") else "")) if ov else "파일럿 자동수집분 — 제품명·내용 검증 전",
+            "tags": sorted(set(tags_of(row["계약명"], "") + ov_tags)),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
