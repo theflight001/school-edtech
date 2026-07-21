@@ -500,10 +500,20 @@ function tagView(tag) {
     <div class="pagehead"><h2>${esc(tag)}</h2>
       <div class="meta">도입 학교 ${uniq(recs.map(r=>r.school)).length}개교 · 기록 ${recs.length}건</div></div>
     <div class="grid2">
-      <div class="card"><h2>계열별</h2>${barChart(bySchoolType)}</div>
-      <div class="card"><h2>지역별</h2>${barChart(bySido.slice(0,10))}</div>
+      <div class="card"><h2>계열별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>지역별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
     <div class="card"><h2>도입 학교 목록</h2>${recordTable(recs)}</div>`;
+}
+function drillTagView(kind, tag, value) {
+  const recs = R.filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
+  if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
+  const nSchools = uniq(recs.map(r => r.school)).length;
+  return `
+    <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tag)}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
+    <div class="pagehead"><h2>${esc(tag)} · ${esc(value)}</h2>
+      <div class="meta">학교 ${nSchools}개교 · 기록 ${recs.length}건</div></div>
+    <div class="card">${recordTable(recs)}</div>`;
 }
 function codeView(code) {
   const s = idxByCode.get(code);
@@ -599,6 +609,7 @@ function render() {
   else if (kind === "code") view.innerHTML = codeView(arg);
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
+  else if (kind === "drill2") view.innerHTML = drillTagView(seg[2], decodeURIComponent(seg[3] || ""), decodeURIComponent(seg[4] || ""));
   else if (kind === "search") view.innerHTML = searchView(arg);
   else {
     view.innerHTML = homeView();
