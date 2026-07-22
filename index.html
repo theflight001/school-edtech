@@ -132,6 +132,7 @@ tr:hover td { background: var(--plane); }
 .pgside.right { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .listq { width: min(220px, 100%); font: inherit; font-size: 13.5px; padding: 8px 13px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink); }
 .listq:focus { outline: 2px solid #04a7e1; border-color: transparent; }
+.sortsel { font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink-2); cursor: pointer; }
 .listq-n { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .listq-n b { color: var(--accent); }
 @media (max-width: 760px) { .pgrow { grid-template-columns: 1fr; } .pgrow .pgside:first-child { display: none; } .pgside.right { justify-content: center; } }
 .pginfo { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
@@ -177,7 +178,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260722i"></script>
+<script src="data.js?b=20260722j"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -212,7 +213,23 @@ function barChart(pairs, {linkFn, max: mx, drillFn} = {}) {
 const PAGE_SIZE = 20;
 let PAGE = 1;
 let LISTQ = "";
+let SORTK = "new";
 window.setPage = p => { PAGE = p; render(); };
+window.setSort = v => { SORTK = v; PAGE = 1; render(); };
+function sortRecs(recs) {
+  const t = r => {
+    const m = r.period && r.period.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return +(m[1] + m[2] + m[3]);
+    return r.ym ? r.ym * 100 + 15 : (r.year ? r.year * 10000 + 615 : 0);
+  };
+  const arr = [...recs];
+  if (SORTK === "new") arr.sort((a, b) => t(b) - t(a));
+  else if (SORTK === "old") arr.sort((a, b) => t(a) - t(b));
+  else if (SORTK === "school") arr.sort((a, b) => a.school.localeCompare(b.school, "ko"));
+  else if (SORTK === "product") arr.sort((a, b) => a.product.localeCompare(b.product, "ko"));
+  else if (SORTK === "amt") arr.sort((a, b) => (b.amt || -1) - (a.amt || -1));
+  return arr;
+}
 window.applyListQ = v => {
   LISTQ = v; PAGE = 1; render();
   const el = document.getElementById("lq");
@@ -225,6 +242,7 @@ function pagedTable(recs, opts) {
     const terms = queryTerms(LISTQ.toLowerCase());
     recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
   }
+  recs = sortRecs(recs);
   const total = recs.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(PAGE, pages);
@@ -244,9 +262,12 @@ function pagedTable(recs, opts) {
         <button ${page === pages ? "disabled" : ""} onclick="setPage(${page + 1})">다음 ›</button>
       </div>`;
     }
-    const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
+    const sortSel = `<select class="sortsel" onchange="setSort(this.value)" aria-label="정렬">
+        ${[["new","최신순"],["old","오래된순"],["school","학교명순"],["product","제품명순"],["amt","금액 높은순"]].map(([k,l]) => `<option value="${k}"${SORTK===k?" selected":""}>${l}</option>`).join("")}
+      </select>`;
+    const filterHtml = `${sortSel}${showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
       <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
-        oninput="if(this.value==='')applyListQ('')" onkeyup="if(event.key==='Enter')applyListQ(this.value)">` : "";
+        oninput="if(this.value==='')applyListQ('')" onkeyup="if(event.key==='Enter')applyListQ(this.value)">` : ""}`;
     bottom = `<div class="pgrow"><div class="pgside"></div>${pagerHtml}<div class="pgside right">${filterHtml}</div></div>`
       + (pages > 1 ? `<div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>` : "");
   }
@@ -693,7 +714,7 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; render(); });
+window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; render(); });
 render();
 
 // ---- 자동완성 ----

@@ -174,6 +174,7 @@ for i, r in enumerate(rows[3:]):
         "sourceType": "나라장터" if "나라장터" in r[8] else r[8],
         "url": r[9], "confidence": r[10], "note": r[11] if len(r) > 11 else "",
         "tags": tags_of(r[4], r[7]),
+        "amt": (lambda ms: int(max(float(x.replace(",", "")) for x in ms) * 10000) if ms else None)(re.findall(r"\(([\d,]+(?:\.\d+)?)만", r[7])),
         "schoolCode": m["code"] if m else None,
         "schoolName": m["name"] if m else None,     # NEIS 현재 교명(개명 반영)
         "hsType": (m.get("hsType") or "") if m else "",
@@ -243,7 +244,7 @@ for path in sorted(glob.glob("refined_*.csv")):
             "school": row["학교명"], "type": stype,
             "region": s_short, "sido": s_short,
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
-            "period": row.get("계약일") or "", "year": year,
+            "period": row.get("계약일") or "", "year": year, "amt": amt or None,
             "ym": int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None,
             "content": f"나라장터 {row['구분']} 계약 {amt_txt}"
                 + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else "")
