@@ -62,6 +62,7 @@ SPECIFIC_RULES = [
     ("Claude",             r"Claude|클로드"),
     ("Replit",             r"Replit|리플릿"),
     ("카피킬러",            r"카피킬러|무하유"),
+    ("GPT킬러",            r"GPT ?킬러"),
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
     ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:] ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
@@ -147,6 +148,10 @@ def tags_of(name, content):
             continue
         tags.append(t)
     tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    if "GPT킬러" in tags and "ChatGPT" in tags:
+        name_wo = re.sub(r"GPT ?킬러", "", name)
+        if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
+            tags.remove("ChatGPT")
     if aux and not tags:
         tags.append("운영 부대구매(제품 미상)")
     if not tags and re.search(r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I):
@@ -283,6 +288,25 @@ if AI_CLS:
         kept_ai.append(r)
     records = kept_ai
     print(f"AI 분류 적용: {ai_n}건, AI 잡음 제외: {ai_noise}건")
+
+# 언론보도가 같은 학교·제품의 조달 기록과 ±6개월 내면 동일 건으로 보고 집계에서 1건 처리
+def _months(ym):
+    return (ym // 100) * 12 + ym % 100
+_proc_idx = {}
+for r in records:
+    st = r["sourceType"]
+    if (st == "나라장터" or "S2B" in st or "교육청 계약" in st) and r.get("ym"):
+        for t in r["tags"]:
+            _proc_idx.setdefault((r["school"], t), []).append(_months(r["ym"]))
+_dup_n = 0
+for r in records:
+    if r["sourceType"] == "언론보도" and r.get("ym"):
+        m = _months(r["ym"])
+        if any(abs(m - pm) <= 6 for t in r["tags"] for pm in _proc_idx.get((r["school"], t), [])):
+            r["dup"] = 1
+            r["note"] = (r["note"] + " · " if r["note"] else "") + "조달 기록과 동일 건 추정 — 집계 1건 처리"
+            _dup_n += 1
+print(f"언론-조달 동일 건 병합 집계: {_dup_n}건")
 
 # 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
 seen_exact = set()
