@@ -157,7 +157,8 @@ for i, r in enumerate(rows[3:]):
         "id": int(r[0]) if r[0].isdigit() else i,
         "school": r[1], "type": r[2], "region": r[3], "sido": sido(r[3]),
         "product": r[4], "category": r[5], "period": r[6],
-        "year": year_of(r[6]), "ym": ym_of(r[6]), "content": r[7], "sourceType": r[8],
+        "year": year_of(r[6]), "ym": ym_of(r[6]), "content": r[7],
+        "sourceType": "나라장터" if "나라장터" in r[8] else r[8],
         "url": r[9], "confidence": r[10], "note": r[11] if len(r) > 11 else "",
         "tags": tags_of(r[4], r[7]),
         "schoolCode": m["code"] if m else None,
@@ -231,10 +232,10 @@ for path in sorted(glob.glob("refined_*.csv")):
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": year,
             "ym": int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None,
-            "content": f"나라장터 계약정보 API 자동수집 — {row['구분']} 계약 {amt_txt}"
+            "content": f"나라장터 {row['구분']} 계약 {amt_txt}"
                 + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else "")
                 + (f" · 실제 제품: {ov['실제제품명']} (수동 확인)" if ov else ""),
-            "sourceType": "나라장터 API(자동수집)",
+            "sourceType": "나라장터",
             "url": row.get("상세URL") or "", "confidence": "상" if ov else "중",
             "note": (f"실제 제품 수동 확인: {ov['실제제품명']}" + (f" — 근거: {ov['근거']}" if ov.get("근거") else "")) if ov else "파일럿 자동수집분 — 제품명·내용 검증 전",
             "tags": sorted(set(tags_of(row["계약명"], "") + ov_tags)),
