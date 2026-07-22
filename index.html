@@ -260,7 +260,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip" href="#/tag/${encodeURIComponent(t)}">${esc(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}</div></td>
-      <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
+      <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
 
