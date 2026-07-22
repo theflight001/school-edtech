@@ -64,7 +64,7 @@ SPECIFIC_RULES = [
     ("카피킬러",            r"카피킬러|무하유"),
     ("GPT킬러",            r"GPT ?킬러"),
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
-    ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:] ?디지털 ?교육자료"),
+    ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:]? ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
     ("구름EDU",            r"구름 ?EDU|goorm|구름에듀"),
     ("이음AI",             r"이음 ?AI|화이트소프트"),
@@ -286,7 +286,8 @@ if AI_CLS:
     for r in records:
         if not r["tags"]:
             c = AI_CLS.get((r["school"], r["product"]))
-            if c == "잡음":
+            # "교육 프로그램·연수"는 소프트웨어가 아니라 교육 용역 — 에듀테크 아님
+            if c in ("잡음", "교육 프로그램·연수"):
                 ai_noise += 1
                 continue
             if c:
