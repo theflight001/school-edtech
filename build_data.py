@@ -121,8 +121,21 @@ def ym_of(period):
 
 def tags_of(name, content):
     hay = f"{name} {content}"
-    tags = [t for t, pat in SPECIFIC_RULES if re.search(pat, hay, re.I)]
+    tags = []
+    aux = False
+    for t, pat in SPECIFIC_RULES:
+        if not re.search(pat, hay, re.I):
+            continue
+        # "○○운영/연계 물품 구입"처럼 브랜드가 맥락으로만 등장하면 그 브랜드 사용 기록이 아님
+        ctx = re.search(f"(?:{pat})" + r"\s*(?:프로그램|플랫폼)?\s*(?:운영|연계)", hay, re.I)
+        plain = re.search(f"(?:{pat})" + r"(?!\s*(?:프로그램|플랫폼)?\s*(?:운영|연계))", hay, re.I)
+        if ctx and not plain:
+            aux = True
+            continue
+        tags.append(t)
     tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    if aux and not tags:
+        tags.append("운영 부대구매(제품 미상)")
     return tags
 
 rows = list(csv.reader(open(SRC, encoding="utf-8-sig")))
