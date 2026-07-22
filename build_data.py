@@ -261,6 +261,29 @@ before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
 print(f"행사·캠프·임대성 계약 제외: {before - len(records)}건")
 
+# AI 일괄 분류(검증 전) — 규칙 태그가 없는 기록에만 적용, 잡음 판정은 제외
+AI_CLS = {}
+if os.path.exists("ai_classified.csv"):
+    for row in csv.DictReader(open("ai_classified.csv", encoding="utf-8-sig")):
+        AI_CLS[(row["school"], row["product"])] = row["분류"].strip()
+if AI_CLS:
+    kept_ai, ai_n, ai_noise = [], 0, 0
+    for r in records:
+        if not r["tags"]:
+            c = AI_CLS.get((r["school"], r["product"]))
+            if c == "잡음":
+                ai_noise += 1
+                continue
+            if c:
+                tag = c[3:].strip() if c.startswith("제품:") else c
+                if tag:
+                    r["tags"] = [tag]
+                    r["note"] = (r["note"] + " · " if r["note"] else "") + "AI 일괄 분류(검증 전)"
+                    ai_n += 1
+        kept_ai.append(r)
+    records = kept_ai
+    print(f"AI 분류 적용: {ai_n}건, AI 잡음 제외: {ai_noise}건")
+
 # 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
 seen_exact = set()
 deduped = []

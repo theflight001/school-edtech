@@ -127,6 +127,10 @@ tr:hover td { background: var(--plane); }
 .pager button.cur { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .pager button:disabled { opacity: .35; cursor: default; }
 .pgdots { color: var(--muted); padding: 0 2px; }
+.listq-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.listq { flex: 1; font: inherit; font-size: 14px; padding: 9px 14px; border: 1px solid var(--grid); border-radius: 12px; background: var(--input-bg); color: var(--ink); }
+.listq:focus { outline: 2px solid #04a7e1; border-color: transparent; }
+.listq-n { color: var(--accent); font-size: 13px; white-space: nowrap; font-weight: 600; }
 .pginfo { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .chip { display: inline-block; background: var(--mint-bg); border: 1px solid var(--mint-line); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--mint); margin: 1px 2px 1px 0; }
 a.chip:hover { border-color: var(--mint); text-decoration: none; }
@@ -170,7 +174,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260722g"></script>
+<script src="data.js?b=20260722h"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -204,8 +208,27 @@ function barChart(pairs, {linkFn, max: mx, drillFn} = {}) {
 }
 const PAGE_SIZE = 20;
 let PAGE = 1;
+let LISTQ = "";
 window.setPage = p => { PAGE = p; render(); };
+window.applyListQ = v => {
+  LISTQ = v; PAGE = 1; render();
+  const el = document.getElementById("lq");
+  if (el) { el.focus(); const n = el.value.length; el.setSelectionRange(n, n); }
+};
 function pagedTable(recs, opts) {
+  const origTotal = recs.length;
+  let filterBox = "";
+  if (origTotal > PAGE_SIZE || LISTQ) {
+    if (LISTQ) {
+      const terms = queryTerms(LISTQ.toLowerCase());
+      recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
+    }
+    filterBox = `<div class="listq-wrap">
+      <input id="lq" class="listq" type="search" placeholder="결과 내 검색 — 학교명·제품명·내용으로 좁히기" value="${esc(LISTQ)}"
+        oninput="if(!event.isComposing)applyListQ(this.value)" oncompositionend="applyListQ(this.value)">
+      ${LISTQ ? `<span class="listq-n">${origTotal.toLocaleString()}건 중 ${recs.length.toLocaleString()}건</span>` : ""}
+    </div>`;
+  }
   const total = recs.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(PAGE, pages);
@@ -224,7 +247,7 @@ function pagedTable(recs, opts) {
     </div>
     <div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>`;
   }
-  return recordTable(slice, opts) + pager;
+  return filterBox + recordTable(slice, opts) + pager;
 }
 function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
