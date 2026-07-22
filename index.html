@@ -127,7 +127,7 @@ tr:hover td { background: var(--plane); }
 .pager button.cur { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .pager button:disabled { opacity: .35; cursor: default; }
 .pgdots { color: var(--muted); padding: 0 2px; }
-.listq-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.listq-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--grid); flex-wrap: wrap; }
 .listq { width: min(300px, 100%); font: inherit; font-size: 13.5px; padding: 8px 13px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink); }
 .listq:focus { outline: 2px solid #04a7e1; border-color: transparent; }
 .listq-n { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .listq-n b { color: var(--accent); }
@@ -247,7 +247,7 @@ function pagedTable(recs, opts) {
     </div>
     <div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>`;
   }
-  return filterBox + recordTable(slice, opts) + pager;
+  return recordTable(slice, opts) + pager + filterBox;
 }
 function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
