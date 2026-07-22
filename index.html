@@ -127,10 +127,10 @@ tr:hover td { background: var(--plane); }
 .pager button.cur { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .pager button:disabled { opacity: .35; cursor: default; }
 .pgdots { color: var(--muted); padding: 0 2px; }
-.listq-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.listq { flex: 1; font: inherit; font-size: 14px; padding: 9px 14px; border: 1px solid var(--grid); border-radius: 12px; background: var(--input-bg); color: var(--ink); }
+.listq-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.listq { width: min(300px, 100%); font: inherit; font-size: 13.5px; padding: 8px 13px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink); }
 .listq:focus { outline: 2px solid #04a7e1; border-color: transparent; }
-.listq-n { color: var(--accent); font-size: 13px; white-space: nowrap; font-weight: 600; }
+.listq-n { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .listq-n b { color: var(--accent); }
 .pginfo { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .chip { display: inline-block; background: var(--mint-bg); border: 1px solid var(--mint-line); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--mint); margin: 1px 2px 1px 0; }
 a.chip:hover { border-color: var(--mint); text-decoration: none; }
@@ -224,9 +224,9 @@ function pagedTable(recs, opts) {
       recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
     }
     filterBox = `<div class="listq-wrap">
-      <input id="lq" class="listq" type="search" placeholder="결과 내 검색 — 학교명·제품명·내용으로 좁히기" value="${esc(LISTQ)}"
+      <span class="listq-n">${LISTQ ? `${origTotal.toLocaleString()}건 중 <b>${recs.length.toLocaleString()}건</b>` : `전체 ${origTotal.toLocaleString()}건`}</span>
+      <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
         oninput="if(!event.isComposing)applyListQ(this.value)" oncompositionend="applyListQ(this.value)">
-      ${LISTQ ? `<span class="listq-n">${origTotal.toLocaleString()}건 중 ${recs.length.toLocaleString()}건</span>` : ""}
     </div>`;
   }
   const total = recs.length;
