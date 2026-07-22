@@ -102,7 +102,9 @@ SPECIFIC_RULES = [
 ]
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
-EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄")
+EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄")
+# "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
+EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강사")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
@@ -265,7 +267,14 @@ print(f"파일럿 자동수집분 병합: {pilot_count}건")
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
-print(f"행사·캠프·임대성 계약 제외: {before - len(records)}건")
+# 교육·연수 운영 용역 제외 — 단, 특정 제품명 태그나 명시적 SW 구입 문구가 있으면 유지
+SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES}
+SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
+records = [r for r in records
+           if not (EDU_SERVICE.search(r["product"])
+                   and not (SPECIFIC_TAGS & set(r["tags"]))
+                   and not SW_BUY.search(r["product"]))]
+print(f"행사·캠프·임대·교육운영 계약 제외: {before - len(records)}건")
 
 # AI 일괄 분류(검증 전) — 규칙 태그가 없는 기록에만 적용, 잡음 판정은 제외
 AI_CLS = {}

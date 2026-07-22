@@ -29,7 +29,9 @@ def post(params):
     req = urllib.request.Request(URL, data=body.encode("ascii"), headers={
         "User-Agent": UA, "Referer": URL,
         "Content-Type": "application/x-www-form-urlencoded"})
-    for attempt, backoff in enumerate([120, 300, 600, None]):
+    # 새벽 점검 등 장시간 장애도 버틴다: 최대 12시간까지 점점 길게 대기하며 재시도
+    backoffs = [120, 300, 600, 1800] + [3600] * 11
+    for attempt, backoff in enumerate(backoffs + [None]):
         try:
             raw = urllib.request.urlopen(req, timeout=60).read()
             _last_req[0] = time.time()
@@ -40,10 +42,10 @@ def post(params):
             print(f"  요청 실패({e}) → {backoff}초 대기", flush=True)
             time.sleep(backoff)
             continue
-        s = raw.decode("euc-kr", "replace")
-        if len(raw) < 5000 or "일시적인 장애" in s:  # S2B 에러 페이지
+        s = raw.decode("cp949", "replace")
+        if len(raw) < 5000 or "일시적인 장애" in s:  # S2B 에러/점검 페이지
             if backoff is None:
-                raise RuntimeError("S2B 에러 페이지 반복 — 중단")
+                raise RuntimeError("S2B 에러 페이지 12시간 지속 — 중단")
             print(f"  에러 페이지 수신 → {backoff}초 대기 후 재시도", flush=True)
             time.sleep(backoff)
             continue
