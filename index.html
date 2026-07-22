@@ -127,10 +127,13 @@ tr:hover td { background: var(--plane); }
 .pager button.cur { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .pager button:disabled { opacity: .35; cursor: default; }
 .pgdots { color: var(--muted); padding: 0 2px; }
-.listq-wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--grid); flex-wrap: wrap; }
-.listq { width: min(300px, 100%); font: inherit; font-size: 13.5px; padding: 8px 13px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink); }
+.pgrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin-top: 16px; }
+.pgrow .pager { margin-top: 0; }
+.pgside.right { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.listq { width: min(220px, 100%); font: inherit; font-size: 13.5px; padding: 8px 13px; border: 1px solid var(--grid); border-radius: 10px; background: var(--input-bg); color: var(--ink); }
 .listq:focus { outline: 2px solid #04a7e1; border-color: transparent; }
 .listq-n { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .listq-n b { color: var(--accent); }
+@media (max-width: 760px) { .pgrow { grid-template-columns: 1fr; } .pgrow .pgside:first-child { display: none; } .pgside.right { justify-content: center; } }
 .pginfo { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .chip { display: inline-block; background: var(--mint-bg); border: 1px solid var(--mint-line); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--mint); margin: 1px 2px 1px 0; }
 a.chip:hover { border-color: var(--mint); text-decoration: none; }
@@ -217,37 +220,37 @@ window.applyListQ = v => {
 };
 function pagedTable(recs, opts) {
   const origTotal = recs.length;
-  let filterBox = "";
-  if (origTotal > PAGE_SIZE || LISTQ) {
-    if (LISTQ) {
-      const terms = queryTerms(LISTQ.toLowerCase());
-      recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
-    }
-    filterBox = `<div class="listq-wrap">
-      <span class="listq-n">${LISTQ ? `${origTotal.toLocaleString()}건 중 <b>${recs.length.toLocaleString()}건</b>` : `전체 ${origTotal.toLocaleString()}건`}</span>
-      <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
-        oninput="if(!event.isComposing)applyListQ(this.value)" oncompositionend="applyListQ(this.value)">
-    </div>`;
+  const showFilter = origTotal > PAGE_SIZE || LISTQ;
+  if (LISTQ) {
+    const terms = queryTerms(LISTQ.toLowerCase());
+    recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
   }
   const total = recs.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(PAGE, pages);
   const slice = recs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  let pager = "";
-  if (pages > 1) {
-    const nums = [];
-    for (let i = 1; i <= pages; i++) {
-      if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
-      else if (nums[nums.length - 1] !== "…") nums.push("…");
+  let bottom = "";
+  if (pages > 1 || showFilter) {
+    let pagerHtml = "<div></div>";
+    if (pages > 1) {
+      const nums = [];
+      for (let i = 1; i <= pages; i++) {
+        if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
+        else if (nums[nums.length - 1] !== "…") nums.push("…");
+      }
+      pagerHtml = `<div class="pager">
+        <button ${page === 1 ? "disabled" : ""} onclick="setPage(${page - 1})">‹ 이전</button>
+        ${nums.map(n => n === "…" ? `<span class="pgdots">…</span>` : `<button class="${n === page ? "cur" : ""}" onclick="setPage(${n})">${n}</button>`).join("")}
+        <button ${page === pages ? "disabled" : ""} onclick="setPage(${page + 1})">다음 ›</button>
+      </div>`;
     }
-    pager = `<div class="pager">
-      <button ${page === 1 ? "disabled" : ""} onclick="setPage(${page - 1})">‹ 이전</button>
-      ${nums.map(n => n === "…" ? `<span class="pgdots">…</span>` : `<button class="${n === page ? "cur" : ""}" onclick="setPage(${n})">${n}</button>`).join("")}
-      <button ${page === pages ? "disabled" : ""} onclick="setPage(${page + 1})">다음 ›</button>
-    </div>
-    <div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>`;
+    const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
+      <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
+        oninput="if(!event.isComposing)applyListQ(this.value)" oncompositionend="applyListQ(this.value)">` : "";
+    bottom = `<div class="pgrow"><div class="pgside"></div>${pagerHtml}<div class="pgside right">${filterHtml}</div></div>`
+      + (pages > 1 ? `<div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>` : "");
   }
-  return recordTable(slice, opts) + pager + filterBox;
+  return recordTable(slice, opts) + bottom;
 }
 function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
