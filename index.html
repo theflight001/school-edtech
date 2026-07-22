@@ -223,7 +223,7 @@ function sortRecs(recs) {
   if (SORTK === "new") arr.sort((a, b) => t(b) - t(a));
   else if (SORTK === "old") arr.sort((a, b) => t(a) - t(b));
   else if (SORTK === "school") arr.sort((a, b) => a.school.localeCompare(b.school, "ko"));
-  else if (SORTK === "product") arr.sort((a, b) => a.product.localeCompare(b.product, "ko"));
+  else if (SORTK === "product") arr.sort((a, b) => ((a.tags[0] || "힣").localeCompare(b.tags[0] || "힣", "ko")) || (t(b) - t(a)));
   else if (SORTK === "amt") arr.sort((a, b) => (b.amt || -1) - (a.amt || -1));
   return arr;
 }
@@ -247,7 +247,7 @@ function pagedTable(recs, opts) {
   let topbar = "";
   if (pages > 1 || showFilter || SORTK !== "new") {
     const sortSel = `<select class="sortsel" onchange="setSort(this.value)" aria-label="정렬">
-        ${[["new","최신순"],["old","오래된순"],["school","학교명순"],["product","제품명순"],["amt","금액 높은순"]].map(([k,l]) => `<option value="${k}"${SORTK===k?" selected":""}>${l}</option>`).join("")}
+        ${[["new","최신순"],["old","오래된순"],["school","학교명순"],["product","제품군순"],["amt","금액 높은순"]].map(([k,l]) => `<option value="${k}"${SORTK===k?" selected":""}>${l}</option>`).join("")}
       </select>`;
     const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
       <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
