@@ -90,7 +90,7 @@ SPECIFIC_RULES = [
 ]
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
-EXCLUDE_EVENT = re.compile(r"전세버스|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행")
+EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
@@ -126,9 +126,10 @@ def tags_of(name, content):
     for t, pat in SPECIFIC_RULES:
         if not re.search(pat, hay, re.I):
             continue
-        # "○○운영/연계 물품 구입"처럼 브랜드가 맥락으로만 등장하면 그 브랜드 사용 기록이 아님
-        ctx = re.search(f"(?:{pat})" + r"\s*(?:프로그램|플랫폼)?\s*(?:운영|연계)", hay, re.I)
-        plain = re.search(f"(?:{pat})" + r"(?!\s*(?:프로그램|플랫폼)?\s*(?:운영|연계))", hay, re.I)
+        # "○○(선도학교) 운영/활용/수업용 물품 구입"처럼 브랜드가 맥락으로만 등장하면 그 브랜드 사용 기록이 아님
+        CTX = r"\s*(?:프로그램|플랫폼|집중|선도)*\s*(?:선도학교|운영|연계|활용|수업|주간|에듀테크)"
+        ctx = re.search(f"(?:{pat})" + CTX, hay, re.I)
+        plain = re.search(f"(?:{pat})" + f"(?!{CTX})", hay, re.I)
         if ctx and not plain:
             aux = True
             continue
