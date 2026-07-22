@@ -245,7 +245,7 @@ function pagedTable(recs, opts) {
       </div>`;
     }
     const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
-      <input id="lq" class="listq" type="search" placeholder="결과 내 검색 — Enter로 적용" value="${esc(LISTQ)}"
+      <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
         oninput="if(this.value==='')applyListQ('')" onkeyup="if(event.key==='Enter')applyListQ(this.value)">` : "";
     bottom = `<div class="pgrow"><div class="pgside"></div>${pagerHtml}<div class="pgside right">${filterHtml}</div></div>`
       + (pages > 1 ? `<div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>` : "");
