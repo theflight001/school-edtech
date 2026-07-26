@@ -264,6 +264,60 @@ for path in sorted(glob.glob("refined_*.csv")):
         pilot_count += 1
 print(f"파일럿 자동수집분 병합: {pilot_count}건")
 
+# --- S2B 학교장터 수집분 병합: s2b_refined.csv (공고 기준 — 금액·업체 정보 없음) ---
+def _norm_title(t):
+    return re.sub(r"\s|계약|공고|체결|의\s*건|건$", "", t)
+
+# 나라장터 기록과 같은 학교·같은 계약명·±2개월이면 동일 계약의 이중 등재로 보고 S2B 쪽 제외
+_nara_titles = {}
+for r in records:
+    if r["sourceType"] == "나라장터" and r.get("ym"):
+        _nara_titles.setdefault((r["school"], _norm_title(r["product"])), []).append(
+            (r["ym"] // 100) * 12 + r["ym"] % 100)
+
+s2b_count, s2b_dup = 0, 0
+if os.path.exists("s2b_refined.csv"):
+    for row in csv.DictReader(open("s2b_refined.csv", encoding="utf-8-sig")):
+        key = (row["계약번호"], row["학교명"])
+        if key in seen_pilot:
+            continue
+        seen_pilot.add(key)
+        ym = int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None
+        if ym:
+            mm = (ym // 100) * 12 + ym % 100
+            if any(abs(mm - pm) <= 2 for pm in _nara_titles.get((row["학교명"], _norm_title(row["계약명"])), [])):
+                s2b_dup += 1
+                continue
+        m = master_by_code.get(row["학교코드"])
+        level = row["급별"]
+        if level == "고등학교":
+            stype = "마이스터고" if (m and is_meister(m)) else ((m.get("hsType") if m else "") or "고등학교")
+        elif level in ("초등학교", "중학교"):
+            stype = level
+        else:
+            stype = level or "미확정"
+        s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
+        records.append({
+            "id": 200000 + s2b_count,
+            "school": row["학교명"], "type": stype,
+            "region": s_short, "sido": s_short,
+            "product": row["계약명"], "category": f"자동수집({row['구분']})",
+            "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
+            "amt": None, "ym": ym,
+            "content": f"S2B 학교장터 수의계약 공고({row['구분']})",
+            "sourceType": "S2B 학교장터",
+            "url": "", "confidence": "중",
+            "note": "S2B 자동수집분 — 공고 기준(금액·계약업체 미표시)",
+            "tags": tags_of(row["계약명"], ""),
+            "schoolCode": row["학교코드"] or None,
+            "schoolName": m["name"] if m else row["학교명"],
+            "hsType": (m.get("hsType") or "") if m else "",
+            "founding": (m.get("founding") or "") if m else "",
+            "neisAddress": (m.get("address") or "") if m else "",
+        })
+        s2b_count += 1
+    print(f"S2B 학교장터 병합: {s2b_count}건 (나라장터 중복 제외 {s2b_dup}건)")
+
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
