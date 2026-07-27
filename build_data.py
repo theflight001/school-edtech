@@ -152,7 +152,9 @@ def tags_of(name, content):
             aux = True
             continue
         tags.append(t)
-    tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    # 특정 제품명이 확인되면 범주 태그는 생략 (제품명 속 단어에 범주 규칙이 오반응하는 것도 방지)
+    if not tags:
+        tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
     if "GPT킬러" in tags and "ChatGPT" in tags:
         name_wo = re.sub(r"GPT ?킬러", "", name)
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
