@@ -77,6 +77,7 @@ SPECIFIC_RULES = [
     ("Padlet",             r"Padlet|패들렛"),
     ("하이러닝",            r"하이러닝|Hi-?Learning"),
     ("클래스팅",            r"클래스팅|Classting"),
+    ("레고 에듀케이션",      r"레고(?!\s?등학교|랜드)|LEGO|스파이크 ?프라임"),
     ("코디마스터",          r"코디마스터"),
     ("아이스크림",          r"아이스크림|i-?Scream"),
     ("젭(ZEP)",            r"젭|\bZEP\b"),
@@ -105,6 +106,8 @@ SPECIFIC_RULES = [
 EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
 EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강사")
+# 계약 전체가 교육 서비스인 유형 — 브랜드가 언급돼도 제품 도입이 아니므로 무조건 제외 (SW 구입 문구만 예외)
+HARD_SERVICE = re.compile(r"교육 ?용역|동아리 ?운영|방과후 ?운영|체험.{0,12}용역")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
@@ -328,6 +331,9 @@ records = [r for r in records
            if not (EDU_SERVICE.search(r["product"])
                    and not (SPECIFIC_TAGS & set(r["tags"]))
                    and not SW_BUY.search(r["product"]))]
+records = [r for r in records
+           if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
+                   and not re.search(r"플랫폼|시스템", r["product"]))]
 print(f"행사·캠프·임대·교육운영 계약 제외: {before - len(records)}건")
 
 # AI 일괄 분류(검증 전) — 규칙 태그가 없는 기록에만 적용, 잡음 판정은 제외
