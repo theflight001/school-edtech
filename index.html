@@ -553,10 +553,10 @@ function homeView() {
     </div>` : ""}
     <div class="section-div">통계 결과</div>
     <div class="grid2">
-      <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교 · 막대를 누르면 학교 목록</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
-      <div class="card"><h2>계열별 사례 수<span class="note">막대를 누르면 목록</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도 · 막대를 누르면 목록</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
+    <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도 · 막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
 function schoolView(name) {
   const recs = R.filter(r => r.school === name);
@@ -591,8 +591,8 @@ function tagView(tag) {
       <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p></div>` : ""}
     <div class="grid2">
-      <div class="card"><h2>계열별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
-      <div class="card"><h2>지역별<span class="note">막대를 누르면 목록</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
     <div class="card"><h2>도입 학교 목록</h2>${pagedTable(recs)}</div>`;
 }
