@@ -76,6 +76,7 @@ SPECIFIC_RULES = [
     ("미리캔버스",          r"미리캔버스"),
     ("Padlet",             r"Padlet|패들렛"),
     ("하이러닝",            r"하이러닝|Hi-?Learning"),
+    ("바당",               r"바당|BADANG"),
     ("클래스팅",            r"클래스팅|Classting"),
     ("레고 에듀케이션",      r"레고(?!\s?등학교|랜드)|LEGO|스파이크 ?프라임"),
     ("코디마스터",          r"코디마스터"),
@@ -118,7 +119,7 @@ GENERIC_RULES = [
     ("로봇·교구·키트",       r"로봇|자율주행|교구|키트|블록코딩"),
     ("드론",                r"드론"),
     ("3D 프린팅/CAD",       r"3D ?프린|3D ?CAD|\bCAD\b|\bCAM\b|인벤터|Inventor"),
-    ("인프라(교실·설비)",    r"냉난방|에어컨|공기청정|환경개선|리모델링|배선|전기 ?공사|구축 ?공사|책상|의자|가구|커튼|블라인드|바닥 ?공사|도색|칸막이|이전 ?설치|증축|전면장|교실 ?구축|실습실|기자재|팩토리|미래교실|스튜디오|구축|충전함"),
+    ("인프라(교실·설비)",    r"냉난방|에어컨|공기청정|환경개선|리모델링|배선|전기 ?공사|구축 ?공사|책상|테이블|의자|가구|커튼|블라인드|바닥 ?공사|도색|칸막이|이전 ?설치|증축|전면장|교실 ?구축|실습실|기자재|팩토리|미래교실|스튜디오|구축|충전함"),
     ("기기(PC·태블릿·전자칠판 등)", r"컴퓨터(?! ?책상)(?! ?실)|노트북|태블릿|전자칠판|모니터|크롬북|\bPC\b|(?<!3D)(?<!3D )프린터|디스플레이|디지털 ?기기|서버"),
 ]
 
@@ -235,10 +236,42 @@ if os.path.exists("manual_overrides.csv"):
         if row.get("계약번호") and row.get("실제제품명"):
             OVERRIDES[row["계약번호"].strip()] = row
 
+# 통합운영학교 보정: 조달 주체(예: 무릉초등학교)와 계약명 속 실사용 학교(무릉중학교)가
+# 같은 어간에 급만 다르면 계약명 쪽 학교로 귀속 (같은 시도에 실재할 때만)
+TITLE_SCHOOL = re.compile(r"([가-힣]{2,})(초등학교|중학교|고등학교)")
+_LV = {"초": "초등학교", "중": "중학교", "고": "고등학교"}
+def reattribute(row):
+    mo = TITLE_SCHOOL.fullmatch(row["학교명"] or "")
+    if not mo:
+        return row
+    name = row["계약명"]
+    target = None
+    mt = TITLE_SCHOOL.search(name)
+    if mt and mt.group(0) != row["학교명"] and mt.group(1) == mo.group(1) and mt.group(2) != mo.group(2):
+        target = mt.group(0)          # "무릉중학교 ... 구입" (전체 이름)
+    if not target:
+        ab = re.search(r"([가-힣]{2,})(초|중|고)(?=\s)", name)
+        if ab and ab.group(1) == mo.group(1) and _LV[ab.group(2)] != mo.group(2):
+            target = ab.group(1) + _LV[ab.group(2)]   # "무릉중 2026..." (약칭)
+    if not target:
+        mk = re.match(r"\s*\((초|중|고)\)", name)
+        if mk and _LV[mk.group(1)] != mo.group(2):
+            target = mo.group(1) + _LV[mk.group(1)]   # "(중)2025..." (급 표기)
+    if not target:
+        return row
+    cands = [c for c in master_by_name.get(target, [])
+             if not row["시도"] or c["sido"] == row["시도"]]
+    if len(cands) == 1:
+        row = dict(row)
+        row["_원학교명"] = row["학교명"]
+        row["학교명"], row["학교코드"], row["급별"] = target, cands[0]["code"], cands[0]["level"]
+    return row
+
 pilot_count = 0
 seen_pilot = set()
 for path in sorted(glob.glob("refined_*.csv")):
     for row in csv.DictReader(open(path, encoding="utf-8-sig")):
+        row = reattribute(row)
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue
@@ -279,6 +312,7 @@ for path in sorted(glob.glob("refined_*.csv")):
             "hsType": (m.get("hsType") or "") if m else "",
             "founding": (m.get("founding") or "") if m else "",
             "neisAddress": (m.get("address") or "") if m else "",
+            "origSchool": row.get("_원학교명") or "",
         })
         pilot_count += 1
 print(f"파일럿 자동수집분 병합: {pilot_count}건")
@@ -365,7 +399,7 @@ if AI_CLS:
     kept_ai, ai_n, ai_noise = [], 0, 0
     for r in records:
         if not r["tags"]:
-            c = AI_CLS.get((r["school"], r["product"]))
+            c = AI_CLS.get((r["school"], r["product"])) or AI_CLS.get((r.get("origSchool") or "", r["product"]))
             # "교육 프로그램·연수"는 소프트웨어가 아니라 교육 용역 — 에듀테크 아님
             if c in ("잡음", "교육 프로그램·연수"):
                 ai_noise += 1
