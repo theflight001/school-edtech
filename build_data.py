@@ -117,7 +117,7 @@ GENERIC_RULES = [
     ("드론",                r"드론"),
     ("3D 프린팅/CAD",       r"3D ?프린|3D ?CAD|\bCAD\b|\bCAM\b|인벤터|Inventor"),
     ("인프라(교실·설비)",    r"냉난방|에어컨|공기청정|환경개선|리모델링|배선|전기 ?공사|구축 ?공사|책상|의자|가구|커튼|블라인드|바닥 ?공사|도색|칸막이|이전 ?설치|증축|전면장|교실 ?구축|실습실|기자재|팩토리|미래교실|스튜디오|구축|충전함"),
-    ("기기(PC·태블릿·전자칠판 등)", r"컴퓨터|노트북|태블릿|전자칠판|모니터|크롬북|\bPC\b|프린터|디스플레이|디지털 ?기기|서버"),
+    ("기기(PC·태블릿·전자칠판 등)", r"컴퓨터(?! ?책상)|노트북|태블릿|전자칠판|모니터|크롬북|\bPC\b|프린터|디스플레이|디지털 ?기기|서버"),
 ]
 
 def sido(region):
@@ -153,8 +153,14 @@ def tags_of(name, content):
             continue
         tags.append(t)
     # 특정 제품명이 확인되면 범주 태그는 생략 (제품명 속 단어에 범주 규칙이 오반응하는 것도 방지)
+    SW_KW = r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱"
     if not tags:
-        tags += [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+        # "기자재(EDA소프트웨어)"처럼 괄호 안이 실제 구매 대상이면 괄호 내용만으로 분류
+        paren = " ".join(re.findall(r"\(([^)]*)\)", name))
+        ptags = [t for t, pat in GENERIC_RULES if re.search(pat, paren, re.I)] if paren else []
+        if not ptags and paren and re.search(SW_KW, paren, re.I):
+            ptags = ["SW·플랫폼(제품명 미상)"]
+        tags += ptags or [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
     if "GPT킬러" in tags and "ChatGPT" in tags:
         name_wo = re.sub(r"GPT ?킬러", "", name)
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
