@@ -29,6 +29,9 @@ ALIAS = {
     "인천중앙여자상업고등학교": "인천중앙여자고등학교",    # 2024 교명 변경
     "경일관광경영고등학교": "경일고등학교",              # 2026.3 교명 환원 (경기 안산)
     "부경보건고등학교": "학력인정부경보건고등학교",       # NEIS 등재명 차이(동일 학교)
+    # 2026-07-27 웹 검증 확정분
+    "보영여자중학교": "한빛누리중학교",                  # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
+    "보영여자고등학교": "한빛누리고등학교",               # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
 }
 
 SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
@@ -240,7 +243,23 @@ if os.path.exists("manual_overrides.csv"):
 # 같은 어간에 급만 다르면 계약명 쪽 학교로 귀속 (같은 시도에 실재할 때만)
 TITLE_SCHOOL = re.compile(r"([가-힣]{2,})(초등학교|중학교|고등학교)")
 _LV = {"초": "초등학교", "중": "중학교", "고": "고등학교"}
+# 실사용 학교 재귀속 확정 쌍: (조달 명의 학교, 계약명 속 실사용 학교) — 웹 검증 근거 있음
+REATTR_PAIRS = {("창원기계공업고등학교", "양산인공지능고등학교")}  # 2025.3 신설교 개교준비팀이 창원기계공고 상주
+def _switch(row, target):
+    cands = master_by_name.get(target, [])
+    if len(cands) == 1:
+        row = dict(row)
+        row["_원학교명"] = row["학교명"]
+        row["학교명"], row["학교코드"], row["급별"] = target, cands[0]["code"], cands[0]["level"]
+    return row
+
 def reattribute(row):
+    # 개명 학교 별칭 적용 (미매칭 파일럿 기록)
+    if row["학교명"] in ALIAS:
+        row = _switch(row, ALIAS[row["학교명"]])
+    for org, real in REATTR_PAIRS:
+        if row["학교명"] == org and real in row["계약명"].replace(" ", ""):
+            return _switch(row, real)
     mo = TITLE_SCHOOL.fullmatch(row["학교명"] or "")
     if not mo:
         return row

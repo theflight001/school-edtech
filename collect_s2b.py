@@ -2,12 +2,13 @@
 # 사용: python3 collect_s2b.py --begin 20230101 --end 20260722 [--keywords 에듀테크,코스웨어] [--max-pages 200]
 # 원칙: 모든 요청 사이 20초 간격(위반 시 CAPTCHA 위험), 체크포인트 재개 지원
 # 결과: s2b_candidates.csv (공고번호+기관명 기준 중복 제거, 증분 저장)
-import argparse, csv, json, os, re, sys, time, urllib.request, urllib.parse
+import argparse, csv, json, os, random, re, sys, time, urllib.request, urllib.parse
 from datetime import date, timedelta
 
 URL = "https://www.s2b.kr/S2BNCustomer/tcmo001.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 20  # 초 — 절대 줄이지 말 것
+SPACING = 25  # 초 최소 간격 — 절대 줄이지 말 것 (여기에 무작위 지연이 더해짐)
+JITTER = 15   # 0~15초 무작위 추가 — 기계적으로 일정한 간격은 안티크롤링에 감지됨
 OUT = "s2b_candidates.csv"
 CKPT = ".ckpt_s2b.json"
 FIELDS = ["공고번호", "공고명", "기관명", "공고일", "마감일", "계약구분", "거래구분", "키워드", "조회창"]
@@ -22,7 +23,7 @@ LEVEL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교)$")
 _last_req = [0.0]
 
 def post(params):
-    wait = SPACING - (time.time() - _last_req[0])
+    wait = SPACING + random.uniform(0, JITTER) - (time.time() - _last_req[0])
     if wait > 0:
         time.sleep(wait)
     body = urllib.parse.urlencode({k: v.encode("euc-kr") for k, v in params.items()})
@@ -43,6 +44,13 @@ def post(params):
             time.sleep(backoff)
             continue
         s = raw.decode("cp949", "replace")
+        if "Anti Web Crawling" in s or "보안 문자" in s:
+            # CAPTCHA 차단 — 자동으로 풀 수 없음. 사람이 브라우저에서 풀어야 하므로 장시간 대기 후 재확인
+            if backoff is None:
+                raise RuntimeError("CAPTCHA 차단 지속 — 사람이 s2b.kr에서 보안 문자를 풀어야 함")
+            print(f"  CAPTCHA 차단 감지 → {max(backoff, 1800)}초 대기 (브라우저에서 보안 문자를 풀면 빨리 풀림)", flush=True)
+            time.sleep(max(backoff, 1800))
+            continue
         if len(raw) < 5000 or "일시적인 장애" in s:  # S2B 에러/점검 페이지
             if backoff is None:
                 raise RuntimeError("S2B 에러 페이지 12시간 지속 — 중단")
