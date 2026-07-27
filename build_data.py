@@ -103,11 +103,13 @@ SPECIFIC_RULES = [
 ]
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
-EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄")
+EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
 EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강사")
 # 계약 전체가 교육 서비스인 유형 — 브랜드가 언급돼도 제품 도입이 아니므로 무조건 제외 (SW 구입 문구만 예외)
-HARD_SERVICE = re.compile(r"교육 ?용역|동아리 ?운영|방과후 ?운영|체험.{0,12}용역")
+HARD_SERVICE = re.compile(r"교육 ?용역|동아리 ?운영|방과후 ?운영|체험.{0,12}용역|체험 ?교육")
+# 일반 '용역' 계약은 대부분 교육활동 — 제품 이용 신호가 있으면 유지 (플랫폼·구독·콘텐츠·설치·임차 등)
+SVC_KEEP = re.compile(r"플랫폼|시스템|구독|라이선스|라이센스|콘텐츠|설치|유지보수|임차|사용료|이용료|대여|렌탈|코스웨어|소프트웨어|S/?W ?구[입매]")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
@@ -348,6 +350,10 @@ records = [r for r in records
 records = [r for r in records
            if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
                    and not re.search(r"플랫폼|시스템", r["product"]))]
+# 일반 '용역' 계약 — 제품 이용 신호도, 특정 제품명 태그도 없으면 교육활동으로 보고 제외
+records = [r for r in records
+           if not ("용역" in r["product"] and not SVC_KEEP.search(r["product"])
+                   and not (SPECIFIC_TAGS & set(r["tags"])))]
 print(f"행사·캠프·임대·교육운영 계약 제외: {before - len(records)}건")
 
 # AI 일괄 분류(검증 전) — 규칙 태그가 없는 기록에만 적용, 잡음 판정은 제외
