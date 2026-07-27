@@ -117,7 +117,7 @@ GENERIC_RULES = [
     ("드론",                r"드론"),
     ("3D 프린팅/CAD",       r"3D ?프린|3D ?CAD|\bCAD\b|\bCAM\b|인벤터|Inventor"),
     ("인프라(교실·설비)",    r"냉난방|에어컨|공기청정|환경개선|리모델링|배선|전기 ?공사|구축 ?공사|책상|의자|가구|커튼|블라인드|바닥 ?공사|도색|칸막이|이전 ?설치|증축|전면장|교실 ?구축|실습실|기자재|팩토리|미래교실|스튜디오|구축|충전함"),
-    ("기기(PC·태블릿·전자칠판 등)", r"컴퓨터(?! ?책상)|노트북|태블릿|전자칠판|모니터|크롬북|\bPC\b|프린터|디스플레이|디지털 ?기기|서버"),
+    ("기기(PC·태블릿·전자칠판 등)", r"컴퓨터(?! ?책상)(?! ?실)|노트북|태블릿|전자칠판|모니터|크롬북|\bPC\b|(?<!3D)(?<!3D )프린터|디스플레이|디지털 ?기기|서버"),
 ]
 
 def sido(region):
@@ -161,6 +161,12 @@ def tags_of(name, content):
         if not ptags and paren and re.search(SW_KW, paren, re.I):
             ptags = ["SW·플랫폼(제품명 미상)"]
         tags += ptags or [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    # "AI교실 환경 구축 노트북 구입"처럼 '구축·조성'이 목적 문구일 뿐이면 기기 구매이지 인프라가 아님
+    if "기기(PC·태블릿·전자칠판 등)" in tags and "인프라(교실·설비)" in tags:
+        stripped = re.sub(r"(?:환경 ?)?구축|조성|기자재|실습실|환경개선", "", name)
+        infra_pat = dict(GENERIC_RULES)["인프라(교실·설비)"]
+        if not re.search(infra_pat, stripped, re.I):
+            tags.remove("인프라(교실·설비)")
     if "GPT킬러" in tags and "ChatGPT" in tags:
         name_wo = re.sub(r"GPT ?킬러", "", name)
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
