@@ -1,4 +1,5 @@
 .DS_Store
 .ckpt_*.json
+.nara_key
 __pycache__/
 backfill.log
