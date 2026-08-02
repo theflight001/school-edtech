@@ -256,7 +256,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260803o"></script>
+<script src="data.js?b=20260803p"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -866,11 +866,11 @@ function aboutView() {
         <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b></li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
         <li>검색 가능 학교: <b>12,543개교</b> — 국내 공교육 전체</li>
-        <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고(12,078)에 더해
-          특수학교 202, 각종학교 116, 평생학교 73, 방송통신 중·고 66,
-          고등기술·고등공민학교 8곳을 포함합니다.
-          등재된 12,666개교 중 <b>재외한국학교 79, 외국인·국제학교 33</b>은 국내 공교육이 아니어서,
-          <b>공동실습소 9</b>는 학교가 아니어서 제외했습니다.</li>
+        <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 12,078개교에 더해
+          특수학교 202개교, 각종학교 116개교, 평생학교 73개교, 방송통신 중·고 66개교,
+          고등기술·고등공민학교 8개교를 포함합니다.
+          등재된 12,666개교 중 <b>재외한국학교 79개교, 외국인·국제학교 33개교</b>는 국내 공교육이 아니어서,
+          <b>공동실습소 9곳</b>은 학교가 아니어서 제외했습니다.</li>
       </ul>
       <p style="margin-top:18px">기록에 잘못된 내용이 있다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
     </div>`;
