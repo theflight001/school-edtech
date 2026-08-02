@@ -178,12 +178,22 @@ SPECIFIC_RULES = [
 
 # 에듀집 등록 제품 중 조달 기록으로 실사용이 확인된 제품 — edzip_rules.csv에서 자동 로드
 # (제품 단위 전수조사 결과: 나라장터 전수 140만 건 × 에듀집 2,490종 대조)
+# 문맥 조건부 태그: 제품명이 보통명사와 겹칠 수 있어 소프트웨어 문맥이 확인될 때만 인정한다
+CTX_REQUIRED = set()
 if os.path.exists("edzip_rules.csv"):
     _seen_tags = {t for t, _ in SPECIFIC_RULES}
     for _row in csv.DictReader(open("edzip_rules.csv", encoding="utf-8-sig")):
         if _row["태그"] not in _seen_tags and _row["패턴"]:
             SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
             _seen_tags.add(_row["태그"])
+            if (_row.get("문맥필요") or "").strip() == "Y":
+                CTX_REQUIRED.add(_row["태그"])
+# 소프트웨어·서비스 도입임을 알려주는 신호 / 시설·공사임을 알려주는 신호
+SW_CTX = re.compile(r"구독|라이선스|라이센스|이용권|이용료|사용료|사용 ?계약|플랫폼|프로그램|"
+                    r"소프트웨어|\bSW\b|S/W|계정|어플|\b앱\b|콘텐츠|코스웨어|에듀테크|"
+                    r"인공지능|\bAI\b|디지털|학습|수업|교육자료", re.I)
+FACILITY_CTX = re.compile(r"공사|설비|보수|조성|정비|철거|배관|전기|도색|방수|제초|살포|청소|"
+                          r"급식|차량|버스|가구|책상|의자|운동장|화장실|냉난방")
 
 # AI·디지털 교육자료(AIDT)는 출판사별로 다른 제품 — 계약 상대 업체로 발행처를 특정한다
 AIDT_PUBLISHERS = [
@@ -284,6 +294,10 @@ def tags_of(name, content):
         infra_pat = dict(GENERIC_RULES)["인프라(교실·설비)"]
         if not re.search(infra_pat, stripped, re.I):
             tags.remove("인프라(교실·설비)")
+    # 보통명사와 겹치는 제품명은 소프트웨어 문맥이 있고 시설·공사 문맥이 아닐 때만 인정
+    if tags and CTX_REQUIRED:
+        tags = [t for t in tags if t not in CTX_REQUIRED
+                or (SW_CTX.search(hay) and not FACILITY_CTX.search(hay))]
     if "GPT킬러" in tags and "ChatGPT" in tags:
         name_wo = re.sub(r"GPT ?킬러", "", name)
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
@@ -691,6 +705,37 @@ meta = {
     "coveragePeriod": "2023.1 ~ 2026.7",
     "pilot": pilot_count,
 }
+# --- 신규 태그 검증 리포트 ---------------------------------------------------
+# 직전 빌드에 없던 태그마다 계약명 원문을 무작위로 뽑아 tag_review.md에 남긴다.
+# 브랜드명이 보통명사와 겹쳐 엉뚱한 계약에 붙는 일을 커밋 전에 사람이 확인하기 위한 장치.
+import random as _random
+_snap_path = ".tag_snapshot.json"
+_prev = set(json.load(open(_snap_path))) if os.path.exists(_snap_path) else set()
+_by_tag = collections.defaultdict(list)
+for _r in deduped:
+    for _t in _r["tags"]:
+        _by_tag[_t].append(_r)
+_now = set(_by_tag)
+_new_tags = sorted(_now - _prev)
+if _new_tags:
+    _random.seed(0)
+    _lines = [f"# 신규 태그 검증 — {len(_new_tags)}종", "",
+              "직전 빌드에 없던 태그입니다. 계약명 원문이 실제로 그 제품을 가리키는지 확인하세요.",
+              "보통명사와 겹치는 이름(그라운드=운동장 등)이 엉뚱한 계약에 붙지 않았는지 특히 주의.", ""]
+    for _t in _new_tags:
+        _recs = _by_tag[_t]
+        _schools = len({_x["school"] for _x in _recs})
+        _lines.append(f"## {_t} — {len(_recs)}건 / {_schools}개교")
+        for _x in _random.sample(_recs, min(5, len(_recs))):
+            _amt = f"{_x['amt']:,}원" if _x.get("amt") else "금액 미상"
+            _lines.append(f"- [{_x['school']}] {_x['product']}  ({_amt} · {_x['sourceType']})")
+        _lines.append("")
+    open("tag_review.md", "w", encoding="utf-8").write("\n".join(_lines))
+    print(f"신규 태그 {len(_new_tags)}종 → tag_review.md (커밋 전 확인 필요)")
+elif os.path.exists("tag_review.md"):
+    os.remove("tag_review.md")
+json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB = ")

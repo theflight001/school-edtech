@@ -12,3 +12,6 @@
 - 수집(collect_*.py) → 정제(refine_*.py, extract_edtech.py) → 빌드(build_data.py) → data.js
 - 태그·제외 규칙의 정본은 `build_data.py` 하나뿐이다. extract_edtech.py는 이 규칙을 그대로 불러다 쓴다 (이중 관리 금지).
 - data.js를 배포할 때는 `index.html`의 `data.js?b=날짜` 캐시 파라미터를 반드시 올린다.
+
+# 태그 검증 리포트
+tag_review.md는 빌드 때 자동 생성된다. 신규 태그가 실제 제품을 가리키는지 계약명 원문 표본으로 확인한 뒤 커밋하고, 판단 결과(통과/제외)를 커밋 메시지에 적는다.
