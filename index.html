@@ -746,9 +746,15 @@ function searchView(q) {
     const hay = (r.school + r.product + r.content + r.tags.join("")).toLowerCase();
     return terms.some(t => hay.includes(t));
   });
+  // 무상 보급·공동 운영 플랫폼은 검색으로 들어와도 한계 고지가 보여야 한다
+  const noteKey = Object.keys(PLATFORM_NOTES).find(k =>
+    terms.some(t => k.toLowerCase().includes(t) || t.includes(k.toLowerCase())));
+  const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}</div></div>
+    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>
+      <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(noteKey)} 제품군 페이지 보기 ›</a></p></div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
 }
 
