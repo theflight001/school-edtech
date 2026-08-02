@@ -106,6 +106,15 @@ SPECIFIC_RULES = [
     ("와콤",               r"와콤|Wacom"),
 ]
 
+# 에듀집 등록 제품 중 조달 기록으로 실사용이 확인된 제품 — edzip_rules.csv에서 자동 로드
+# (제품 단위 전수조사 결과: 나라장터 전수 140만 건 × 에듀집 2,490종 대조)
+if os.path.exists("edzip_rules.csv"):
+    _seen_tags = {t for t, _ in SPECIFIC_RULES}
+    for _row in csv.DictReader(open("edzip_rules.csv", encoding="utf-8-sig")):
+        if _row["태그"] not in _seen_tags and _row["패턴"]:
+            SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
+            _seen_tags.add(_row["태그"])
+
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
 EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
