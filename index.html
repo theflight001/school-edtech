@@ -63,7 +63,11 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .page p, .page li { color: var(--ink-2); font-size: 15px; }
 .page ul { margin: 6px 0 0; padding-left: 18px; }
 .page li { margin: 3px 0; }
-.srcgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+/* 자료원 5개 — 3열로 두고 마지막 카드가 남은 두 칸을 채워 빈자리를 없앤다 */
+.srcgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+.srcgrid .srccard:last-child { grid-column: span 2; }
+@media (max-width: 900px) { .srcgrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .srcgrid { grid-template-columns: 1fr; } .srcgrid .srccard:last-child { grid-column: auto; } }
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
 .srccard span { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
@@ -779,7 +783,7 @@ function aboutView() {
         <img src="hero_person_m.png?v=2" width="170" height="132" alt="">
       </div>
 
-      <h3>어디서 모았나</h3>
+      <h3>어디에서 모았나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 소액 수의계약 공고 (입찰분 미포함)</span></div>
