@@ -588,11 +588,14 @@ for t, c in tag_counts.most_common():
     schools = len({rec["school"] for rec in records if t in rec["tags"]})
     print(f"  {t}: {c}건 / {schools}개교")
 
-# 전국 학교 검색 인덱스(초·중·고) — 기록 없는 학교도 검색·열람 가능하게
+# 전국 학교 검색 인덱스 — 기록 없는 학교도 검색·열람 가능하게
+# 국내 공교육 전체(특수학교·방송통신·각종학교·평생학교 포함).
+# 재외한국학교·외국인학교·국제학교는 국내 공교육이 아니어서, 공동실습소는 학교가 아니어서 제외.
+INDEX_EXCLUDE = ("재외한국학교", "외국인학교", "국제학교", "공동실습소")
 school_index = []
 for cands in master_by_name.values():
     for s in cands:
-        if s["level"] in ("초등학교", "중학교", "고등학교"):
+        if s["level"] and not any(e in s["level"] for e in INDEX_EXCLUDE):
             rec = {
                 "c": s["code"], "n": s["name"], "l": s["level"],
                 "s": NEIS_SIDO_SHORT.get(s["sido"], s["sido"]),

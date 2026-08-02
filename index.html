@@ -226,7 +226,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260802e"></script>
+<script src="data.js?b=20260802f"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -375,10 +375,13 @@ const LEAVES = [
   {k: "spc_lang", label: "외국어고·국제고", parent: "spc"},
   {k: "spc_art", label: "예술고·체육고", parent: "spc"},
   {k: "aut", label: "자율고", parent: "aut"},
+  {k: "spe", label: "특수학교", parent: "etc"},
+  {k: "alt", label: "방송통신·각종·평생학교", parent: "etc"},
 ];
 const PARENTS = [
   {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
   {k: "voc", label: "특성화고·마이스터고"}, {k: "spc", label: "특목고"}, {k: "aut", label: "자율고"},
+  {k: "etc", label: "특수·기타학교"},
 ];
 const leafLabel = {}, parentOf = {}, parentLabel = {};
 LEAVES.forEach(l => { leafLabel[l.k] = l.label; parentOf[l.k] = l.parent; });
@@ -395,13 +398,17 @@ function spcLeaf(name, detail) {
   if (/예술고|예고|체육고|국악고/.test(name)) return "spc_art";
   return "spc_sci";
 }
+const ETC_LV = /방송통신|각종학교|평생학교|고등기술|고등공민/;
 const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
+  : s.l === "특수학교" ? "spe" : ETC_LV.test(s.l || "") ? "alt"
   : s.m ? "voc_m" : s.h === "특성화고" ? "voc_v"
   : s.h === "특목고" ? spcLeaf(s.n, s.d) : s.h === "자율고" ? "aut" : "gen";
 function recLeaf(r) {
   const t = r.type;
   if (t === "초등학교") return "elem";
   if (t === "중학교") return "mid";
+  if (t === "특수학교") return "spe";
+  if (ETC_LV.test(t || "")) return "alt";
   if (t === "일반고") return "gen";
   if (t === "자율고") return "aut";
   if (t === "특성화고" || t === "특성화고·마이스터고") return "voc_v";
@@ -784,11 +791,12 @@ function aboutView() {
       <ul>
         <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b></li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
-        <li>검색 가능 학교: <b>12,078개교</b> — 전국 정규 초·중·고 전체</li>
-        <li>학교 명단은 교육부 NEIS 개방 포털 기준이며, 등재된 12,666개교 중
-          정규 과정이 아닌 <b>588개교는 제외</b>했습니다:
-          특수학교 202, 각종학교 116, 재외한국학교 79, 평생학교 73,
-          방송통신 중·고 66, 외국인·국제학교 33, 그 밖에 19개교(고등기술학교·공동실습소 등)</li>
+        <li>검색 가능 학교: <b>12,543개교</b> — 국내 공교육 전체</li>
+        <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고(12,078)에 더해
+          특수학교 202, 각종학교 116, 평생학교 73, 방송통신 중·고 66,
+          고등기술·고등공민학교 8곳을 포함합니다.
+          등재된 12,666개교 중 <b>재외한국학교 79, 외국인·국제학교 33</b>은 국내 공교육이 아니어서,
+          <b>공동실습소 9</b>는 학교가 아니어서 제외했습니다.</li>
       </ul>
       <p style="margin-top:18px">기록에 잘못된 내용이 있다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
     </div>`;
