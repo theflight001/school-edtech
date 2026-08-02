@@ -46,9 +46,9 @@ def fetch(keyword, page):
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
 
-def parse(html):
+def parse(page_html):
     rows = []
-    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page_html, re.S):
         if not re.search(r"\d{4}-\d{2}-\d{2}", tr):
             continue
         c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x))).replace("\xa0", " ").strip()
@@ -76,6 +76,15 @@ def main():
     if new_file:
         w.writeheader()
 
+    # 검색창이 SQL 주입 방어에 걸려 404를 내는 낱말(and/or/select 등)이 든 검색어는
+    # 가장 긴 안전한 낱말 하나로 줄여서 조회한다 ("Phonics and Stuff" → "Phonics")
+    RISKY = re.compile(r"\b(and|or|not|select|union|insert|update|delete|where|from|drop|exec)\b", re.I)
+    def safe_kw(k):
+        if not RISKY.search(k):
+            return k
+        toks = [t for t in re.split(r"[\s\-–—/]+", k) if t and not RISKY.fullmatch(t)]
+        return max(toks, key=len) if toks else ""
+
     kept = req_n = 0
     kws = a.keywords.split(",")
     if a.keyword_file:
@@ -84,11 +93,20 @@ def main():
     for kw in kws:
         if kw in done:
             continue
+        q = safe_kw(kw)
+        if not q:
+            done.add(kw)
+            continue
         page = 1
         while page <= a.max_pages:
-            html = fetch(kw, page)
+            try:
+                body = fetch(q, page)
+            except Exception as e:
+                # 특정 검색어에서만 나는 오류로 전체 수집이 멈추지 않게 한다
+                print(f"  [{kw}] 건너뜀 ({e})", flush=True)
+                break
             req_n += 1
-            rows = parse(html)
+            rows = parse(body)
             if not rows:
                 break
             for r in rows:

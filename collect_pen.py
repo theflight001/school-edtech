@@ -45,9 +45,9 @@ def fetch(kw, bdt, edt, year, page):
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
 
-def parse(html):
+def parse(page_html):
     rows = []
-    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page_html, re.S):
         if not re.search(r"\d{4}-\d{2}-\d{2}", tr):
             continue
         c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x))).replace("\xa0", " ").strip()
@@ -88,9 +88,9 @@ def main():
                 continue
             page = 1
             while True:
-                html = fetch(kw, bdt, edt, year, page)
+                body = fetch(kw, bdt, edt, year, page)
                 req_n += 1
-                rows = parse(html)
+                rows = parse(body)
                 for r in rows:
                     if EXCLUDE.search(r["계약명"]):
                         continue
