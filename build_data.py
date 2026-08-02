@@ -223,6 +223,11 @@ EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강
 # 계약 전체가 교육 서비스인 유형 — 브랜드가 언급돼도 제품 도입이 아니므로 무조건 제외 (SW 구입 문구만 예외)
 HARD_SERVICE = re.compile(r"교육 ?용역|동아리 ?운영|방과후 ?운영|체험.{0,12}용역|체험 ?교육|운영비")
 # 일반 '용역' 계약은 대부분 교육활동 — 제품 이용 신호가 있으면 유지 (플랫폼·구독·콘텐츠·설치·임차 등)
+# 자격증·위탁교육 등 '교육 실행' 계약 — 물품·라이선스 구매 신호가 없으면 제품 도입이 아니다
+EDU_TRAINING = re.compile(r"위탁 ?교육|위탁교육|자격증|직무 ?연수|연수 ?용역|캠프 ?운영|"
+                          r"교육과정 ?운영|아카데미 ?운영|과정 ?운영|취득 ?교육|체험 ?위탁")
+GOODS_SIGNAL = re.compile(r"구입|구매|라이선스|라이센스|구독|임차|대여|렌탈|이용권|사용료|이용료|"
+                          r"계정|납품|설치|유지보수")
 SVC_KEEP = re.compile(r"플랫폼|시스템|구독|라이선스|라이센스|콘텐츠|설치|유지보수|임차|사용료|이용료|대여|렌탈|코스웨어|소프트웨어|S/?W ?구[입매]")
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
@@ -585,6 +590,12 @@ records = [r for r in records
 records = [r for r in records
            if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
                    and not re.search(r"플랫폼|시스템", r["product"]))]
+# 자격증 취득·위탁 교육류: 물품 구매 신호가 없으면 교육 용역이므로 제외
+_before_edu = len(records)
+records = [r for r in records
+           if not (EDU_TRAINING.search(r["product"]) and not GOODS_SIGNAL.search(r["product"]))]
+if _before_edu - len(records):
+    print(f"자격증·위탁교육 등 교육 실행 계약 제외: {_before_edu - len(records)}건")
 # 일반 '용역' 계약 — 제품 이용 신호도, 특정 제품명 태그도 없으면 교육활동으로 보고 제외
 records = [r for r in records
            if not ("용역" in r["product"] and not SVC_KEEP.search(r["product"])
@@ -725,10 +736,13 @@ if _new_tags:
     for _t in _new_tags:
         _recs = _by_tag[_t]
         _schools = len({_x["school"] for _x in _recs})
-        _lines.append(f"## {_t} — {len(_recs)}건 / {_schools}개교")
+        _edu = [_x for _x in _recs if EDU_TRAINING.search(_x["product"])]
+        _warn = f"  ⚠️ 교육 용역 신호 {len(_edu)}건 포함 — 제품 도입인지 확인" if _edu else ""
+        _lines.append(f"## {_t} — {len(_recs)}건 / {_schools}개교{_warn}")
         for _x in _random.sample(_recs, min(5, len(_recs))):
             _amt = f"{_x['amt']:,}원" if _x.get("amt") else "금액 미상"
-            _lines.append(f"- [{_x['school']}] {_x['product']}  ({_amt} · {_x['sourceType']})")
+            _flag = " ⚠️" if EDU_TRAINING.search(_x["product"]) else ""
+            _lines.append(f"- [{_x['school']}] {_x['product']}  ({_amt} · {_x['sourceType']}){_flag}")
         _lines.append("")
     open("tag_review.md", "w", encoding="utf-8").write("\n".join(_lines))
     print(f"신규 태그 {len(_new_tags)}종 → tag_review.md (커밋 전 확인 필요)")
