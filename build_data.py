@@ -601,6 +601,21 @@ if AI_CLS:
     records = kept_ai
     print(f"AI 분류 적용: {ai_n}건, AI 잡음 제외: {ai_noise}건")
 
+# 결제 수수료 기록 표시 — 해외/카드 결제의 부대 지출은 제품 구매액이 아니다.
+# ('아이엠스쿨 이용 수수료'처럼 이용료 자체인 경우는 제외하려고 결제 수단·소액 조건을 함께 본다)
+FEE_ANCILLARY = re.compile(r"(?:해외|카드|결제|승인|송금|환전|이용액)[^)\n]{0,6}수수료")
+_fee_n = 0
+for r in records:
+    p = r.get("product") or ""
+    if "수수료" not in p:
+        continue
+    small = (r.get("amt") or 0) and r["amt"] < 10000
+    if FEE_ANCILLARY.search(p) or small:
+        r["note"] = (r["note"] + " · " if r.get("note") else "") + "결제 수수료 — 제품 이용의 부대 지출(구매액 아님)"
+        r["feeOnly"] = 1
+        _fee_n += 1
+print(f"결제 수수료 부대 지출 표시: {_fee_n}건")
+
 # 태그가 하나도 붙지 않은 기록 제외 — 학교 이름에 '소프트웨어'가 들어가 딸려온 비에듀테크 계약 등
 _before_ut = len(records)
 records = [r for r in records if r["tags"]]
