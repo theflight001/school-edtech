@@ -123,6 +123,8 @@ def resolve_school(row):
 # 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
 SPECIFIC_RULES = [
     ("ChatGPT",            r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI"),
+    # Google AI Pro/Ultra는 2025년 개편된 구글 AI 구독 요금제 공식 명칭(구 Gemini Advanced·Google One AI Premium)
+    ("Google AI Pro",       r"구글 ?AI ?(?:PRO|프로|Ultra|울트라)|Google ?AI ?(?:Pro|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
     ("Gemini",             r"Gemini|제미나이"),
     ("Claude",             r"Claude|클로드"),
     ("Replit",             r"\bReplit\b"),   # 한글 '리플릿'은 인쇄물을 뜻해 오탐
