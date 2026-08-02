@@ -51,12 +51,11 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
   .navlinks { justify-content: center; }
   .navlinks a { font-size: 13px; padding: 6px 10px; }
 }
-.page { max-width: 760px; position: relative; }
-.pageart { position: absolute; top: -18px; right: -6px; pointer-events: none; }
-.pageart img { height: 104px; width: auto; display: block; }
-/* 제목·머리글은 그림과 겹치지 않도록 오른쪽을 비워 둔다 */
-@media (min-width: 761px) { .page h2, .page > p:first-of-type { padding-right: 200px; } }
-@media (max-width: 760px) { .pageart { display: none; } }
+.page p, .page li { max-width: 880px; }   /* 카드·표는 본문 폭 전체, 글줄만 읽기 좋게 제한 */
+/* 머리글: 왼쪽 제목·설명, 오른쪽 일러스트를 나란히 놓는다 */
+.page-intro { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.page-intro img { display: block; height: 132px; width: auto; flex: none; }
+@media (max-width: 760px) { .page-intro img { display: none; } }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
 .page p, .page li { color: var(--ink-2); font-size: 15px; }
@@ -769,17 +768,21 @@ function aboutView() {
   return `
     <div class="crumb"><a href="#/">홈</a> › 데이터 안내</div>
     <div class="page">
-      <div class="pageart"><img src="hero_person_m.png?v=2" width="192" height="149" alt=""></div>
-      <h2>데이터 안내</h2>
-      <p>이 서비스는 공개된 조달 기록을 모아 전국 초·중·고등학교의 에듀테크 도입 현황을 보여줍니다.
-      학교가 무엇을 계약했는지는 공개 정보지만 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
+      <div class="page-intro">
+        <div>
+          <h2>데이터 안내</h2>
+          <p>이 서비스는 공개된 조달 기록을 모아 전국 초·중·고등학교의 에듀테크 도입 현황을 보여줍니다.
+          학교가 무엇을 계약했는지는 공개 정보지만 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
+        </div>
+        <img src="hero_person_m.png?v=2" width="170" height="132" alt="">
+      </div>
 
       <h3>어디서 모았나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 — 학교 소액 수의계약 공고</span></div>
         <div class="srccard"><b>에듀집</b><span>교육부·한국교육학술정보원 — 학습지원 소프트웨어 등록 목록</span></div>
-        <div class="srccard"><b>NEIS 학교 정보</b><span>교육부 개방 포털 — 전국 12,078개 학교 명단·소재지</span></div>
+        <div class="srccard"><b>NEIS 학교 정보</b><span>교육부 개방 포털 — 전국 12,666개 학교 명단·소재지</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료</span></div>
       </div>
 
