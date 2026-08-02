@@ -74,7 +74,7 @@ def main():
         # 괄호·따옴표 안 이름 + 문장 속 영문 제품명(Mathematica, MATLAB 등)
         picks = [next((x for x in p if x), "") for p in
                  re.findall(r"\(([^)]{2,16})\)|'([^']{2,16})'|\"([^\"]{2,16})\"", name)]
-        picks += re.findall(r"\b([A-Z][A-Za-z]{4,15}|[A-Z]{3,10})\b", name)
+        picks += re.findall(r"\b([A-Za-z][A-Za-z0-9.]{3,15})\b", name)
         for t in picks:
             t = (t or "").strip().rstrip(",")
             if not t or STOP.search(t) or len(re.sub(r"\s", "", t)) < 2:
@@ -92,8 +92,9 @@ def main():
 
     rows = []
     for name, c in cand.items():
-        # 에듀집 사전에 있으면 실존 제품이 확정되므로 1건이어도 후보로 올린다
-        if c["n"] < a.min_count and norm(name) not in edzip:
+        # 에듀집 사전에 있거나 SW 구매 문맥이 뚜렷하면 1건이어도 후보로 올린다
+        # (bitly처럼 한 학교만 산 제품도 실존 제품이므로 사람이 볼 기회를 준다)
+        if c["n"] < a.min_count and norm(name) not in edzip and c["sw"] == 0:
             continue
         top = c["vendors"].most_common(1)
         share = (top[0][1] / sum(c["vendors"].values())) if c["vendors"] else 0

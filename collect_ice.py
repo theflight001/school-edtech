@@ -3,7 +3,7 @@
 # 배경: 나라장터·S2B에 안 잡히는 소액 구매(수만~수십만 원)가 여기에 남는다.
 #       K-에듀파인과 연계돼 자동 공개되며 로그인이 필요 없다.
 # 결과: ice_candidates.csv (계약번호 대신 기관+계약명+계약일로 중복 판별)
-import argparse, csv, http.cookiejar, json, os, re, sys, time, urllib.parse, urllib.request
+import argparse, csv, html, http.cookiejar, json, os, re, sys, time, urllib.parse, urllib.request
 
 URL = "https://www.ice.go.kr/contract/ir/selectCntrInfoList.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -51,7 +51,7 @@ def parse(html):
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
         if not re.search(r"\d{4}-\d{2}-\d{2}", tr):
             continue
-        c = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x)).replace("&nbsp;", " ").strip()
+        c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x))).replace("\xa0", " ").strip()
              for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         if len(c) < 8:
             continue

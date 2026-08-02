@@ -1,6 +1,6 @@
 # CSV → data.js 변환 스크립트 (정적 프로토타입용)
 # 사용: python3 build_data.py  → data.js 생성
-import csv, json, re, collections, os
+import csv, html, json, re, collections, os
 
 SRC = "db_export.csv"
 OUT = "data.js"
@@ -182,6 +182,13 @@ SPECIFIC_RULES = [
     ("Tinkercad",          r"Tinkercad|팅커캐드"),
     # 투핸즈인터랙티브의 체육활동 에듀테크 교구 ('디딤' 단독은 디딤돌 등과 겹쳐 제외)
     ("플레이 디딤",          r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
+    ("Bitly",              r"\bbitly\b|비틀리"),
+    ("Canva",              r"\bCanva\b|캔바"),
+    ("Figma",              r"\bFigma\b|피그마"),
+    ("Miro",               r"\bMiro\b(?! ?사|타)|미로 ?보드"),
+    ("Perplexity",         r"Perplexity|퍼플렉시티"),
+    ("Gamma",              r"\bGamma ?(?:Pro|AI)\b|감마 ?(?:프로|AI)"),
+    ("젠스파크",             r"젠스파크|Genspark"),
     ("KAIST 공동 AP",       r"KAIST ?공동 ?AP|공동 ?AP ?학사관리|apscience|대학과목선이수"),
     ("캐츠잉글리시",          r"캐츠 ?잉글리시|캣츠 ?잉글리시|Cats ?English"),
     ("윌라",                r"윌라(?!드)|welaaa"),
@@ -711,6 +718,18 @@ for r in records:
         r["feeOnly"] = 1
         _fee_n += 1
 print(f"결제 수수료 부대 지출 표시: {_fee_n}건")
+
+# 원자료에 남은 HTML 엔티티(&apos; &amp; 등) 정리 — 화면에 그대로 노출되는 것을 막는다
+_ent = re.compile(r"&[a-zA-Z]{2,8};|&#\d{2,5};")
+_ent_n = 0
+for r in records:
+    for k in ("product", "content", "school", "note"):
+        v = r.get(k)
+        if isinstance(v, str) and _ent.search(v):
+            r[k] = html.unescape(v)
+            _ent_n += 1
+if _ent_n:
+    print(f"HTML 엔티티 정리: {_ent_n}곳")
 
 # 태그가 하나도 붙지 않은 기록 제외 — 학교 이름에 '소프트웨어'가 들어가 딸려온 비에듀테크 계약 등
 _before_ut = len(records)

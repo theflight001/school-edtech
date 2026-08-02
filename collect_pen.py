@@ -1,7 +1,7 @@
 # 부산광역시교육청 계약정보공개(K-에듀파인 자동연계) 수집기 — 학교 수의계약
 # 사용: python3 collect_pen.py [--begin 2023-01] [--end 2026-08] [--keywords 에듀테크,코스웨어]
 # 제약: 공개 기준 100만원 이상, 검색 기간 최대 1개월 → 월 단위로 나눠 조회한다.
-import argparse, csv, json, os, re, time, urllib.parse, urllib.request
+import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 from datetime import date
 
 URL = "https://www.pen.go.kr/main/ir/selectPrvcntrInfoList.do?mi=31735"
@@ -50,7 +50,7 @@ def parse(html):
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
         if not re.search(r"\d{4}-\d{2}-\d{2}", tr):
             continue
-        c = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x)).replace("&nbsp;", " ").strip()
+        c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x))).replace("\xa0", " ").strip()
              for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         if len(c) < 7:
             continue

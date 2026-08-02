@@ -2,7 +2,7 @@
 # 사용: python3 collect_s2b.py --begin 20230101 --end 20260722 [--keywords 에듀테크,코스웨어] [--max-pages 200]
 # 원칙: 모든 요청 사이 20초 간격(위반 시 CAPTCHA 위험), 체크포인트 재개 지원
 # 결과: s2b_candidates.csv (공고번호+기관명 기준 중복 제거, 증분 저장)
-import argparse, csv, json, os, random, re, sys, time, urllib.request, urllib.parse
+import argparse, csv, html, json, os, random, re, sys, time, urllib.request, urllib.parse
 from datetime import date, timedelta
 
 URL = "https://www.s2b.kr/S2BNCustomer/tcmo001.do"
@@ -81,7 +81,7 @@ def parse_rows(s):
         no, kind = m.group(1), m.group(2)
         title = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.group(3))).replace("&nbsp;", " ").strip()
         seg = s[m.end():m.end() + 2000]
-        tds = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", c)).replace("&nbsp;", " ").strip()
+        tds = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", c))).replace("\xa0", " ").strip()
                for c in re.findall(r"<td[^>]*>(.*?)</td>", seg, re.S)]
         # [상태, 거래구분, 기관명, 공고일, 마감일, ...]
         if len(tds) >= 5:
