@@ -18,6 +18,8 @@ STOP = re.compile(
     r"태블릿|컴퓨터|긴급|추가|변경|재공고|물품|기자재|프로그램|콘텐츠|온라인|디지털|스마트|"
     r"모니터|프린터|서버|충전함|공기청정기|정수기|책상|의자|가구|도서|교구|세트|외|등|목적|"
     r"보조금|인공지능|미래교실|로봇|정보화기기|에듀테크|제품명 미확인|수정|조달|유치원|상품권|"
+    r"AIDT|EDU|CEU|LMS|PC|TV|USB|LED|CCTV|HDMI|SSD|GPU|CPU|OA|IT|ICT|STEAM|SW|HW|"
+    r"MOU|NCS|KERIS|NEIS|S2B|G2B|VOD|PDF|HWP|OS|VR|AR|XR|3D|2D|AI|"
     r"협동로봇|메타버스|수업용|선택형교육)$"
     r"|^\d|^[A-Za-z0-9]{1,4}$|학교|교육청|지원청|계약|구입|구매|납품|설치|임차|대여|용역|공사|"
     r"수리|점검|예산|사업|지원|운영|활용|교실|센터|외 ?\d|,")
@@ -69,8 +71,12 @@ def main():
         m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
         if m:
             vendor = m.group(1).strip()
-        for piece in re.findall(r"\(([^)]{2,16})\)|'([^']{2,16})'|\"([^\"]{2,16})\"", name):
-            t = next((x for x in piece if x), "").strip().rstrip(",")
+        # 괄호·따옴표 안 이름 + 문장 속 영문 제품명(Mathematica, MATLAB 등)
+        picks = [next((x for x in p if x), "") for p in
+                 re.findall(r"\(([^)]{2,16})\)|'([^']{2,16})'|\"([^\"]{2,16})\"", name)]
+        picks += re.findall(r"\b([A-Z][A-Za-z]{4,15}|[A-Z]{3,10})\b", name)
+        for t in picks:
+            t = (t or "").strip().rstrip(",")
             if not t or STOP.search(t) or len(re.sub(r"\s", "", t)) < 2:
                 continue
             if norm(t) in known_norm:
