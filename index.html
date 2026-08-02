@@ -39,9 +39,9 @@ header { background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--plane
 header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.2; }
 .topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--grid); }
 @media (prefers-color-scheme: dark) { .topbar { background: rgba(15,20,26,.78); } }
-.topbar-in { max-width: 1120px; margin: 0 auto; padding: 0 24px; height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.topbar-in { max-width: 1120px; margin: 0 auto; padding: 0 24px; height: 86px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { display: inline-flex; align-items: center; }
-.brand img { display: block; height: 52px; width: auto; }
+.brand img { display: block; height: 62px; width: auto; }
 .brand:hover { text-decoration: none; opacity: .7; }
 .navlinks { display: flex; gap: 4px; }
 .navlinks a { font-size: 16px; font-weight: 600; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
@@ -49,7 +49,7 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .navlinks a.on { color: var(--accent); font-weight: 600; }
 @media (max-width: 700px) {
   .topbar-in { height: auto; padding: 8px 14px; flex-direction: column; align-items: center; gap: 8px; }
-  .brand img { height: 42px; }
+  .brand img { height: 48px; }
   .navlinks { justify-content: center; }
   .navlinks a { font-size: 14.5px; padding: 6px 10px; }
 }
@@ -210,7 +210,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 <body>
 <nav class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="#/" aria-label="공교육 에듀테크 활용 현황 홈"><img src="logo_stack.png?v=1" width="129" height="52" alt="school edtech"></a>
+    <a class="brand" href="#/" aria-label="공교육 에듀테크 활용 현황 홈"><img src="logo_stack.png?v=1" width="154" height="62" alt="school edtech"></a>
     <div class="navlinks">
       <a href="#/about">데이터 안내</a>
       <a href="#/products">제품 전체 보기</a>
