@@ -28,6 +28,21 @@ EXCLUDE = re.compile(r"전세버스|버스 ?임차|임대차|숙박|수송|캠�
 LEVEL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교)$")
 
 _last_req = [0.0]
+_opener = None
+
+def session(renew=False):
+    """S2B는 세션 쿠키(WMONID·s2bncustomer) 없이 POST하면 안티크롤링에 걸린다.
+    브라우저처럼 목록 페이지를 먼저 GET해 쿠키를 받아 둔다."""
+    global _opener
+    if _opener is None or renew:
+        import http.cookiejar
+        cj = http.cookiejar.CookieJar()
+        _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        _opener.addheaders = [("User-Agent", UA),
+                              ("Accept", "text/html,application/xhtml+xml"),
+                              ("Accept-Language", "ko-KR,ko;q=0.9")]
+        _opener.open(URL + "?forwardName=list03", timeout=60).read()
+    return _opener
 
 def post(params):
     wait = SPACING + random.uniform(0, JITTER) - (time.time() - _last_req[0])
@@ -41,7 +56,7 @@ def post(params):
     backoffs = [120, 300, 600, 1800] + [3600] * 11
     for attempt, backoff in enumerate(backoffs + [None]):
         try:
-            raw = urllib.request.urlopen(req, timeout=60).read()
+            raw = session().open(req, timeout=60).read()
             _last_req[0] = time.time()
         except Exception as e:
             _last_req[0] = time.time()
@@ -55,8 +70,13 @@ def post(params):
             # CAPTCHA 차단 — 자동으로 풀 수 없음. 사람이 브라우저에서 풀어야 하므로 장시간 대기 후 재확인
             if backoff is None:
                 raise RuntimeError("CAPTCHA 차단 지속 — 사람이 s2b.kr에서 보안 문자를 풀어야 함")
-            print(f"  CAPTCHA 차단 감지 → {max(backoff, 1800)}초 대기 (브라우저에서 보안 문자를 풀면 빨리 풀림)", flush=True)
-            time.sleep(max(backoff, 1800))
+            # 먼저 세션을 새로 받아 본다 — 쿠키 만료가 원인이면 이것으로 풀린다
+            print(f"  CAPTCHA 차단 감지 → 세션 재발급 후 {backoff}초 대기", flush=True)
+            try:
+                session(renew=True)
+            except Exception as e:
+                print(f"  세션 재발급 실패({e})", flush=True)
+            time.sleep(backoff)
             continue
         if len(raw) < 5000 or "일시적인 장애" in s:  # S2B 에러/점검 페이지
             if backoff is None:
