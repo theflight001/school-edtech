@@ -92,7 +92,8 @@ def main():
 
     rows = []
     for name, c in cand.items():
-        if c["n"] < a.min_count:
+        # 에듀집 사전에 있으면 실존 제품이 확정되므로 1건이어도 후보로 올린다
+        if c["n"] < a.min_count and norm(name) not in edzip:
             continue
         top = c["vendors"].most_common(1)
         share = (top[0][1] / sum(c["vendors"].values())) if c["vendors"] else 0
@@ -124,8 +125,23 @@ def main():
     open("product_candidates.md", "w", encoding="utf-8").write("\n".join(lines))
     print(f"후보 {len(rows)}종 → product_candidates.md")
 
+    # 에듀집에 있어도 보통명사·기존 규칙과 겹치는 이름은 자동 반영하지 않는다
+    AUTO_BLOCK = {"디지털교과서", "로봇 코딩", "SMART", "Smart", "온라인 교육", "전자칠판",
+                  "심리검사", "공동교육과정", "스마트", "코딩", "소프트웨어"}
+    def rule_covered(name):
+        src2 = open("build_data.py", encoding="utf-8").read()
+        pats = re.findall(r'\("[^"]+",\s+r"([^"]+)"\),',
+                          src2[src2.index("SPECIFIC_RULES = ["):src2.index("# 자동 발굴 규칙")])
+        for p in ("edzip_rules.csv",):
+            if os.path.exists(p):
+                pats += [r["패턴"] for r in csv.DictReader(open(p, encoding="utf-8-sig"))]
+        return any(re.search(p, name, re.I) for p in pats if p)
+
     if a.apply:
-        agrade = [r for r in rows if r["등급"] == "A"]
+        agrade = [r for r in rows if r["등급"] == "A"
+                  and r["후보"] not in AUTO_BLOCK and not rule_covered(r["후보"])]
+        seen_norm = set()
+        agrade = [r for r in agrade if not (norm(r["후보"]) in seen_norm or seen_norm.add(norm(r["후보"])))]
         exist = []
         if os.path.exists("mined_rules.csv"):
             exist = list(csv.DictReader(open("mined_rules.csv", encoding="utf-8-sig")))
