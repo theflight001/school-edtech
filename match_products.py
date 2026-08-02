@@ -55,9 +55,13 @@ def load_catalog():
     return cat
 
 def contract_files():
-    """전수(nara_full)가 있으면 그것을, 없으면 기존 refined를 쓴다. S2B 공고는 항상 추가."""
+    """전수(nara_full)가 있으면 그것을, 없으면 기존 refined를 쓴다.
+    교육청 계약공개(인천·부산 등)와 S2B 공고도 함께 대조한다."""
     full = sorted(glob.glob("nara_full_*.csv"))
-    nara = full or sorted(glob.glob("refined_*.csv"))
+    nara = (full or sorted(glob.glob("refined_2*.csv")))
+    for extra in ("ice_refined.csv", "pen_refined.csv"):
+        if os.path.exists(extra):
+            nara.append(extra)
     return nara, (["s2b_candidates.csv"] if os.path.exists("s2b_candidates.csv") else [])
 
 def iter_contracts():
