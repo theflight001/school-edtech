@@ -115,6 +115,27 @@ if os.path.exists("edzip_rules.csv"):
             SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
             _seen_tags.add(_row["태그"])
 
+# AI·디지털 교육자료(AIDT)는 출판사별로 다른 제품 — 계약 상대 업체로 발행처를 특정한다
+AIDT_PUBLISHERS = [
+    ("천재교과서", r"천재교과서|천재교육"), ("비상교육", r"비상교육"),
+    ("YBM", r"와이비엠|\bYBM\b"), ("NE능률", r"엔이능률|NE ?능률"),
+    ("동아출판", r"동아출판"), ("미래엔", r"미래엔"), ("금성출판사", r"금성출판"),
+    ("지학사", r"지학사"), ("아이스크림미디어", r"아이스크림미디어"), ("교학사", r"교학사"),
+]
+# "AIDT 활용 부속품·태블릿"류는 교재가 아니라 기기 구매다
+AIDT_ACCESSORY = re.compile(r"부속품|부속 ?물품|활용 ?물품|태블릿|무선 ?인프라|제작 ?용역")
+AIDT_TAG = "AI·디지털 교육자료"
+
+def refine_aidt(tags, name, vendor):
+    if AIDT_TAG not in tags:
+        return tags
+    if AIDT_ACCESSORY.search(name or ""):
+        return [("기기(PC·태블릿·전자칠판 등)" if t == AIDT_TAG else t) for t in tags]
+    for label, pat in AIDT_PUBLISHERS:
+        if re.search(pat, vendor or "", re.I):
+            return [(f"{label} {AIDT_TAG}" if t == AIDT_TAG else t) for t in tags]
+    return tags
+
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
 EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
@@ -207,7 +228,7 @@ for i, r in enumerate(rows[3:]):
         "year": year_of(r[6]), "ym": ym_of(r[6]), "content": r[7],
         "sourceType": "나라장터" if "나라장터" in r[8] else r[8],
         "url": r[9], "confidence": r[10], "note": r[11] if len(r) > 11 else "",
-        "tags": tags_of(r[4], r[7]),
+        "tags": refine_aidt(tags_of(r[4], r[7]), r[4], r[7]),
         "amt": (lambda ms: int(max(float(x.replace(",", "")) for x in ms) * 10000) if ms else None)(re.findall(r"\(([\d,]+(?:\.\d+)?)만", r[7])),
         "schoolCode": m["code"] if m else None,
         "schoolName": m["name"] if m else None,     # NEIS 현재 교명(개명 반영)
@@ -334,7 +355,7 @@ for path in sorted(glob.glob("refined_*.csv")):
             "sourceType": "나라장터",
             "url": row.get("상세URL") or "", "confidence": "상" if ov else "중",
             "note": (f"실제 제품 수동 확인: {ov['실제제품명']}" + (f" — 근거: {ov['근거']}" if ov.get("근거") else "")) if ov else "파일럿 자동수집분 — 제품명·내용 검증 전",
-            "tags": sorted(set(tags_of(row["계약명"], "") + ov_tags)),
+            "tags": sorted(set(refine_aidt(tags_of(row["계약명"], "") + ov_tags, row["계약명"], row.get("업체명", "")))),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
@@ -389,7 +410,7 @@ if os.path.exists("s2b_refined.csv"):
             "sourceType": "S2B 학교장터",
             "url": "", "confidence": "중",
             "note": "S2B 자동수집분 — 공고 기준(금액·계약업체 미표시)",
-            "tags": tags_of(row["계약명"], ""),
+            "tags": refine_aidt(tags_of(row["계약명"], ""), row["계약명"], ""),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
@@ -403,7 +424,7 @@ if os.path.exists("s2b_refined.csv"):
 before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
 # 교육·연수 운영 용역 제외 — 단, 특정 제품명 태그나 명시적 SW 구입 문구가 있으면 유지
-SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES}
+SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
 records = [r for r in records
            if not (EDU_SERVICE.search(r["product"])
