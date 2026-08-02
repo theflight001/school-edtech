@@ -62,7 +62,7 @@ def main():
     known_norm = {norm(t) for t in known}
 
     cand = collections.defaultdict(lambda: {"n": 0, "vendors": collections.Counter(),
-                                            "sw": 0, "samples": []})
+                                            "sw": 0, "samples": [], "brand_of": ""})
     for r in recs:
         if not r["tags"] or (set(r["tags"]) - GENERIC):
             continue                                   # 이미 제품명이 붙은 기록은 대상 아님
@@ -110,6 +110,53 @@ def main():
         if len(c["samples"]) < 3:
             c["samples"].append((r["school"], (r.get("product") or "")[:60], m.group(1).strip()))
 
+    # 에듀집 등록명은 정식명(브랜드+수식어)인데 계약서엔 브랜드만 적히는 경우
+    # (예: '코들 AI 클래스룸' → 계약명 '프로그램 코들 구입'). 첫 토큰이 고유 브랜드일 때만.
+    BRAND_STOP = re.compile(
+        r"^(AI|인공지능|스마트|디지털|온라인|클래스|교실|수학|영어|국어|과학|코딩|학습|교육|에듀|"
+        r"메타버스|가상현실|증강현실|미래|우리|한국|글로벌|플랫폼|프로그램|콘텐츠|서비스|시스템|"
+        r"솔루션|초등|중등|고등|모두의|리딩|매쓰|잉글리시|무한|기초|교재|학내망|스마트기기|교사용|"
+        r"이동식|프로젝트|미래역량|구독형|전자책|학급|현장|기숙사|지게차|라이트|이미지|방송부|"
+        r"직업계고|그린스마트스쿨|스마트팜|스마트시티|인터렉티브|저스트|SW|ICT|IoT|VR|XR|3D)$", re.I)
+    brands = collections.defaultdict(set)
+    for full in edzip.values():
+        toks = full.split()
+        if len(toks) < 2:
+            continue
+        b = toks[0].strip("[]()「」〈〉")
+        if len(re.sub(r"\s", "", b)) < 2 or BRAND_STOP.match(b) or norm(b) in known_norm:
+            continue
+        brands[b].add(full)
+    # 같은 브랜드로 시작하는 제품이 여럿이면 어느 제품인지 못 가리므로 제외
+    starts = collections.Counter()
+    for full in edzip.values():
+        for b in brands:
+            if full.startswith(b):
+                starts[b] += 1
+    BR = {b: v for b, v in brands.items() if starts[b] == 1}
+    TOK = re.compile(r"[가-힣]+|[A-Za-z][A-Za-z0-9]*")
+    BR3 = [b for b in BR if len(b) >= 3]
+    for r in recs:
+        if not r["tags"] or (set(r["tags"]) - GENERIC):
+            continue
+        nm = r.get("product") or ""
+        hit = None
+        for t in set(TOK.findall(nm)):
+            if t in BR:
+                hit = t
+            else:
+                hit = next((b for b in BR3 if t.startswith(b) and t != b), None)
+            if hit:
+                break
+        if not hit:
+            continue
+        c = cand[hit]
+        c["n"] += 1
+        c["sw"] += 1
+        c["brand_of"] = sorted(BR[hit])[0]
+        if len(c["samples"]) < 3:
+            c["samples"].append((r["school"], nm[:60], ""))
+
     rows = []
     for name, c in cand.items():
         # 에듀집 사전에 있거나 SW 구매 문맥이 뚜렷하면 1건이어도 후보로 올린다
@@ -119,7 +166,9 @@ def main():
         top = c["vendors"].most_common(1)
         share = (top[0][1] / sum(c["vendors"].values())) if c["vendors"] else 0
         in_edzip = norm(name) in edzip
-        if in_edzip:
+        if c.get("brand_of"):
+            grade, why = "B", f"에듀집 등록명 '{c['brand_of']}'의 브랜드부 — 확인 후 반영"
+        elif in_edzip:
             grade, why = "A", f"에듀집 등록 제품({edzip[norm(name)]})"
         elif share >= 0.6 and c["n"] >= 3:
             grade, why = "B", f"업체 쏠림 {share:.0%} ({top[0][0]})"
