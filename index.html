@@ -51,7 +51,12 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
   .navlinks { justify-content: center; }
   .navlinks a { font-size: 13px; padding: 6px 10px; }
 }
-.page { max-width: 760px; }
+.page { max-width: 760px; position: relative; }
+.pageart { position: absolute; top: -18px; right: -6px; pointer-events: none; }
+.pageart img { height: 104px; width: auto; display: block; }
+/* 제목·머리글은 그림과 겹치지 않도록 오른쪽을 비워 둔다 */
+@media (min-width: 761px) { .page h2, .page > p:first-of-type { padding-right: 200px; } }
+@media (max-width: 760px) { .pageart { display: none; } }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
 .page p, .page li { color: var(--ink-2); font-size: 15px; }
@@ -744,6 +749,7 @@ function aboutView() {
   return `
     <div class="crumb"><a href="#/">홈</a> › 데이터 안내</div>
     <div class="page">
+      <div class="pageart"><img src="hero_person.png" width="192" height="150" alt=""></div>
       <h2>데이터 안내</h2>
       <p>이 서비스는 공개된 조달 기록을 모아 전국 초·중·고등학교의 에듀테크 도입 현황을 보여줍니다.
       학교가 무엇을 계약했는지는 공개 정보지만 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
@@ -849,8 +855,8 @@ function contactView() {
 
       <h3>보내실 곳</h3>
       <p>아래 버튼을 누르면 정정 요청 서식이 채워진 메일 창이 열립니다.
-      메일 앱이 없으시면 <b>seouledtech@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
-      <a class="mailbtn" href="mailto:seouledtech@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
+      메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
+      <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
 
       <h3>처리 방식</h3>
       <ul>
