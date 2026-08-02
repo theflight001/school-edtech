@@ -506,6 +506,58 @@ if os.path.exists("s2b_refined.csv"):
         s2b_count += 1
     print(f"S2B 학교장터 병합: {s2b_count}건 (나라장터 중복 제외 {s2b_dup}건)")
 
+# --- 인천교육청 계약공개 수집분 병합: ice_refined.csv (소액 구매 포함) ---
+ice_count, ice_dup = 0, 0
+if os.path.exists("ice_refined.csv"):
+    _idx = {}
+    for r in records:
+        if r.get("ym"):
+            _idx.setdefault((r["school"], _norm_title(r["product"])), []).append(
+                (r["ym"] // 100) * 12 + r["ym"] % 100)
+    for row in csv.DictReader(open("ice_refined.csv", encoding="utf-8-sig")):
+        key = (row["계약번호"], row["학교명"])
+        if key in seen_pilot:
+            continue
+        seen_pilot.add(key)
+        ym = int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None
+        # 나라장터·S2B에 이미 있는 계약이면 중복 (같은 학교·같은 계약명·±2개월)
+        if ym:
+            mm = (ym // 100) * 12 + ym % 100
+            if any(abs(mm - pm) <= 2 for pm in _idx.get((row["학교명"], _norm_title(row["계약명"])), [])):
+                ice_dup += 1
+                continue
+        m = master_by_code.get(row["학교코드"])
+        level = row["급별"]
+        if level == "고등학교":
+            stype = "마이스터고" if (m and is_meister(m)) else ((m.get("hsType") if m else "") or "고등학교")
+        elif level in ("초등학교", "중학교"):
+            stype = level
+        else:
+            stype = level or "미확정"
+        amt = int(row["금액"] or 0)
+        amt_txt = f"({amt/10000:,.0f}만원)" if amt >= 10000 else (f"({amt:,}원)" if amt else "")
+        records.append({
+            "id": 300000 + ice_count,
+            "school": row["학교명"], "type": stype,
+            "region": "인천", "sido": "인천",
+            "product": row["계약명"], "category": f"자동수집({row['구분']})",
+            "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
+            "amt": amt or None, "ym": ym,
+            "content": f"인천교육청 계약공개 {row['구분']} {amt_txt}"
+                + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else ""),
+            "sourceType": "인천교육청 계약공개",
+            "url": "", "confidence": "중",
+            "note": "교육청 계약정보공개 자동수집분 — 소액 구매 포함",
+            "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], row.get("업체명", "")),
+            "schoolCode": row["학교코드"] or None,
+            "schoolName": m["name"] if m else row["학교명"],
+            "hsType": (m.get("hsType") or "") if m else "",
+            "founding": (m.get("founding") or "") if m else "",
+            "neisAddress": (m.get("address") or "") if m else "",
+        })
+        ice_count += 1
+    print(f"인천교육청 계약공개 병합: {ice_count}건 (중복 제외 {ice_dup}건)")
+
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"])]
