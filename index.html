@@ -58,9 +58,12 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .page-intro { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .page-intro img { display: block; height: 186px; width: auto; flex: none; }
 @media (max-width: 760px) { .page-intro img { display: none; } }
-/* 페이지마다 같은 배치가 반복되면 지루하므로, 정정 요청은 그림을 왼쪽에 두고 좌우를 뒤집는다 */
-.page-intro.mirror { flex-direction: row-reverse; }
-.page-intro.mirror img { transform: scaleX(-1); }
+/* 페이지마다 그림이 같은 자리에 오면 지루하므로, 정정 요청은 메일 버튼 옆에 둔다.
+   제목·본문의 왼쪽 기준선은 그대로 유지된다. */
+.cta-row { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.cta-row > div { flex: 1; }
+.cta-row img { display: block; height: 186px; width: auto; flex: none; transform: scaleX(-1); }
+@media (max-width: 760px) { .cta-row img { display: none; } }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
 .page p, .page li { color: var(--ink-2); font-size: 15px; }
@@ -251,7 +254,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260803h"></script>
+<script src="data.js?b=20260803i"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -922,14 +925,9 @@ function contactView() {
   return `
     <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
     <div class="page">
-      <div class="page-intro mirror">
-        <div>
-          <h2>정정 요청 · 문의</h2>
-          <p>이 서비스의 기록은 공개된 조달 자료를 자동으로 정리한 것이라 사실과 다른 부분이 있을 수 있습니다.
-          잘못된 내용을 알려 주시면 확인 후 바로잡겠습니다.</p>
-        </div>
-        <img src="contact_person.png?v=1" width="137" height="186" alt="">
-      </div>
+      <h2>정정 요청 · 문의</h2>
+      <p>이 서비스의 기록은 공개된 조달 자료를 자동으로 정리한 것이라 사실과 다른 부분이 있을 수 있습니다.
+      잘못된 내용을 알려 주시면 확인 후 바로잡겠습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
       <ul>
@@ -940,9 +938,14 @@ function contactView() {
       </ul>
 
       <h3>보내실 곳</h3>
-      <p>아래 버튼을 누르면 정정 요청 서식이 채워진 메일 창이 열립니다.
-      메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
-      <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
+      <div class="cta-row">
+        <div>
+          <p>아래 버튼을 누르면 정정 요청 서식이 채워진 메일 창이 열립니다.
+          메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
+          <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
+        </div>
+        <img src="contact_person.png?v=1" width="137" height="186" alt="">
+      </div>
 
       <h3>처리 방식</h3>
       <ul>
