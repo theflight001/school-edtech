@@ -63,6 +63,7 @@ def parse(html):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
+    ap.add_argument("--keyword-file", help="검색어를 줄 단위로 담은 파일 (에듀집 제품명 등)")
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--max-pages", type=int, default=200)
     a = ap.parse_args()
@@ -76,7 +77,11 @@ def main():
         w.writeheader()
 
     kept = req_n = 0
-    for kw in a.keywords.split(","):
+    kws = a.keywords.split(",")
+    if a.keyword_file:
+        kws = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
+    print(f"검색어 {len(kws)}종", flush=True)
+    for kw in kws:
         if kw in done:
             continue
         page = 1

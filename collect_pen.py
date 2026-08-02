@@ -64,6 +64,8 @@ def main():
     ap.add_argument("--begin", default="2023-01")
     ap.add_argument("--end", default=date.today().strftime("%Y-%m"))
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
+    ap.add_argument("--sweep", action="store_true",
+                    help="키워드 없이 월별 전수 수집 — 제품명만 적힌 계약도 놓치지 않는다")
     a = ap.parse_args()
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
@@ -76,8 +78,8 @@ def main():
         w.writeheader()
 
     wins = months(a.begin, a.end)
-    kws = a.keywords.split(",")
-    print(f"월 {len(wins)}개 × 키워드 {len(kws)}개 = {len(wins)*len(kws)}조합", flush=True)
+    kws = [""] if a.sweep else a.keywords.split(",")
+    print(f"월 {len(wins)}개 × {'전수 스윕' if a.sweep else f'키워드 {len(kws)}개'} = {len(wins)*len(kws)}조합", flush=True)
     kept = req_n = 0
     for kw in kws:
         for bdt, edt, year in wins:
@@ -96,7 +98,7 @@ def main():
                     if k in seen:
                         continue
                     seen.add(k)
-                    r["키워드"] = kw
+                    r["키워드"] = kw or "(전수)"
                     w.writerow(r)
                     kept += 1
                 f.flush()
@@ -105,11 +107,16 @@ def main():
                 page += 1
                 time.sleep(SPACING)
             done.add(key)
+            if len(done) % 6 == 0:
+                print(f"  {bdt[:7]}까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+            ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
+            with open(CKPT, "w") as cf:
+                json.dump(ckpt, cf, ensure_ascii=False)
             time.sleep(SPACING)
         ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
         with open(CKPT, "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
-        print(f"[{kw}] 완료 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+        print(f"[{kw or '전수'}] 완료 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
 
