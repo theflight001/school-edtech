@@ -37,6 +37,11 @@ ALIAS = {
     "의정부공업고등학교": "한국모빌리티고등학교",          # 2026.3 교명 변경 (경기 의정부)
     "마산의신여자중학교": "의신중학교",                   # 2025.3 교명 변경·남녀공학 전환 (경남 창원)
     "대구전자공업고등학교": "대구반도체마이스터고등학교",   # 2025.3 마이스터고 전환 (대구 달서)
+    # 2026-08-02 웹 검증 확정분 (부산 계약공개 수집 중 발견)
+    "부산여자상업고등학교": "해연여자고등학교",             # 2026.3 교명 변경 (부산 동래)
+    "해운대공업고등학교": "부산해군과학기술고등학교",        # 2025.3 교명 변경 (부산 해운대)
+    "금정전자고등학교": "금샘고등학교",                    # 2024.3 교명 변경 (부산 금정)
+    "부일외국어고등학교": "부일고등학교",                  # 자사고 전환에 따른 교명 변경 (부산 해운대)
 }
 
 SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
@@ -604,15 +609,22 @@ if os.path.exists("s2b_refined.csv"):
         s2b_count += 1
     print(f"S2B 학교장터 병합: {s2b_count}건 (나라장터 중복 제외 {s2b_dup}건)")
 
-# --- 인천교육청 계약공개 수집분 병합: ice_refined.csv (소액 구매 포함) ---
-ice_count, ice_dup = 0, 0
-if os.path.exists("ice_refined.csv"):
+# --- 시도교육청 계약공개 수집분 병합 (소액 구매 포함) ---
+# 시도를 늘릴 때는 이 표에 한 줄만 추가한다 (정제 스크립트가 같은 스키마를 내보내므로)
+OFFICE_SOURCES = [
+    ("ice_refined.csv", "인천", "인천교육청 계약공개", 300000),
+    ("pen_refined.csv", "부산", "부산교육청 계약공개", 400000),
+]
+for _src, _sido, _label, _idbase in OFFICE_SOURCES:
+    if not os.path.exists(_src):
+        continue
+    office_count, office_dup = 0, 0
     _idx = {}
     for r in records:
         if r.get("ym"):
             _idx.setdefault((r["school"], _norm_title(r["product"])), []).append(
                 (r["ym"] // 100) * 12 + r["ym"] % 100)
-    for row in csv.DictReader(open("ice_refined.csv", encoding="utf-8-sig")):
+    for row in csv.DictReader(open(_src, encoding="utf-8-sig")):
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue
@@ -622,7 +634,7 @@ if os.path.exists("ice_refined.csv"):
         if ym:
             mm = (ym // 100) * 12 + ym % 100
             if any(abs(mm - pm) <= 2 for pm in _idx.get((row["학교명"], _norm_title(row["계약명"])), [])):
-                ice_dup += 1
+                office_dup += 1
                 continue
         m = master_by_code.get(row["학교코드"])
         level = row["급별"]
@@ -635,15 +647,15 @@ if os.path.exists("ice_refined.csv"):
         amt = int(row["금액"] or 0)
         amt_txt = f"({amt/10000:,.0f}만원)" if amt >= 10000 else (f"({amt:,}원)" if amt else "")
         records.append({
-            "id": 300000 + ice_count,
+            "id": _idbase + office_count,
             "school": row["학교명"], "type": stype,
-            "region": "인천", "sido": "인천",
+            "region": _sido, "sido": _sido,
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": amt or None, "ym": ym,
-            "content": f"인천교육청 계약공개 {row['구분']} {amt_txt}"
+            "content": f"{_label} {row['구분']} {amt_txt}"
                 + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else ""),
-            "sourceType": "인천교육청 계약공개",
+            "sourceType": _label,
             "url": "", "confidence": "중",
             "note": "교육청 계약정보공개 자동수집분 — 소액 구매 포함",
             "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], row.get("업체명", "")),
@@ -653,8 +665,8 @@ if os.path.exists("ice_refined.csv"):
             "founding": (m.get("founding") or "") if m else "",
             "neisAddress": (m.get("address") or "") if m else "",
         })
-        ice_count += 1
-    print(f"인천교육청 계약공개 병합: {ice_count}건 (중복 제외 {ice_dup}건)")
+        office_count += 1
+    print(f"{_label} 병합: {office_count}건 (중복 제외 {office_dup}건)")
 
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
@@ -841,6 +853,34 @@ for r in records:
             r["note"] = (r["note"] + " · " if r["note"] else "") + "조달 기록과 동일 건 추정 — 집계 1건 처리"
             _dup_n += 1
 print(f"언론-조달 동일 건 병합 집계: {_dup_n}건")
+
+# 손으로 정리한 씨앗 기록과 자동수집 기록이 같은 계약이면(학교·금액 일치, ±2개월)
+# 계약명 원문이 남는 자동수집분을 살리고, 씨앗이 특정해 둔 제품 태그를 옮겨 붙인다
+_auto_idx = collections.defaultdict(list)
+for r in records:
+    if str(r.get("category", "")).startswith("자동수집") and r.get("amt") and r.get("ym"):
+        _auto_idx[(r["school"], r["amt"])].append(r)
+_seed_dup, _drop_ids = 0, set()
+for r in records:
+    if str(r.get("category", "")).startswith("자동수집") or not r.get("amt"):
+        continue
+    m = _months(r["ym"]) if r.get("ym") else None
+    for a2 in _auto_idx.get((r["school"], r["amt"]), []):
+        if m is not None:
+            if abs(m - _months(a2["ym"])) > 2:
+                continue
+        elif r.get("year") and r["year"] != a2.get("year"):
+            continue      # 씨앗에 월이 없으면 연도만 대조 (금액이 원 단위로 같아 충돌 위험은 낮다)
+        gained = sorted(set(r["tags"]) - set(a2["tags"]) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+        if gained:
+            a2["tags"] = sorted((set(a2["tags"]) | set(gained)) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+            a2["note"] = (a2["note"] + " · " if a2.get("note") else "") + "제품 확인 완료"
+        _drop_ids.add(id(r))
+        _seed_dup += 1
+        break
+if _seed_dup:
+    records = [r for r in records if id(r) not in _drop_ids]
+    print(f"씨앗-자동수집 동일 계약 정리: {_seed_dup}건 (계약명 원문 쪽을 남김)")
 
 # 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
 seen_exact = set()

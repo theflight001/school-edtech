@@ -22,7 +22,8 @@
       "Bash(git add *)",
       "Bash(git commit -q -m '팝업 바깥 클릭으로 닫히는 동작 제거 — 버튼으로만 닫기 *)",
       "Bash(git push *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(python3 -)"
     ]
   }
 }
