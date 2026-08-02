@@ -7,8 +7,9 @@ from datetime import date, timedelta
 
 URL = "https://www.s2b.kr/S2BNCustomer/tcmo001.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 25  # 초 최소 간격 — 절대 줄이지 말 것 (여기에 무작위 지연이 더해짐)
-JITTER = 15   # 0~15초 무작위 추가 — 기계적으로 일정한 간격은 안티크롤링에 감지됨
+SPACING = 45  # 초 최소 간격 — 절대 줄이지 말 것 (여기에 무작위 지연이 더해짐)
+              # 2026-08-03: 25초로는 짧은 시간 안의 두 번째 검색이 차단돼 45초로 올림
+JITTER = 25   # 0~25초 무작위 추가 — 기계적으로 일정한 간격은 안티크롤링에 감지됨
 OUT = "s2b_candidates.csv"
 CKPT = ".ckpt_s2b.json"
 FIELDS = ["공고번호", "공고명", "기관명", "공고일", "마감일", "계약구분", "거래구분", "키워드", "조회창"]
