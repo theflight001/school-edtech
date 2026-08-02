@@ -90,6 +90,26 @@ def main():
             if len(c["samples"]) < 3:
                 c["samples"].append((r["school"], name[:60], vendor))
 
+    # 업체명이 곧 제품명인 경우(READDY AI, PADLET.COM 등) — 유통·조달상은 제외
+    RESELLER = re.compile(r"지마켓|쿠팡|이베이|옥션|조달청|문구|상사|유통|서점|총판|"
+                          r"컴퓨터|시스템|테크|엔지니어링|건설|인쇄|물산|상회|마트")
+    for r in recs:
+        if not r["tags"] or (set(r["tags"]) - GENERIC):
+            continue
+        m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
+        if not m:
+            continue
+        v = re.sub(r"주식회사|㈜|\(주|유한회사|\(유|Co\.?,?\s?Ltd\.?|Inc\.?", "", m.group(1)).strip()
+        v = re.sub(r"[,\s]+$", "", v)
+        if len(v) < 3 or RESELLER.search(v) or norm(v) in known_norm:
+            continue
+        c = cand[v]
+        c["n"] += 1
+        c["vendors"][m.group(1).strip()] += 1
+        c["sw"] += 1                       # 업체명 후보는 SW 문맥으로 간주
+        if len(c["samples"]) < 3:
+            c["samples"].append((r["school"], (r.get("product") or "")[:60], m.group(1).strip()))
+
     rows = []
     for name, c in cand.items():
         # 에듀집 사전에 있거나 SW 구매 문맥이 뚜렷하면 1건이어도 후보로 올린다

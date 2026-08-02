@@ -183,6 +183,7 @@ SPECIFIC_RULES = [
     # 투핸즈인터랙티브의 체육활동 에듀테크 교구 ('디딤' 단독은 디딤돌 등과 겹쳐 제외)
     ("플레이 디딤",          r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
     ("Bitly",              r"\bbitly\b|비틀리"),
+    ("Readdy AI",          r"\bReaddy\b|리디 ?AI"),
     ("Canva",              r"\bCanva\b|캔바"),
     ("Figma",              r"\bFigma\b|피그마"),
     ("Miro",               r"\bMiro\b(?! ?사|타)|미로 ?보드"),
@@ -719,6 +720,27 @@ for r in records:
         r["feeOnly"] = 1
         _fee_n += 1
 print(f"결제 수수료 부대 지출 표시: {_fee_n}건")
+
+# 업체명 자체가 제품명인 경우 — 계약명에 제품이 없어도 업체로 특정된다
+# (자동 도출은 3건 이상이라야 작동하므로, 1~2건뿐인 단일 제품 업체는 여기에 적는다)
+VENDOR_RULES = [
+    (r"READDY|리디 ?AI", "Readdy AI"),
+    (r"툰스퀘어", "투닝"),
+    (r"제로엑스플로우", "원아워"),
+    (r"투핸즈인터랙티브", "플레이 디딤"),
+]
+_vr_n = 0
+for r in records:
+    m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
+    if not m:
+        continue
+    for pat, tag in VENDOR_RULES:
+        if re.search(pat, m.group(1), re.I) and tag not in r["tags"]:
+            r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+            r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체명이 제품명({tag})"
+            _vr_n += 1
+if _vr_n:
+    print(f"업체명=제품명 규칙 적용: {_vr_n}건")
 
 # --- 단일 제품 업체 보정 ------------------------------------------------------
 # 한 제품만 공급하는 업체(예: PADLET.COM, 주식회사 리로소프트)가 계약 상대라면
