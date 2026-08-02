@@ -44,14 +44,14 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .brand img { display: block; height: 28px; width: auto; }
 .brand:hover { text-decoration: none; opacity: .7; }
 .navlinks { display: flex; gap: 4px; }
-.navlinks a { font-size: 14px; color: var(--ink-2); padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
+.navlinks a { font-size: 16px; font-weight: 600; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
 .navlinks a:hover { text-decoration: none; background: var(--surface); color: var(--ink); }
 .navlinks a.on { color: var(--accent); font-weight: 600; }
 @media (max-width: 700px) {
   .topbar-in { height: auto; padding: 8px 14px; flex-direction: column; align-items: stretch; gap: 6px; }
   .brand { font-size: 14px; text-align: center; }
   .navlinks { justify-content: center; }
-  .navlinks a { font-size: 13px; padding: 6px 10px; }
+  .navlinks a { font-size: 14.5px; padding: 6px 10px; }
 }
 .page p, .page li { max-width: 880px; }   /* 카드·표는 본문 폭 전체, 글줄만 읽기 좋게 제한 */
 /* 머리글: 왼쪽 제목·설명, 오른쪽 일러스트를 나란히 놓는다 */
