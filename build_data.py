@@ -258,13 +258,17 @@ def refine_aidt(tags, name, vendor):
     return tags
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
-EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기|교복|체육복")
+EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기|교복|체육복|상품권|기념품|시상품|트로피|기념패|홍보물품")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
 EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강사")
 # 계약 전체가 교육 서비스인 유형 — 브랜드가 언급돼도 제품 도입이 아니므로 무조건 제외 (SW 구입 문구만 예외)
 HARD_SERVICE = re.compile(r"교육 ?용역|동아리 ?운영|방과후 ?운영|체험.{0,12}용역|체험 ?교육|운영비")
 # 일반 '용역' 계약은 대부분 교육활동 — 제품 이용 신호가 있으면 유지 (플랫폼·구독·콘텐츠·설치·임차 등)
 # 자격증·위탁교육 등 '교육 실행' 계약 — 물품·라이선스 구매 신호가 없으면 제품 도입이 아니다
+# 학교 보안·시설 설비 — 학습과 무관하므로 수록 대상이 아니다
+# ('출결관리'는 에듀테크에 해당하므로 '출입'과 구분해서 적을 것)
+SECURITY_SYS = re.compile(r"출입 ?관리|출입 ?통제|출입 ?시스템|출입문|무인경비|방범|CCTV|"
+                          r"도어락|잠금장치|주차 ?관리|스피드게이트|지문 ?인식기|안면인식 ?출입")
 EDU_TRAINING = re.compile(r"위탁 ?교육|위탁교육|자격증|직무 ?연수|연수 ?용역|캠프 ?운영|"
                           r"교육과정 ?운영|아카데미 ?운영|과정 ?운영|취득 ?교육|체험 ?위탁")
 GOODS_SIGNAL = re.compile(r"구입|구매|라이선스|라이센스|구독|임차|대여|렌탈|이용권|사용료|이용료|"
@@ -299,6 +303,9 @@ def ym_of(period):
         return int(m.group(1)) * 100 + int(m.group(2))
     return None
 
+DEPT_NAME = re.compile(r"[가-힣]{0,8}(?:소프트웨어|정보통신|정보처리|컴퓨터|전자|반도체|"
+                       r"인공지능|디지털|스마트|메카트로닉스)[가-힣]{0,6}과(?=[\s,)·]|$)")
+
 def strip_school(name, school):
     """계약명 앞의 학교 이름이 태그 규칙에 걸리는 것을 막는다
     (예: '부산소프트웨어마이스터고 교복 구매' → 소프트웨어 태그 오탐)"""
@@ -308,7 +315,7 @@ def strip_school(name, school):
     base = re.sub(r"(초등학교|중학교|고등학교|학교)$", "", school)
     if len(base) >= 3:
         out = out.replace(base, " ")
-    return out
+    return DEPT_NAME.sub(" ", out)      # 학과명도 제거 ('반도체소프트웨어과 대회 상품권' 오탐 방지)
 
 def tags_of(name, content):
     hay = f"{name} {content}"
@@ -647,6 +654,12 @@ records = [r for r in records
                    and not (_spec_all & set(r["tags"])))]
 if _before_svc - len(records):
     print(f"교육 실행 용역(제품군 태그만) 제외: {_before_svc - len(records)}건")
+
+# 보안·시설 설비 계약 제외 (출입통제·CCTV·방범 등)
+_before_sec = len(records)
+records = [r for r in records if not SECURITY_SYS.search(r["product"])]
+if _before_sec - len(records):
+    print(f"보안·시설 설비 계약 제외: {_before_sec - len(records)}건")
 
 # 자격증 취득·위탁 교육류: 물품 구매 신호가 없으면 교육 용역이므로 제외
 _before_edu = len(records)
