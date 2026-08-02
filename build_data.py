@@ -720,6 +720,51 @@ for r in records:
         _fee_n += 1
 print(f"결제 수수료 부대 지출 표시: {_fee_n}건")
 
+# --- 단일 제품 업체 보정 ------------------------------------------------------
+# 한 제품만 공급하는 업체(예: PADLET.COM, 주식회사 리로소프트)가 계약 상대라면
+# 계약명에 제품이 안 적혔어도 그 제품 도입으로 볼 수 있다. 추정이 아니라 직접 증거다.
+# 업체 목록은 데이터에서 자동 도출한다 — 그 업체의 태그된 계약 90% 이상이 한 제품일 때만.
+_SPEC_ALL = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
+_vend_re = re.compile(r"계약업체[:：]\s*([^·)]+)")
+
+def _vkey(v):
+    """업체명 표기 흔들림 흡수 — 'PADLET.COM' 'PADLET SOFTWARE' 'PADLET*PADLET…'를 한 업체로"""
+    v = re.sub(r"주식회사|㈜|\(주\)|유한회사|Co\.?,?\s?Ltd\.?|Inc\.?", "", v, flags=re.I)
+    v = re.sub(r"[^0-9A-Za-z가-힣]", "", v).lower()
+    return v[:6]
+_by_vendor, _vendor_total = collections.defaultdict(collections.Counter), collections.Counter()
+for r in records:
+    m = _vend_re.search(r.get("content") or "")
+    if not m:
+        continue
+    v = _vkey(m.group(1))
+    if len(v) < 3:
+        continue
+    _vendor_total[v] += 1
+    for t in r["tags"]:
+        if t in _SPEC_ALL:
+            _by_vendor[v][t] += 1
+SINGLE_VENDOR = {}
+for v, c in _by_vendor.items():
+    if _vendor_total[v] < 3:
+        continue
+    top, n = c.most_common(1)[0]
+    if n >= 3 and n / sum(c.values()) >= 0.9:
+        SINGLE_VENDOR[v] = top
+_vfix = 0
+for r in records:
+    if set(r["tags"]) & _SPEC_ALL:
+        continue                     # 이미 제품이 특정된 기록은 건드리지 않는다
+    m = _vend_re.search(r.get("content") or "")
+    if not m:
+        continue
+    tag = SINGLE_VENDOR.get(_vkey(m.group(1)))
+    if tag:
+        r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+        r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체가 {tag} 단일 공급사"
+        _vfix += 1
+print(f"단일 제품 업체 근거로 제품 특정: {_vfix}건 (업체 {len(SINGLE_VENDOR)}곳)")
+
 # 원자료에 남은 HTML 엔티티(&apos; &amp; 등) 정리 — 화면에 그대로 노출되는 것을 막는다
 _ent = re.compile(r"&[a-zA-Z]{2,8};|&#\d{2,5};")
 _ent_n = 0
