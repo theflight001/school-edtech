@@ -62,7 +62,7 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
    제목·본문의 왼쪽 기준선은 그대로 유지된다. */
 .cta-row { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .cta-row > div { flex: 1; }
-.cta-row img { display: block; height: 186px; width: auto; flex: none; transform: scaleX(-1); }
+.cta-row img { display: block; height: 150px; width: auto; flex: none; transform: scaleX(-1); }
 @media (max-width: 760px) { .cta-row img { display: none; } }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
@@ -254,7 +254,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260803i"></script>
+<script src="data.js?b=20260803j"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -944,7 +944,7 @@ function contactView() {
           메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
           <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
         </div>
-        <img src="contact_person.png?v=1" width="137" height="186" alt="">
+        <img src="contact_person.png?v=1" width="111" height="150" alt="">
       </div>
 
       <h3>처리 방식</h3>
