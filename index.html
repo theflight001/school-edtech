@@ -58,6 +58,9 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .page-intro { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .page-intro img { display: block; height: 186px; width: auto; flex: none; }
 @media (max-width: 760px) { .page-intro img { display: none; } }
+/* 페이지마다 같은 배치가 반복되면 지루하므로, 정정 요청은 그림을 왼쪽에 두고 좌우를 뒤집는다 */
+.page-intro.mirror { flex-direction: row-reverse; }
+.page-intro.mirror img { transform: scaleX(-1); }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
 .page p, .page li { color: var(--ink-2); font-size: 15px; }
@@ -248,7 +251,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260803g"></script>
+<script src="data.js?b=20260803h"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -919,7 +922,7 @@ function contactView() {
   return `
     <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
     <div class="page">
-      <div class="page-intro">
+      <div class="page-intro mirror">
         <div>
           <h2>정정 요청 · 문의</h2>
           <p>이 서비스의 기록은 공개된 조달 자료를 자동으로 정리한 것이라 사실과 다른 부분이 있을 수 있습니다.
