@@ -137,7 +137,7 @@ def refine_aidt(tags, name, vendor):
     return tags
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
-EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기")
+EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기|교복|체육복")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
 EDU_SERVICE = re.compile(r"프로그램 ?운영|운영 ?용역|특강|연수|강사")
 # 계약 전체가 교육 서비스인 유형 — 브랜드가 언급돼도 제품 도입이 아니므로 무조건 제외 (SW 구입 문구만 예외)
@@ -172,6 +172,17 @@ def ym_of(period):
     if m and 1 <= int(m.group(2)) <= 12:
         return int(m.group(1)) * 100 + int(m.group(2))
     return None
+
+def strip_school(name, school):
+    """계약명 앞의 학교 이름이 태그 규칙에 걸리는 것을 막는다
+    (예: '부산소프트웨어마이스터고 교복 구매' → 소프트웨어 태그 오탐)"""
+    if not school:
+        return name
+    out = (name or "").replace(school, " ")
+    base = re.sub(r"(초등학교|중학교|고등학교|학교)$", "", school)
+    if len(base) >= 3:
+        out = out.replace(base, " ")
+    return out
 
 def tags_of(name, content):
     hay = f"{name} {content}"
@@ -355,7 +366,7 @@ for path in sorted(glob.glob("refined_*.csv")):
             "sourceType": "나라장터",
             "url": row.get("상세URL") or "", "confidence": "상" if ov else "중",
             "note": (f"실제 제품 수동 확인: {ov['실제제품명']}" + (f" — 근거: {ov['근거']}" if ov.get("근거") else "")) if ov else "파일럿 자동수집분 — 제품명·내용 검증 전",
-            "tags": sorted(set(refine_aidt(tags_of(row["계약명"], "") + ov_tags, row["계약명"], row.get("업체명", "")))),
+            "tags": sorted(set(refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), "") + ov_tags, row["계약명"], row.get("업체명", "")))),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
@@ -410,7 +421,7 @@ if os.path.exists("s2b_refined.csv"):
             "sourceType": "S2B 학교장터",
             "url": "", "confidence": "중",
             "note": "S2B 자동수집분 — 공고 기준(금액·계약업체 미표시)",
-            "tags": refine_aidt(tags_of(row["계약명"], ""), row["계약명"], ""),
+            "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], ""),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
@@ -462,6 +473,12 @@ if AI_CLS:
         kept_ai.append(r)
     records = kept_ai
     print(f"AI 분류 적용: {ai_n}건, AI 잡음 제외: {ai_noise}건")
+
+# 태그가 하나도 붙지 않은 기록 제외 — 학교 이름에 '소프트웨어'가 들어가 딸려온 비에듀테크 계약 등
+_before_ut = len(records)
+records = [r for r in records if r["tags"]]
+if _before_ut - len(records):
+    print(f"태그 없는 기록 제외: {_before_ut - len(records)}건")
 
 # 언론보도가 같은 학교·제품의 조달 기록과 ±6개월 내면 동일 건으로 보고 집계에서 1건 처리
 def _months(ym):
