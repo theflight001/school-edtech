@@ -32,6 +32,11 @@ ALIAS = {
     # 2026-07-27 웹 검증 확정분
     "보영여자중학교": "한빛누리중학교",                  # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
     "보영여자고등학교": "한빛누리고등학교",               # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
+    # 2026-08-02 웹 검증 확정분
+    "김화공업고등학교": "한국국방과학고등학교",            # 2026.3 마이스터고 전환 (강원 철원)
+    "의정부공업고등학교": "한국모빌리티고등학교",          # 2026.3 교명 변경 (경기 의정부)
+    "마산의신여자중학교": "의신중학교",                   # 2025.3 교명 변경·남녀공학 전환 (경남 창원)
+    "대구전자공업고등학교": "대구반도체마이스터고등학교",   # 2025.3 마이스터고 전환 (대구 달서)
 }
 
 SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
@@ -56,6 +61,63 @@ def find_school(name, region):
             if len(f) == 1:
                 return f[0]
     return None
+
+_by_name = master_by_name
+# 주의: 광주·전남은 마스터에 '전남광주통합특별시(광주)' 형태로 들어 있어 접두 비교가 통하지 않는다
+SIDO_FROM_ORG = [("서울", "서울"), ("부산", "부산"), ("대구", "대구"), ("인천", "인천"),
+                 ("광주", r".*\(광주\)"), ("대전", "대전"), ("울산", "울산"), ("세종", "세종"),
+                 ("경기", "경기"), ("강원", "강원"), ("충청북", "충청북"), ("충북", "충청북"),
+                 ("충청남", "충청남"), ("충남", "충청남"), ("전북", "전북|전라북"),
+                 ("전라북", "전북|전라북"), ("전라남", r".*\(전남\)"), ("전남", r".*\(전남\)"),
+                 ("경상북", "경상북"), ("경북", "경상북"), ("경상남", "경상남"),
+                 ("경남", "경상남"), ("제주", "제주")]
+
+def resolve_school(row):
+    """학교코드가 비어 있는 행을 관할 시도교육청 기준으로 다시 매칭한다."""
+    if row.get("학교코드"):
+        return row
+    name = (row.get("학교명") or "").strip()
+    org = (row.get("수요기관") or "").strip()
+    toks = org.split()
+    head = toks[0] if toks else ""            # 예: '경기도교육청' — 광역 단위가 확실한 토큰
+    name = ALIAS.get(name, name)              # 개명 학교 반영
+    cands = _by_name.get(name, [])
+    if not cands and len(toks) > 1:
+        # 교명에 띄어쓰기가 있어 마지막 토큰만 잘린 경우 ('… 사범대학 부설고등학교')
+        for k in (2, 3, 4):
+            if len(toks) >= k:
+                cand_name = "".join(toks[-k:])
+                cand_name = ALIAS.get(cand_name, cand_name)
+                if _by_name.get(cand_name):
+                    cands, name = _by_name[cand_name], cand_name
+                    break
+    if not cands:
+        # '인천재능고등학교'처럼 시도 접두어가 교명에 붙은 표기 보정
+        for pre, _ in SIDO_FROM_ORG:
+            if name.startswith(pre) and _by_name.get(name[len(pre):]):
+                cands = _by_name[name[len(pre):]]
+                name = name[len(pre):]
+                break
+    if len(cands) > 1 and head:
+        for kw, pat in SIDO_FROM_ORG:
+            if head.startswith(kw):
+                f = [c for c in cands if re.match(pat, c["sido"])]
+                if len(f) == 1:
+                    cands = f
+                break
+    if len(cands) > 1 and len(toks) > 1:
+        # 같은 시도에 동명 학교가 여럿이면 교육지원청 지명으로 가른다 ('경기도수원교육청' → 수원시)
+        mid = re.sub(r"(교육지원청|교육청|특별자치도|광역시|특별시|도)$", "", toks[-2] if len(toks) > 2 else toks[0])
+        mid = re.sub(r"^(경기도|강원도|충청남도|충청북도|경상남도|경상북도|전라남도|전라북도|제주도)", "", mid)
+        if len(mid) >= 2:
+            f = [c for c in cands if mid in (c.get("address") or "")]
+            if len(f) == 1:
+                cands = f
+    if len(cands) == 1:
+        c = cands[0]
+        row["학교명"], row["학교코드"] = name, c["code"]
+        row["급별"], row["시도"] = c["level"], c["sido"]
+    return row
 
 # 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
 # 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
@@ -280,6 +342,9 @@ if os.path.exists("manual_overrides.csv"):
         if row.get("계약번호") and row.get("실제제품명"):
             OVERRIDES[row["계약번호"].strip()] = row
 
+# --- 학교 재매칭 보정 ---------------------------------------------------------
+# 수집 단계의 시도 추정은 "경기도광주교육청"에서 '광주'(광역시)를 먼저 잡는 등 오판이 있었다.
+# 여기서는 수요기관 첫 토큰(관할 시도교육청)을 근거로 다시 맞춘다.
 # 통합운영학교 보정: 조달 주체(예: 무릉초등학교)와 계약명 속 실사용 학교(무릉중학교)가
 # 같은 어간에 급만 다르면 계약명 쪽 학교로 귀속 (같은 시도에 실재할 때만)
 TITLE_SCHOOL = re.compile(r"([가-힣]{2,})(초등학교|중학교|고등학교)")
@@ -291,7 +356,8 @@ def _switch(row, target):
     if len(cands) == 1:
         row = dict(row)
         row["_원학교명"] = row["학교명"]
-        row["학교명"], row["학교코드"], row["급별"] = target, cands[0]["code"], cands[0]["level"]
+        row["학교명"], row["학교코드"] = target, cands[0]["code"]
+        row["급별"], row["시도"] = cands[0]["level"], cands[0]["sido"]
     return row
 
 def reattribute(row):
@@ -324,14 +390,15 @@ def reattribute(row):
     if len(cands) == 1:
         row = dict(row)
         row["_원학교명"] = row["학교명"]
-        row["학교명"], row["학교코드"], row["급별"] = target, cands[0]["code"], cands[0]["level"]
+        row["학교명"], row["학교코드"] = target, cands[0]["code"]
+        row["급별"], row["시도"] = cands[0]["level"], cands[0]["sido"]
     return row
 
 pilot_count = 0
 seen_pilot = set()
 for path in sorted(glob.glob("refined_*.csv")):
     for row in csv.DictReader(open(path, encoding="utf-8-sig")):
-        row = reattribute(row)
+        row = resolve_school(reattribute(row))
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue

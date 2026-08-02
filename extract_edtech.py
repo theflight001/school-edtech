@@ -18,6 +18,7 @@ tags_of, refine_aidt, strip_school = R["tags_of"], R["refine_aidt"], R["strip_sc
 EXCLUDE_EVENT, EDU_SERVICE, HARD_SERVICE = R["EXCLUDE_EVENT"], R["EDU_SERVICE"], R["HARD_SERVICE"]
 SVC_KEEP, SPECIFIC_RULES, GENERIC_RULES = R["SVC_KEEP"], R["SPECIFIC_RULES"], R["GENERIC_RULES"]
 AIDT_PUBLISHERS, AIDT_TAG = R["AIDT_PUBLISHERS"], R["AIDT_TAG"]
+resolve_school = R["resolve_school"]
 SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
 
@@ -32,6 +33,9 @@ EDTECH_CTX = re.compile(
     r"에듀테크|코스웨어|인공지능|\bAI\b|디지털|스마트|\bSW\b|S/W|소프트웨어|정보화|"
     r"메타버스|\bVR\b|\bXR\b|증강현실|가상현실|로봇|코딩|드론|3D ?프린|이러닝|e-?러닝|"
     r"온라인 ?수업|원격 ?수업|미래교실|스마트교실|전자칠판|태블릿|크롬북|노트북|컴퓨터실", re.I)
+
+
+COVER_END = "2026-07-31"   # 나라장터 전수 수집 종료일
 
 def main():
     ap = argparse.ArgumentParser()
@@ -80,6 +84,11 @@ def main():
             if "용역" in name and not SVC_KEEP.search(name) and not has_specific:
                 drop["일반 용역"] += 1
                 continue
+            # 조사 기간(수집 종료일) 이후로 찍힌 계약일은 고지한 기간 밖이라 제외한다
+            if (r.get("계약일") or "") > COVER_END:
+                drop["조사 기간 밖(미래 계약일)"] += 1
+                continue
+            r = resolve_school(r)
             n_tag += 1
             for t in tags:
                 tagcount[t] += 1
