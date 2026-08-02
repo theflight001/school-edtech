@@ -167,6 +167,18 @@ SPECIFIC_RULES = [
     ("KT AICE",            r"\bAICE\b"),
     ("와콤",               r"와콤|Wacom"),
     ("KAIST 공동 AP",       r"KAIST ?공동 ?AP|공동 ?AP ?학사관리|apscience|대학과목선이수"),
+    ("캐츠잉글리시",          r"캐츠 ?잉글리시|캣츠 ?잉글리시|Cats ?English"),
+    ("윌라",                r"윌라(?!드)|welaaa"),
+    ("알툴즈",               r"알툴즈|알PDF|알집(?! ?파일)|ALTools"),
+    ("이지에듀",             r"이지에듀|EZ ?EDU"),
+    ("반디캠",               r"반디캠|Bandicam"),
+    ("곰믹스",               r"곰믹스|GOM ?Mix"),
+    ("클립스튜디오",          r"클립 ?스튜디오|Clip ?Studio"),
+    ("쿨메신저",             r"쿨메신저|Cool ?Messenger"),
+    ("하드보안관",            r"하드보안관"),
+    ("리딩앤",               r"리딩앤(?!드)|Reading& ?"),
+    ("네프론",               r"네프론|Nephron"),
+    ("티처몰",               r"티처몰"),
     ("마인크래프트 에듀케이션", r"마인크래프트|Minecraft"),
     ("카훗",               r"카훗|Kahoot"),
     ("김킷",               r"김킷|Gimkit"),
@@ -294,6 +306,10 @@ def tags_of(name, content):
         if not ptags and paren and re.search(SW_KW, paren, re.I):
             ptags = ["SW·플랫폼(제품명 미상)"]
         tags += ptags or [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
+    # "실습기자재 소프트웨어 구입"처럼 대상이 소프트웨어로 명시되면 시설·기기 태그보다 SW가 우선
+    if tags and set(tags) <= {"인프라(교실·설비)", "기기(PC·태블릿·전자칠판 등)"} \
+            and re.search(r"소프트웨어|S/?W\b|라이선스|라이센스|구독|프로그램", name, re.I):
+        tags = ["SW·플랫폼(제품명 미상)"]
     # "AI교실 환경 구축 노트북 구입"처럼 '구축·조성'이 목적 문구일 뿐이면 기기 구매이지 인프라가 아님
     if "기기(PC·태블릿·전자칠판 등)" in tags and "인프라(교실·설비)" in tags:
         stripped = re.sub(r"(?:환경 ?)?구축|조성|기자재|실습실|환경개선", "", name)
