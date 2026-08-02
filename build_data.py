@@ -191,6 +191,14 @@ SPECIFIC_RULES = [
 
 # 에듀집 등록 제품 중 조달 기록으로 실사용이 확인된 제품 — edzip_rules.csv에서 자동 로드
 # (제품 단위 전수조사 결과: 나라장터 전수 140만 건 × 에듀집 2,490종 대조)
+# 자동 발굴 규칙 — mine_products.py가 에듀집 사전과 대조해 확정한 제품명(A등급)
+if os.path.exists("mined_rules.csv"):
+    _seen_m = {t for t, _ in SPECIFIC_RULES}
+    for _row in csv.DictReader(open("mined_rules.csv", encoding="utf-8-sig")):
+        if _row["태그"] not in _seen_m and _row["패턴"]:
+            SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
+            _seen_m.add(_row["태그"])
+
 # 문맥 조건부 태그: 제품명이 보통명사와 겹칠 수 있어 소프트웨어 문맥이 확인될 때만 인정한다
 CTX_REQUIRED = set()
 if os.path.exists("edzip_rules.csv"):
@@ -201,6 +209,10 @@ if os.path.exists("edzip_rules.csv"):
             _seen_tags.add(_row["태그"])
             if (_row.get("문맥필요") or "").strip() == "Y":
                 CTX_REQUIRED.add(_row["태그"])
+if os.path.exists("mined_rules.csv"):
+    for _row in csv.DictReader(open("mined_rules.csv", encoding="utf-8-sig")):
+        if (_row.get("문맥필요") or "").strip() == "Y":
+            CTX_REQUIRED.add(_row["태그"])
 # 소프트웨어·서비스 도입임을 알려주는 신호 / 시설·공사임을 알려주는 신호
 SW_CTX = re.compile(r"구독|라이선스|라이센스|이용권|이용료|사용료|사용 ?계약|플랫폼|프로그램|"
                     r"소프트웨어|\bSW\b|S/W|계정|어플|\b앱\b|콘텐츠|코스웨어|에듀테크|"
