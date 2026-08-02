@@ -180,6 +180,8 @@ SPECIFIC_RULES = [
     ("Scratch",            r"\bScratch\b|스크래치(?!치)"),
     ("엔트리",              r"엔트리(?! ?고|타)|\bEntry\b(?! ?Level)"),
     ("Tinkercad",          r"Tinkercad|팅커캐드"),
+    # 투핸즈인터랙티브의 체육활동 에듀테크 교구 ('디딤' 단독은 디딤돌 등과 겹쳐 제외)
+    ("플레이 디딤",          r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
     ("KAIST 공동 AP",       r"KAIST ?공동 ?AP|공동 ?AP ?학사관리|apscience|대학과목선이수"),
     ("캐츠잉글리시",          r"캐츠 ?잉글리시|캣츠 ?잉글리시|Cats ?English"),
     ("윌라",                r"윌라(?!드)|welaaa"),
