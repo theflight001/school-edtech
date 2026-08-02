@@ -36,7 +36,44 @@ header { background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--plane
 .hero-r img { height: 150px; width: auto; display: block; }
 @media (max-width: 1080px) { .hero-deco { display: none; } }
 header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -1.2px; line-height: 1.2; }
+.topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--grid); }
+@media (prefers-color-scheme: dark) { .topbar { background: rgba(15,20,26,.78); } }
+.topbar-in { max-width: 1120px; margin: 0 auto; padding: 0 24px; height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.brand { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.3px; white-space: nowrap; }
+.brand:hover { text-decoration: none; opacity: .7; }
+.navlinks { display: flex; gap: 4px; }
+.navlinks a { font-size: 14px; color: var(--ink-2); padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
+.navlinks a:hover { text-decoration: none; background: var(--surface); color: var(--ink); }
+.navlinks a.on { color: var(--accent); font-weight: 600; }
+@media (max-width: 700px) {
+  .topbar-in { height: auto; padding: 8px 14px; flex-direction: column; align-items: stretch; gap: 6px; }
+  .brand { font-size: 14px; text-align: center; }
+  .navlinks { justify-content: center; }
+  .navlinks a { font-size: 13px; padding: 6px 10px; }
+}
+.page { max-width: 760px; }
+.page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
+.page h3 { font-size: 16px; margin: 26px 0 8px; }
+.page p, .page li { color: var(--ink-2); font-size: 15px; }
+.page ul { margin: 6px 0 0; padding-left: 18px; }
+.page li { margin: 3px 0; }
+.srcgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+.srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
+.srccard b { font-size: 14.5px; }
+.srccard span { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+.plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
+.plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; }
+.plist a:hover { text-decoration: none; box-shadow: inset 0 0 0 2px var(--bar); }
+.plist .n { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.alpha { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 4px; }
+.alpha button { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--grid); background: var(--plane); color: var(--ink-2); cursor: pointer; }
+.alpha button.on { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
+.mailbtn { display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; padding: 11px 20px; border-radius: 999px; background: var(--bar); color: #fff; font-weight: 600; font-size: 15px; }
+.mailbtn:hover { text-decoration: none; opacity: .9; }
 .titlerow { position: relative; }
+/* 하위 화면에서는 상단 바가 이름을 대신하므로 히어로를 감춘다 */
+body.sub-page header { display: none; }
+body.sub-page main { padding-top: 18px; }
 .homebtn { position: absolute; top: 50%; transform: translateY(-50%); left: 0; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; border: 1.5px solid transparent; background: linear-gradient(var(--plane), var(--plane)) padding-box, linear-gradient(90deg, #2da0df, #77ec77) border-box; color: var(--ink-2); font-size: 14px; font-weight: 500; letter-spacing: 0; line-height: 1.4; z-index: 5; transition: color .15s, background .15s; }
 .homebtn:hover { background: linear-gradient(90deg, #2da0df, #5fd89a) padding-box, linear-gradient(90deg, #2da0df, #77ec77) border-box; color: #fff; text-decoration: none; }
 header .sub { color: var(--ink-2); font-size: clamp(14px, 1.6vw, 17px); margin-top: 10px; }
@@ -149,15 +186,21 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </style>
 </head>
 <body>
+<nav class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#/">공교육 에듀테크 활용 현황</a>
+    <div class="navlinks">
+      <a href="#/about">데이터 안내</a>
+      <a href="#/products">제품 전체 보기</a>
+      <a href="#/contact">정정 요청</a>
+    </div>
+  </div>
+</nav>
 <header>
   <div class="hero-deco hero-r" aria-hidden="true"><div>
     <img src="hero_person.png" width="192" height="150" alt="">
   </div></div>
   <div class="titlerow">
-    <a class="homebtn" href="#/" aria-label="홈으로">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 L12 3 L21 10.5"/><path d="M5.5 9 V20 h13 V9"/></svg>
-      홈
-    </a>
     <h1>공교육 에듀테크 활용 현황</h1>
   </div>
   <div class="sub">전국 초·중·고등학교의 에듀테크 (학습지원 소프트웨어) 도입 현황을 조달·공개자료 기반으로 제공합니다</div>
@@ -178,7 +221,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260802d"></script>
+<script src="data.js?b=20260802e"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -696,6 +739,130 @@ function animateCount() {
 }
 
 // ---- 라우팅 ----
+function aboutView() {
+  const m = DB.meta || {};
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 데이터 안내</div>
+    <div class="page">
+      <h2>데이터 안내</h2>
+      <p>이 서비스는 공개된 조달 기록을 모아 전국 초·중·고등학교의 에듀테크 도입 현황을 보여줍니다.
+      학교가 무엇을 계약했는지는 공개 정보지만 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
+
+      <h3>어디서 모았나</h3>
+      <div class="srcgrid">
+        <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
+        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 — 학교 소액 수의계약 공고</span></div>
+        <div class="srccard"><b>에듀집</b><span>교육부·한국교육학술정보원 — 학습지원 소프트웨어 등록 목록</span></div>
+        <div class="srccard"><b>NEIS 학교 정보</b><span>교육부 개방 포털 — 전국 12,078개 학교 명단·소재지</span></div>
+        <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료</span></div>
+      </div>
+
+      <h3>어떻게 판정하나</h3>
+      <p>계약명 원문에서 제품명을 찾아 태그를 붙입니다. 제품명이 드러나지 않는 계약은 무리하게 추정하지 않고
+      제품군(코스웨어·기기·인프라 등)으로만 분류하거나 <b>제품명 미상</b>으로 남겨 둡니다.</p>
+      <ul>
+        <li>계약 상대 업체명은 <b>사실 그대로</b> 표시합니다. 다만 한 업체가 여러 제품을 공급하는 경우가 많아, 업체명으로 제품을 추정하지는 않습니다.</li>
+        <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외합니다.</li>
+        <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교로 합쳐 보여 줍니다. 계약명 원문은 그대로 보존합니다.</li>
+      </ul>
+
+      <h3>무엇이 빠지나</h3>
+      <p>여기 실린 숫자는 <b>하한선</b>입니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
+      <ul>
+        <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
+        <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 잡히지 않습니다.</li>
+        <li>계약명에 제품을 적지 않은 경우 어떤 제품인지 알 수 없습니다.</li>
+      </ul>
+
+      <h3>수록 범위</h3>
+      <ul>
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b></li>
+        <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
+        <li>검색 가능 학교: <b>12,078개교</b> (전국 초·중·고 전체)</li>
+      </ul>
+      <p style="margin-top:18px">기록에 잘못된 내용이 있다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
+    </div>`;
+}
+
+function productsView() {
+  const cnt = {}, sch = {};
+  for (const r of R) for (const t of r.tags) {
+    cnt[t] = (cnt[t] || 0) + 1;
+    (sch[t] = sch[t] || new Set()).add(r.school);
+  }
+  const names = Object.keys(cnt).sort((a, b) => a.localeCompare(b, "ko"));
+  const initial = s => {
+    const c = s[0];
+    if (/[A-Za-z]/.test(c)) return "A–Z";
+    if (/[0-9]/.test(c)) return "0–9";
+    const code = c.charCodeAt(0);
+    if (code < 0xac00 || code > 0xd7a3) return "기타";
+    return "가나다라마바사아자차카타파하"[Math.floor((code - 0xac00) / 588 * 19 / 19)] ||
+      ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"][Math.floor((code - 0xac00) / 588)];
+  };
+  const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  const groupOf = s => {
+    const code = s.charCodeAt(0);
+    if (/[A-Za-z]/.test(s[0])) return "A–Z";
+    if (/[0-9]/.test(s[0])) return "0–9";
+    if (code < 0xac00 || code > 0xd7a3) return "기타";
+    const c = CHO[Math.floor((code - 0xac00) / 588)];
+    return { "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ" }[c] || c;
+  };
+  const groups = {};
+  for (const n of names) (groups[groupOf(n)] = groups[groupOf(n)] || []).push(n);
+  const order = ["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ","A–Z","0–9","기타"].filter(g => groups[g]);
+  const sel = PLIST_G && groups[PLIST_G] ? PLIST_G : "전체";
+  const show = sel === "전체" ? names : groups[sel];
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 제품 전체 보기</div>
+    <div class="pagehead"><h2>제품 전체 보기</h2>
+      <div class="sub2">조달 기록에서 확인된 제품·제품군 ${names.length}종 · 이름을 누르면 도입 학교를 볼 수 있습니다</div></div>
+    <div class="alpha">
+      <button class="${sel === "전체" ? "on" : ""}" onclick="PLIST_G='';render()">전체</button>
+      ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}
+    </div>
+    <div class="plist">
+      ${show.map(n => `<a href="#/tag/${encodeURIComponent(n)}">${esc(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
+    </div>`;
+}
+
+function contactView() {
+  const subj = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청");
+  const body = encodeURIComponent(
+    "아래 항목을 채워 보내주시면 확인 후 반영하겠습니다.\n\n" +
+    "1. 학교명:\n2. 해당 기록(제품명 또는 계약명):\n3. 어떤 점이 잘못되었나요:\n4. 올바른 내용:\n5. 근거 자료(있으면):\n6. 회신받을 연락처:\n");
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
+    <div class="page">
+      <h2>정정 요청 · 문의</h2>
+      <p>이 서비스의 기록은 공개된 조달 자료를 자동으로 정리한 것이라 사실과 다른 부분이 있을 수 있습니다.
+      잘못된 내용을 알려 주시면 확인 후 바로잡겠습니다.</p>
+
+      <h3>이런 경우 알려 주세요</h3>
+      <ul>
+        <li>우리 학교 기록이 아닌데 실려 있는 경우</li>
+        <li>제품명이 실제와 다르게 표시된 경우</li>
+        <li>학교 이름·지역·계열이 잘못된 경우 (개명·이전 등)</li>
+        <li>이미 종료한 계약이 사용 중인 것처럼 보이는 경우</li>
+      </ul>
+
+      <h3>보내실 곳</h3>
+      <p>아래 버튼을 누르면 정정 요청 서식이 채워진 메일 창이 열립니다.
+      메일 앱이 없으시면 <b>seouledtech@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
+      <a class="mailbtn" href="mailto:seouledtech@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
+
+      <h3>처리 방식</h3>
+      <ul>
+        <li>보내주신 내용은 원본 조달 기록과 대조해 확인합니다.</li>
+        <li>확인되면 해당 기록을 수정하거나 내리고, 다음 갱신에 반영합니다.</li>
+        <li>계약 원문 자체가 잘못된 경우에는 원문을 바꿀 수 없어, 참고 설명을 덧붙이는 방식으로 처리합니다.</li>
+      </ul>
+      <p style="margin-top:18px">데이터를 어떻게 모으고 판정하는지는 <a href="#/about">데이터 안내</a>에서 보실 수 있습니다.</p>
+    </div>`;
+}
+
+let PLIST_G = "";
 function render() {
   const seg = (location.hash.slice(1) || "/").split("/");
   const kind = seg[1];
@@ -707,10 +874,18 @@ function render() {
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
   else if (kind === "drill2") view.innerHTML = drillTagView(seg[2], decodeURIComponent(seg[3] || ""), decodeURIComponent(seg[4] || ""));
   else if (kind === "search") view.innerHTML = searchView(arg);
+  else if (kind === "about") view.innerHTML = aboutView();
+  else if (kind === "products") view.innerHTML = productsView();
+  else if (kind === "contact") view.innerHTML = contactView();
   else {
     view.innerHTML = homeView();
     animateCount();
   }
+  // 현재 화면에 해당하는 상단 메뉴 강조
+  document.querySelectorAll(".navlinks a").forEach(a =>
+    a.classList.toggle("on", a.getAttribute("href") === `#/${kind || ""}`));
+  // 히어로는 첫 화면에서만 크게, 하위 화면에서는 접어 둔다
+  document.body.classList.toggle("sub-page", !!kind);
   // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
   const qEl = document.querySelector("#q");
   if (qEl) qEl.value = kind === "search" ? (arg || "") : "";
@@ -718,7 +893,7 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; render(); });
+window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; render(); });
 render();
 
 // ---- 자동완성 ----
