@@ -130,7 +130,7 @@ def resolve_school(row):
 # 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
 # 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
 SPECIFIC_RULES = [
-    ("ChatGPT",            r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI"),
+    ("ChatGPT",            r"Chat[\s\-]?GPT|챗[\s\-]?GPT|GPT[- ]?[45]|OpenAI"),   # 'Chat gpt Plus'처럼 띄어 쓴 표기도 있다
     # Google AI Pro/Ultra는 2025년 개편된 구글 AI 구독 요금제 공식 명칭(구 Gemini Advanced·Google One AI Premium)
     ("Google AI Pro",       r"구글 ?AI ?(?:PRO|프로|Ultra|울트라)|Google ?AI ?(?:Pro|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
     ("Gemini",             r"Gemini|제미나이"),
@@ -164,7 +164,7 @@ SPECIFIC_RULES = [
     ("엘리스",             r"엘리스|\belice\b"),
     ("니어팟",             r"니어팟|Nearpod"),
     ("밀크T",              r"밀크티|밀크T"),
-    ("넷클래스",            r"넷클래스|NetClass"),
+    ("넷클래스",            r"넷클래스|Net[\s\-]?Class"),   # 계약명엔 'Net-Class 9.0'처럼 하이픈 표기도 쓰인다
     ("루디쿤",             r"루디쿤"),
     ("인공지능 히어로",      r"인공지능 ?히어로|AI ?히어로"),
     ("DBpia",              r"DBpia|디비피아"),
@@ -194,6 +194,7 @@ SPECIFIC_RULES = [
     ("Readdy AI",          r"\bReaddy\b|리디 ?AI"),
     # 에듀집 등록명은 '코들 AI 클래스룸'이지만 계약서엔 브랜드만 적힌다. '코들리'는 다른 제품
     ("코들",               r"코들(?!리)|\bCODLE\b"),
+    ("inline AI",          r"\binline ?AI\b"),
     # 에듀집 등록명의 브랜드부만 계약서에 적힌 사례 (자동 스캔으로 발굴)
     ("뚜루뚜루",           r"뚜루뚜루"),
     ("소프트웨어야 놀자",  r"소프트웨어야\s?놀자"),
@@ -305,7 +306,11 @@ SECURITY_SYS = re.compile(r"출입 ?관리|출입 ?통제|출입 ?시스템|출�
                           r"도어락|잠금장치|주차 ?관리|스피드게이트|지문 ?인식기|안면인식 ?출입|"
                           r"마스터키(?!트)|키박스|자물쇠|시건장치")
 EDU_TRAINING = re.compile(r"위탁 ?교육|위탁교육|자격증|직무 ?연수|연수 ?용역|캠프 ?운영|"
-                          r"교육과정 ?운영|아카데미 ?운영|과정 ?운영|취득 ?교육|체험 ?위탁")
+                          r"교육과정 ?운영|아카데미 ?운영|과정 ?운영|취득 ?교육|체험 ?위탁|"
+                          r"역량 ?강화 ?프로그램|프로그램 ?위탁")
+# 계약 상대가 여행·운송업이면 제품 공급이 아니라 연수·체험 운영 계약이다
+#  (예: '글로벌 소프트웨어 역량 강화 프로그램 위탁 용역' — 계약업체 ○○항공여행사)
+NON_SUPPLIER = re.compile(r"여행사|여행㈜|관광\s?개발|항공여행|투어|여객|전세버스|운수")
 GOODS_SIGNAL = re.compile(r"구입|구매|라이선스|라이센스|구독|임차|대여|렌탈|이용권|사용료|이용료|"
                           r"계정|납품|설치|유지보수")
 SVC_KEEP = re.compile(r"플랫폼|시스템|구독|라이선스|라이센스|콘텐츠|설치|유지보수|임차|사용료|이용료|대여|렌탈|코스웨어|소프트웨어|S/?W ?구[입매]")
@@ -697,6 +702,14 @@ records = [r for r in records
                    and not (_spec_all & set(r["tags"])))]
 if _before_svc - len(records):
     print(f"교육 실행 용역(제품군 태그만) 제외: {_before_svc - len(records)}건")
+
+# 계약 상대가 여행·운송업이면 제품 공급이 아니다 (연수·체험 운영 계약)
+_before_ns = len(records)
+records = [r for r in records
+           if not (NON_SUPPLIER.search(r.get("content") or "")
+                   and not (_spec_all & set(r["tags"])))]
+if _before_ns - len(records):
+    print(f"여행·운송 업체 계약 제외: {_before_ns - len(records)}건")
 
 # 보안·시설 설비 계약 제외 (출입통제·CCTV·방범 등)
 _before_sec = len(records)
