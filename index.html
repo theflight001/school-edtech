@@ -92,6 +92,10 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 @media (max-width: 820px) { .herocard { padding: 32px 24px; } .hero-img { display: none; } }
 
 
+.nlist { margin-top: 10px; }
+.nlist summary { cursor: pointer; font-size: 13.5px; color: var(--accent); font-weight: 600; }
+.nlist-in { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 6px; }
+.nlist-in a { font-size: 13.5px; }
 .titlerow { position: relative; }
 /* 하위 화면에서는 상단 바가 이름을 대신하므로 히어로 카드를 감춘다 */
 body.sub-page .herocard { display: none; }
@@ -243,7 +247,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260802m"></script>
+<script src="data.js?b=20260802n"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
@@ -654,7 +658,25 @@ const PLATFORM_NOTES = {
     body: "바당(BADANG)은 제주특별자치도교육청이 개발해 무상 운영하는 제주형 AI 교수학습 플랫폼입니다. 2026년 도내 전 학교로 수업·과제·평가 통합 플랫폼 활용을 확대하고 있습니다.",
     caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여줍니다.",
   },
+  "KAIST 공동 AP": {
+    body: "KAIST 공동 AP(대학과목선이수제) 학사관리시스템(apscience)은 과학기술특성화대 5개교와 과학고 20개교가 맺은 협약을 기반으로 공동 운영됩니다. 영재학교 8개교도 공동 AP 수강·성적을 온라인으로 관리합니다.",
+    caveat: "협약 기반 공동 운영이라 학교별 구매 기록이 남지 않습니다. 따라서 아래 목록에는 개별 학교가 아니라 공동 운영 기록만 나타납니다. 실제 이용 학교는 협약에 참여한 과학고·영재학교 전체입니다.",
+    schoolList: "spc_sci",
+    schoolNote: "본 서비스가 과학계열 특목고·영재학교로 분류한 학교입니다. 협약 참여 명단은 각 학교·주관기관 공지를 확인하세요.",
+  },
 };
+
+// 배너에 대상 학교 명단을 덧붙인다 (공동 운영이라 개별 기록이 없는 경우)
+function noteSchoolList(note) {
+  if (!note.schoolList) return "";
+  const list = (DB.schoolIndex || []).filter(s => idxGroup(s) === note.schoolList)
+    .map(s => s.n).sort((a, b) => a.localeCompare(b, "ko"));
+  if (!list.length) return "";
+  return `<details class="nlist"><summary>대상 학교 ${list.length}개교 보기</summary>
+    <div class="nlist-in">${list.map(n =>
+      `<a href="#/school/${encodeURIComponent(n)}">${esc(n)}</a>`).join("")}</div>
+    <p class="cv">${esc(note.schoolNote || "")}</p></details>`;
+}
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
   if (!recs.length) return `<div class="empty">제품군을 찾을 수 없습니다: ${esc(tag)}</div>`;
@@ -665,7 +687,7 @@ function tagView(tag) {
     <div class="crumb"><a href="#/">홈</a> › 제품군 상세</div>
     <div class="pagehead"><h2>${esc(tag)}</h2>
       <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
-    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p></div>` : ""}
+    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
       <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
@@ -753,7 +775,7 @@ function searchView(q) {
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}</div></div>
-    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>
+    ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(noteKey)} 제품군 페이지 보기 ›</a></p></div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
 }

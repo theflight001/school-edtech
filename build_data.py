@@ -125,7 +125,7 @@ SPECIFIC_RULES = [
     ("ChatGPT",            r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI"),
     ("Gemini",             r"Gemini|제미나이"),
     ("Claude",             r"Claude|클로드"),
-    ("Replit",             r"Replit|리플릿"),
+    ("Replit",             r"\bReplit\b"),   # 한글 '리플릿'은 인쇄물을 뜻해 오탐
     ("카피킬러",            r"카피킬러|무하유"),
     ("GPT킬러",            r"GPT ?킬러"),
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
@@ -166,6 +166,7 @@ SPECIFIC_RULES = [
     ("아이톡톡",            r"아이톡톡"),
     ("KT AICE",            r"\bAICE\b"),
     ("와콤",               r"와콤|Wacom"),
+    ("KAIST 공동 AP",       r"KAIST ?공동 ?AP|공동 ?AP ?학사관리|apscience|대학과목선이수"),
     ("마인크래프트 에듀케이션", r"마인크래프트|Minecraft"),
     ("카훗",               r"카훗|Kahoot"),
     ("김킷",               r"김킷|Gimkit"),
@@ -590,6 +591,19 @@ records = [r for r in records
 records = [r for r in records
            if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
                    and not re.search(r"플랫폼|시스템", r["product"]))]
+# 용역 계약인데 계약명이 교육 실행이고 물품 신호가 없으면, 제품군 태그만으로는 도입 근거가 못 된다.
+# (예: '드론 교육', '메타버스 진로체험' — 제품을 산 게 아니라 교육을 산 것)
+EDU_WORD = re.compile(r"교육|연수|캠프|아카데미|특강|강좌|체험|수업")
+_before_svc = len(records)
+_spec_all = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
+records = [r for r in records
+           if not (re.search(r"용역", (r.get("content") or "") + (r.get("category") or ""))
+                   and EDU_WORD.search(r["product"])
+                   and not GOODS_SIGNAL.search(r["product"])
+                   and not (_spec_all & set(r["tags"])))]
+if _before_svc - len(records):
+    print(f"교육 실행 용역(제품군 태그만) 제외: {_before_svc - len(records)}건")
+
 # 자격증 취득·위탁 교육류: 물품 구매 신호가 없으면 교육 용역이므로 제외
 _before_edu = len(records)
 records = [r for r in records
