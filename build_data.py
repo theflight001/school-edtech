@@ -195,6 +195,7 @@ SPECIFIC_RULES = [
     # 에듀집 등록명은 '코들 AI 클래스룸'이지만 계약서엔 브랜드만 적힌다. '코들리'는 다른 제품
     ("코들",               r"코들(?!리)|\bCODLE\b"),
     ("inline AI",          r"\binline ?AI\b"),
+    ("WeeAI",              r"\bWee\s?AI\b|위\s?AI(?=\s?플랫폼)"),
     # 에듀집 등록명의 브랜드부만 계약서에 적힌 사례 (자동 스캔으로 발굴)
     ("뚜루뚜루",           r"뚜루뚜루"),
     ("소프트웨어야 놀자",  r"소프트웨어야\s?놀자"),
@@ -828,6 +829,14 @@ for r in records:
     if not m:
         continue
     tag = SINGLE_VENDOR.get(_vkey(m.group(1)))
+    # 계약명 괄호 안에 영문 제품명이 적혀 있는데 추론 결과와 다르면, 그 계약은 다른 제품이다
+    # (예: '생성형 AI(WeeAI 플랫폼) 구독료' — 업체가 알툴즈 주력이어도 산 것은 WeeAI)
+    if tag:
+        _paren = re.findall(r"[（(]([^)）]{2,24})[)）]", r["product"])
+        _other = [p for p in _paren if re.search(r"[A-Za-z]{3,}", p)
+                  and _norm_title(tag) not in _norm_title(p)]
+        if _other:
+            tag = None
     if tag:
         r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
         r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체가 {tag} 단일 공급사"
