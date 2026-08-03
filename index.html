@@ -68,7 +68,8 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 @media (max-width: 760px) { .cta-row img { display: none; } }
 .page h2 { font-size: 24px; letter-spacing: -0.6px; margin-bottom: 6px; }
 .page h3 { font-size: 16px; margin: 26px 0 8px; }
-.page p, .page li { color: var(--ink-2); font-size: 15px; }
+/* 한글은 기본값이면 단어 중간에서 끊긴다('바로잡겠습니 / 다'). 어절 단위로만 줄바꿈. */
+.page p, .page li { color: var(--ink-2); font-size: 15px; word-break: keep-all; overflow-wrap: break-word; }
 .page ul { margin: 6px 0 0; padding-left: 18px; }
 .page li { margin: 3px 0; }
 /* 자료원 카드 — 3열 고정, 모두 같은 크기 */
@@ -77,7 +78,7 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 @media (max-width: 560px) { .srcgrid { grid-template-columns: 1fr; } }
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
-.srccard span { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+.srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
 .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
 .plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; }
 .plist a:hover { text-decoration: none; box-shadow: inset 0 0 0 2px var(--bar); }
@@ -256,7 +257,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260803r"></script>
+<script src="data.js?b=20260804a"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
