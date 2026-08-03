@@ -37,12 +37,13 @@ def session(renew=False):
         _token = m.group(1)
     return _opener, _token
 
-def fetch(keyword, page):
+def fetch(keyword, page, year=""):
     for wait in [5, 20, 60, 180, None]:
         try:
             op, tok = session()
             d = {"CSRFToken": tok, "mode": "jaai001f_list", "ordr_list": "", "school_add": "1",
-                 "sdate": "", "edate": "", "cntr_amt_sc": "", "totsearch": keyword, "page": str(page)}
+                 "sdate": "", "edate": "", "cntr_amt_sc": "", "totsearch": keyword,
+                 "page": str(page), "DateYear": year}   # 연도를 안 주면 올해분만 나온다
             req = urllib.request.Request(BASE, data=urllib.parse.urlencode(d).encode(),
                                          headers={"Referer": BASE + "?mode=jaai001f_list",
                                                   "User-Agent": UA})
@@ -78,6 +79,8 @@ def main():
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
     ap.add_argument("--keyword-file", help="검색어를 줄 단위로 담은 파일 (에듀집 제품명 등)")
     ap.add_argument("--max-pages", type=int, default=300)
+    ap.add_argument("--years", default="2023,2024,2025,2026",
+                    help="회계연도 목록 — 지정하지 않으면 조회가 올해분으로 한정된다")
     a = ap.parse_args()
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
@@ -90,18 +93,20 @@ def main():
 
     kws = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()] \
         if a.keyword_file else a.keywords.split(",")
-    print(f"검색어 {len(kws)}종", flush=True)
+    years = a.years.split(",")
+    print(f"검색어 {len(kws)}종 × 회계연도 {len(years)}개 = {len(kws)*len(years)}조합", flush=True)
     kept = req_n = 0
     for kw in kws:
-        if kw in done:
-            continue
-        q = safe_kw(kw)
-        if not q:
-            done.add(kw)
+      q = safe_kw(kw)
+      if not q:
+          continue
+      for year in years:
+        tag = f"{kw}|{year}"
+        if tag in done:
             continue
         page = 1
         while page <= a.max_pages:
-            rows = parse(fetch(q, page))
+            rows = parse(fetch(q, page, year))
             req_n += 1
             if not rows:
                 break
@@ -120,11 +125,11 @@ def main():
                 break
             page += 1
             time.sleep(SPACING)
-        done.add(kw)
+        done.add(tag)
         ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
         with open(CKPT, "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
-        print(f"[{kw}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+        print(f"[{kw} {year}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
 

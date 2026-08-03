@@ -68,16 +68,18 @@ def post(params):
             continue
         s = raw.decode("cp949", "replace")
         if "Anti Web Crawling" in s or "보안 문자" in s:
-            # CAPTCHA 차단 — 자동으로 풀 수 없음. 사람이 브라우저에서 풀어야 하므로 장시간 대기 후 재확인
+            # 안티크롤링 차단 — 사람이 풀 CAPTCHA가 아니라 '요청이 잦다'는 신호다.
+            # 브라우저로는 같은 시각에도 정상 조회되므로, 사람 개입이 아니라 속도 조절이 답이다.
             if backoff is None:
-                raise RuntimeError("CAPTCHA 차단 지속 — 사람이 s2b.kr에서 보안 문자를 풀어야 함")
-            # 먼저 세션을 새로 받아 본다 — 쿠키 만료가 원인이면 이것으로 풀린다
-            print(f"  CAPTCHA 차단 감지 → 세션 재발급 후 {backoff}초 대기", flush=True)
+                raise RuntimeError("안티크롤링 차단 지속 — 간격을 더 늘려야 함")
+            # 차단 상태에서 계속 두드리면 차단이 갱신돼 영영 안 풀린다. 충분히 쉬고 세션도 새로 받는다.
+            nap = max(backoff, 1800)
+            print(f"  차단 감지 → 세션 재발급 후 {nap}초 대기 (재요청이 차단을 연장하므로 길게 쉰다)", flush=True)
             try:
                 session(renew=True)
             except Exception as e:
                 print(f"  세션 재발급 실패({e})", flush=True)
-            time.sleep(backoff)
+            time.sleep(nap)
             continue
         if len(raw) < 5000 or "일시적인 장애" in s:  # S2B 에러/점검 페이지
             if backoff is None:
