@@ -83,7 +83,8 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
 .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
-.plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; }
+/* 이름이 한 줄이든 두 줄이든 타일 크기를 같게 둔다 (두 줄 기준 높이) */
+.plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; line-height: 1.45; min-height: 63px; box-sizing: border-box; }
 .plist a:hover { text-decoration: none; box-shadow: inset 0 0 0 2px var(--bar); }
 .plist .n { color: var(--muted); font-size: 13px; white-space: nowrap; }
 .alpha { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 4px; }
@@ -260,7 +261,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260804f"></script>
+<script src="data.js?b=20260804g"></script>
 <script>
 const R = DB.records;
 const $ = s => document.querySelector(s);
