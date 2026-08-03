@@ -1020,9 +1020,40 @@ elif os.path.exists("tag_review.md"):
     os.remove("tag_review.md")
 json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
 
+# --- 저장: 키 이름 반복과 되풀이되는 문자열을 걷어낸 압축 형식 ---
+# 레코드마다 키 이름을 적으면 그것만으로 파일의 3분의 1이 된다. 열 이름을 한 번만 적고
+# 값은 배열로 늘어놓되, 되풀이되는 문자열(출처·비고·지역 등)은 사전으로 치환한다.
+# 화면 쪽 코드는 그대로 두기 위해 index.html이 읽는 시점에 원래 모양으로 되돌린다.
+_cols = sorted({k for r in records for k in r})
+_DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
+              "hsType", "founding", "confidence", "period",
+              # 학교 관련 값은 그 학교의 기록 수만큼 되풀이된다
+              "neisAddress", "school", "schoolName", "schoolCode"]
+_dicts = {}
+for c in _DICT_COLS:
+    vals = sorted({r.get(c) for r in records if isinstance(r.get(c), str)})
+    if len(vals) < len(records) / 4:            # 되풀이가 뚜렷할 때만 사전으로 바꾼다
+        _dicts[c] = {v: i for i, v in enumerate(vals)}
+_URL_PRE = "https://www.g2b.go.kr/link/FIUA027_01/single/?ctrtNo="
+_rows = []
+for r in records:
+    row = []
+    for c in _cols:
+        v = r.get(c)
+        if c in _dicts and isinstance(v, str):
+            v = _dicts[c][v]
+        elif c == "url" and isinstance(v, str) and v.startswith(_URL_PRE):
+            v = "~" + v[len(_URL_PRE):]
+        row.append(v)
+    _rows.append(row)
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
-    f.write("const DB = ")
-    json.dump({"meta": meta, "records": records, "schoolIndex": school_index}, f, ensure_ascii=False)
+    f.write("const DB_RAW = ")
+    json.dump({"meta": meta, "cols": _cols,
+               "dict": {c: sorted(d, key=d.get) for c, d in _dicts.items()},
+               "urlPrefix": _URL_PRE, "rows": _rows, "schoolIndex": school_index},
+              f, ensure_ascii=False, separators=(",", ":"))
     f.write(";\n")
-print(f"\n{OUT} 생성 완료")
+_kb = os.path.getsize(OUT) / 1024 / 1024
+print(f"\n{OUT} 생성 완료 — {_kb:.1f}MB (열 {len(_cols)}개, 사전 {len(_dicts)}종)")
