@@ -311,6 +311,15 @@ EDU_TRAINING = re.compile(r"위탁 ?교육|위탁교육|자격증|직무 ?연수
                           r"역량 ?강화 ?프로그램|프로그램 ?위탁")
 # 계약 상대가 여행·운송업이면 제품 공급이 아니라 연수·체험 운영 계약이다
 #  (예: '글로벌 소프트웨어 역량 강화 프로그램 위탁 용역' — 계약업체 ○○항공여행사)
+# 시설 유지보수·설비 계약 — 학습과 무관하므로 인프라 태그가 붙어도 수록 대상이 아니다
+# (예: '기숙사 냉난방기 유지보수 용역' — 냉난방이 인프라 규칙에 걸리지만 에듀테크가 아니다)
+FACILITY_MAINT = re.compile(
+    r"(?:냉난방|난방|냉방|보일러|공조|급배수|배관|상하수|소방|승강기|엘리베이터|정화조|"
+    r"방수|도색|창호|바닥|천장|지붕|외벽|담장|화장실|기숙사|급식실|조리|보안등|가로등|"
+    r"전기 ?안전|전기공사|누수|해빙|제설|수목|조경|화단|운동장|체육관 ?바닥)"
+    r"[가-힣]{0,3}\s*(?:유지 ?보수|보수|수리|교체|점검|공사|정비|관리 ?용역|대행)"
+    r"|(?:유지 ?보수|수리|교체|점검)[^가-힣]{0,12}(?:냉난방|보일러|공조|승강기|기숙사)")
+
 NON_SUPPLIER = re.compile(r"여행사|여행㈜|관광\s?개발|항공여행|투어|여객|전세버스|운수")
 GOODS_SIGNAL = re.compile(r"구입|구매|라이선스|라이센스|구독|임차|대여|렌탈|이용권|사용료|이용료|"
                           r"계정|납품|설치|유지보수")
@@ -712,6 +721,24 @@ records = [r for r in records
                    and not (_spec_all & set(r["tags"])))]
 if _before_ns - len(records):
     print(f"여행·운송 업체 계약 제외: {_before_ns - len(records)}건")
+
+# 시설 유지보수·설비 계약 제외 (냉난방·기숙사·승강기 등) — 특정 제품 태그가 있으면 유지
+_before_fm = len(records)
+records = [r for r in records
+           if not (FACILITY_MAINT.search(r["product"]) and not (_spec_all & set(r["tags"])))]
+if _before_fm - len(records):
+    print(f"시설 유지보수·설비 계약 제외: {_before_fm - len(records)}건")
+
+# '용역'은 일을 시키는 계약이라 제품 구매와 거리가 멀다 — 제품 이용 신호가 없으면 제외한다
+# (예외: 아이스크림 홈런 용역·리로스쿨 용역처럼 제품명이나 구독·라이선스 신호가 뚜렷한 경우)
+_before_svc2 = len(records)
+records = [r for r in records
+           if not (re.search(r"용역", r["product"] + (r.get("content") or "") + (r.get("category") or ""))
+                   and not (_spec_all & set(r["tags"]))
+                   and not GOODS_SIGNAL.search(r["product"])
+                   and not SVC_KEEP.search(r["product"]))]
+if _before_svc2 - len(records):
+    print(f"제품 신호 없는 용역 계약 제외: {_before_svc2 - len(records)}건")
 
 # 보안·시설 설비 계약 제외 (출입통제·CCTV·방범 등)
 _before_sec = len(records)
