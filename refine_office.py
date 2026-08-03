@@ -5,11 +5,13 @@ import csv, hashlib, re, sys, collections
 
 csv.field_size_limit(10**7)
 
-# 시도별: (수집 파일, 결과 파일, 마스터의 시도 접두어)
+# 시도별: (수집 파일, 결과 파일, 교명에 붙는 시도 접두어, 마스터 시도명 정규식)
+# 광주·전남은 마스터에 '전남광주통합특별시(광주)' 형태라 접두어 비교가 통하지 않는다
 OFFICES = {
-    "인천": ("ice_candidates.csv", "ice_refined.csv", "인천"),
-    "부산": ("pen_candidates.csv", "pen_refined.csv", "부산"),
-    "대구": ("dge_candidates.csv", "dge_refined.csv", "대구"),
+    "인천": ("ice_candidates.csv", "ice_refined.csv", "인천", r"인천"),
+    "부산": ("pen_candidates.csv", "pen_refined.csv", "부산", r"부산"),
+    "대구": ("dge_candidates.csv", "dge_refined.csv", "대구", r"대구"),
+    "광주": ("gen_candidates.csv", "gen_refined.csv", "광주", r".*\(광주\)"),
 }
 
 def load_rules():
@@ -34,17 +36,17 @@ EDTECH_CTX = re.compile(
 FIELDS = ["계약번호", "구분", "계약명", "계약일", "금액", "수요기관", "학교명",
           "업체명", "학교코드", "급별", "시도", "상세URL"]
 
-def match_school(name, prefix):
+def match_school(name, prefix, sido_pat):
     """해당 시도 학교 중에서 찾는다. '대구OO초' ↔ 'OO초' 표기 차이도 본다."""
     nm = ALIAS.get(name, name)
     for cand_name in (nm, nm[len(prefix):] if nm.startswith(prefix) else prefix + nm):
-        cands = [c for c in master_by_name.get(cand_name, []) if c["sido"].startswith(prefix)]
+        cands = [c for c in master_by_name.get(cand_name, []) if re.match(sido_pat, c["sido"])]
         if len(cands) == 1:
             return cand_name, cands[0]
     return nm, None
 
 def refine(sido):
-    src, out_path, prefix = OFFICES[sido]
+    src, out_path, prefix, sido_pat = OFFICES[sido]
     rows = list(csv.DictReader(open(src, encoding="utf-8-sig")))
     out, drop = [], collections.Counter()
     matched = 0
@@ -57,7 +59,7 @@ def refine(sido):
         if EXCLUDE_EVENT.search(name):
             drop["행사·임대·비제품"] += 1
             continue
-        school, m = match_school(school_raw, prefix)
+        school, m = match_school(school_raw, prefix, sido_pat)
         tags = refine_aidt(tags_of(strip_school(name, school), ""), name, r.get("계약상대자", ""))
         if not tags:
             drop["태그 없음"] += 1
@@ -99,7 +101,7 @@ def refine(sido):
 
 def main():
     import os
-    todo = sys.argv[1:] or [s for s, (src, _, _) in OFFICES.items() if os.path.exists(src)]
+    todo = sys.argv[1:] or [s for s, (src, *_) in OFFICES.items() if os.path.exists(src)]
     for sido in todo:
         refine(sido)
 
