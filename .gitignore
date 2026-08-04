@@ -4,3 +4,5 @@
 .tag_snapshot.json
 __pycache__/
 backfill.log
+s2b_all.csv
+nara_full_*.csv
