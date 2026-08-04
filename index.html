@@ -272,7 +272,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer><span id="footfresh"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260804k"></script>
+<script src="data.js?b=20260804l"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -293,15 +293,6 @@ const DB = (() => {
   return { meta: d.meta, records, schoolIndex: d.schoolIndex };
 })();
 const R = DB.records;
-// 갱신 시점 안내 — 검색 전에 최신성부터 판단할 수 있게 검색바 아래와 푸터에 적는다
-(() => {
-  const m = DB.meta || {};
-  const f = document.getElementById("freshline");
-  if (f) f.innerHTML = `<b>${esc(m.asOfMonth || "")}월 기준</b> · 전국 ${(m.total||0).toLocaleString()}건 · `
-    + `${(m.schools||0).toLocaleString()}개교 · 매달 한 번 갱신합니다`;
-  const g = document.getElementById("footfresh");
-  if (g) g.textContent = `최종 갱신 ${m.asOf || ""} · 다음 갱신 ${m.nextMonth || ""}월 중`;
-})();
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const count = (arr, key) => { const m = new Map(); for (const x of arr) { const k = key(x); if (!k) continue; m.set(k, (m.get(k)||0)+1); } return [...m.entries()].sort((a,b)=>b[1]-a[1]); };
@@ -1086,6 +1077,17 @@ q.addEventListener("keydown", e => {
   [...sugg.children].forEach((el, i) => el.classList.toggle("sel", i === selIdx));
 });
 document.addEventListener("click", e => { if (!e.target.closest(".searchwrap")) sugg.hidden = true; });
+
+// 갱신 시점 안내 — 검색 전에 최신성부터 판단할 수 있게 검색바 아래와 푸터에 적는다
+// (esc·DB가 모두 정의된 뒤여야 하므로 스크립트 끝에 둔다)
+(() => {
+  const m = DB.meta || {};
+  const f = document.getElementById("freshline");
+  if (f) f.innerHTML = `<b>${esc(m.asOfMonth || "")}월 기준</b> · 전국 ${(m.total || 0).toLocaleString()}건 · `
+    + `${(m.schools || 0).toLocaleString()}개교 · 매달 한 번 갱신합니다`;
+  const g = document.getElementById("footfresh");
+  if (g) g.textContent = `최종 갱신 ${m.asOf || ""} · 다음 갱신 ${m.nextMonth || ""}월 중`;
+})();
 </script>
 </body>
 </html>
