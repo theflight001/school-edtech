@@ -205,6 +205,9 @@ SPECIFIC_RULES = [
     ("코들",               r"코들(?!리)|\bCODLE\b"),
     ("inline AI",          r"\binline ?AI\b"),
     ("WeeAI",              r"\bWee\s?AI\b|위\s?AI(?=\s?플랫폼)"),
+    ("Suno",               r"\bSuno\b|수노 ?AI"),
+    ("Ghost",              r"\bGhost\b(?! ?Rider)"),            # 디스크 이미징 도구(Norton Ghost)
+    ("Symantec",           r"\bSymantec\b|시만텍"),
     # 에듀집 등록명의 브랜드부만 계약서에 적힌 사례 (자동 스캔으로 발굴)
     ("뚜루뚜루",           r"뚜루뚜루"),
     ("소프트웨어야 놀자",  r"소프트웨어야\s?놀자"),
