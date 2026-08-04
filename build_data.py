@@ -1038,29 +1038,6 @@ elif os.path.exists("tag_review.md"):
     os.remove("tag_review.md")
 json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
 
-# --- 갱신 이력 --- 월 1회 갱신을 전제로, 달마다 한 줄씩 남긴다.
-# 건수·학교 수는 빌드할 때 자동으로 채우고, '무엇을 새로 넣었나'(note)만 사람이 적는다.
-from datetime import date as _date
-_today = _date.today()
-_month = f"{_today.year}.{_today.month}"
-_hist_path = "update_history.json"
-_hist = json.load(open(_hist_path, encoding="utf-8")) if os.path.exists(_hist_path) else []
-_cur = next((h for h in _hist if h["month"] == _month), None)
-if _cur is None:
-    _cur = {"month": _month, "note": ""}
-    _hist.append(_cur)
-_prev = [h for h in _hist if h["month"] != _month]
-_cur["total"] = len(records)
-_cur["schools"] = len({r["school"] for r in records})
-_cur["delta"] = _cur["total"] - (_prev[-1]["total"] if _prev else 0)
-_hist.sort(key=lambda h: [int(x) for x in h["month"].split(".")])
-json.dump(_hist, open(_hist_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-meta["asOf"] = _today.isoformat()
-meta["asOfMonth"] = _month
-meta["nextMonth"] = f"{_today.year + (_today.month == 12)}.{_today.month % 12 + 1}"
-meta["history"] = _hist[-6:][::-1]
-print(f"갱신 이력: {_month} · {_cur['total']:,}건 (직전 대비 {_cur['delta']:+,})")
-
 # --- 저장: 키 이름 반복과 되풀이되는 문자열을 걷어낸 압축 형식 ---
 # 레코드마다 키 이름을 적으면 그것만으로 파일의 3분의 1이 된다. 열 이름을 한 번만 적고
 # 값은 배열로 늘어놓되, 되풀이되는 문자열(출처·비고·지역 등)은 사전으로 치환한다.

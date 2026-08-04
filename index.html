@@ -82,16 +82,6 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
-.freshline { margin: 10px 2px 0; color: var(--muted); font-size: 13px; }
-.freshline b { color: var(--ink-2); font-weight: 600; }
-footer #footfresh { display: block; color: var(--muted); font-size: 12.5px; margin-bottom: 6px; }
-/* 갱신 이력 */
-.hist { margin-top: 10px; border-top: 1px solid var(--grid); }
-.hist div { display: flex; gap: 14px; padding: 9px 2px; border-bottom: 1px solid var(--grid); font-size: 14px; }
-.hist b { flex: none; width: 66px; color: var(--ink); font-weight: 600; }
-.hist span { color: var(--ink-2); }
-.hist em { flex: none; color: var(--muted); font-style: normal; font-size: 13px; margin-left: auto; white-space: nowrap; }
-@media (max-width: 620px) { .hist em { display: none; } }
 .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
 /* 이름이 한 줄이든 두 줄이든 타일 크기를 같게 둔다 (두 줄 기준 높이) */
 .plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; line-height: 1.45; min-height: 63px; box-sizing: border-box; }
@@ -260,7 +250,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     <input id="q" type="search" placeholder="학교명 또는 제품명 검색 (예: 서울과학고, ChatGPT)" autocomplete="off">
     <div id="sugg" hidden></div>
   </div>
-  <div class="freshline" id="freshline"></div>
   <div id="view"></div>
   <div class="disclaimer">
     <b>데이터 한계 고지</b> — 본 자료는 나라장터·S2B 등 공공 조달 기록과 언론 보도 등을 종합한 자료를 바탕으로 집계한 추정 수치입니다.
@@ -270,9 +259,9 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     </ul>
   </div>
 </main>
-<footer><span id="footfresh"></span>Crafted by Keol Lim</footer>
+<footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260804l"></script>
+<script src="data.js?b=20260804m"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -897,7 +886,7 @@ function aboutView() {
 
       <h3>수록 범위</h3>
       <ul>
-        <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b> · 자료 기준 시점: <b>${esc(m.asOf || "")}</b></li>
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b></li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
         <li>검색 가능 학교: <b>12,543개교</b> — 국내 공교육 전체</li>
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 12,078개교에 더해
@@ -906,13 +895,6 @@ function aboutView() {
           등재된 12,666개교 중 <b>재외한국학교 79개교, 외국인·국제학교 33개교</b>는 국내 공교육이 아니어서,
           <b>공동실습소 9곳</b>은 학교가 아니어서 제외했습니다.</li>
       </ul>
-      <h3>갱신 이력</h3>
-      <p>조달 자료는 계약 후 시차를 두고 공개되고 뒤늦게 올라오는 건도 있어, 매달 한 번 다시 모아 반영합니다.</p>
-      <div class="hist">
-        ${(m.history || []).map(h => `<div><b>${esc(h.month)}월</b><span>${esc(h.note || "정기 갱신")}</span>
-          <em>${(h.total||0).toLocaleString()}건 ${h.delta > 0 ? `(+${h.delta.toLocaleString()})` : ""}</em></div>`).join("")}
-      </div>
-
       <p style="margin-top:18px">기록에 잘못된 내용이 있다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
     </div>`;
 }
@@ -1077,17 +1059,6 @@ q.addEventListener("keydown", e => {
   [...sugg.children].forEach((el, i) => el.classList.toggle("sel", i === selIdx));
 });
 document.addEventListener("click", e => { if (!e.target.closest(".searchwrap")) sugg.hidden = true; });
-
-// 갱신 시점 안내 — 검색 전에 최신성부터 판단할 수 있게 검색바 아래와 푸터에 적는다
-// (esc·DB가 모두 정의된 뒤여야 하므로 스크립트 끝에 둔다)
-(() => {
-  const m = DB.meta || {};
-  const f = document.getElementById("freshline");
-  if (f) f.innerHTML = `<b>${esc(m.asOfMonth || "")}월 기준</b> · 전국 ${(m.total || 0).toLocaleString()}건 · `
-    + `${(m.schools || 0).toLocaleString()}개교 · 매달 한 번 갱신합니다`;
-  const g = document.getElementById("footfresh");
-  if (g) g.textContent = `최종 갱신 ${m.asOf || ""} · 다음 갱신 ${m.nextMonth || ""}월 중`;
-})();
 </script>
 </body>
 </html>
