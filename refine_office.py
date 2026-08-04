@@ -13,6 +13,7 @@ OFFICES = {
     "대구": ("dge_candidates.csv", "dge_refined.csv", "대구", r"대구"),
     "광주": ("gen_candidates.csv", "gen_refined.csv", "광주", r".*\(광주\)"),
     "대전": ("dje_candidates.csv", "dje_refined.csv", "대전", r"대전"),
+    "울산": ("use_candidates.csv", "use_refined.csv", "울산", r"울산"),
 }
 
 def load_rules():
