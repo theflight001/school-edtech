@@ -6,3 +6,5 @@ __pycache__/
 backfill.log
 s2b_all.csv
 nara_full_*.csv
+s2b_all*.csv
+s2b_refined_nationwide.csv

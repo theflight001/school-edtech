@@ -840,58 +840,12 @@ for r in records:
 if _vr_n:
     print(f"업체명=제품명 규칙 적용: {_vr_n}건")
 
-# --- 단일 제품 업체 보정 ------------------------------------------------------
-# 한 제품만 공급하는 업체(예: PADLET.COM, 주식회사 리로소프트)가 계약 상대라면
-# 계약명에 제품이 안 적혔어도 그 제품 도입으로 볼 수 있다. 추정이 아니라 직접 증거다.
-# 업체 목록은 데이터에서 자동 도출한다 — 그 업체의 태그된 계약 90% 이상이 한 제품일 때만.
-_SPEC_ALL = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
-_vend_re = re.compile(r"계약업체[:：]\s*([^·)]+)")
-
-def _vkey(v):
-    """업체명 표기 흔들림 흡수 — 'PADLET.COM' 'PADLET SOFTWARE' 'PADLET*PADLET…'를 한 업체로"""
-    v = re.sub(r"주식회사|㈜|\(주\)|유한회사|Co\.?,?\s?Ltd\.?|Inc\.?", "", v, flags=re.I)
-    v = re.sub(r"[^0-9A-Za-z가-힣]", "", v).lower()
-    return v[:6]
-_by_vendor, _vendor_total = collections.defaultdict(collections.Counter), collections.Counter()
-for r in records:
-    m = _vend_re.search(r.get("content") or "")
-    if not m:
-        continue
-    v = _vkey(m.group(1))
-    if len(v) < 3:
-        continue
-    _vendor_total[v] += 1
-    for t in r["tags"]:
-        if t in _SPEC_ALL:
-            _by_vendor[v][t] += 1
-SINGLE_VENDOR = {}
-for v, c in _by_vendor.items():
-    if _vendor_total[v] < 3:
-        continue
-    top, n = c.most_common(1)[0]
-    if n >= 3 and n / sum(c.values()) >= 0.9:
-        SINGLE_VENDOR[v] = top
-_vfix = 0
-for r in records:
-    if set(r["tags"]) & _SPEC_ALL:
-        continue                     # 이미 제품이 특정된 기록은 건드리지 않는다
-    m = _vend_re.search(r.get("content") or "")
-    if not m:
-        continue
-    tag = SINGLE_VENDOR.get(_vkey(m.group(1)))
-    # 계약명 괄호 안에 영문 제품명이 적혀 있는데 추론 결과와 다르면, 그 계약은 다른 제품이다
-    # (예: '생성형 AI(WeeAI 플랫폼) 구독료' — 업체가 알툴즈 주력이어도 산 것은 WeeAI)
-    if tag:
-        _paren = re.findall(r"[（(]([^)）]{2,24})[)）]", r["product"])
-        _other = [p for p in _paren if re.search(r"[A-Za-z]{3,}", p)
-                  and _norm_title(tag) not in _norm_title(p)]
-        if _other:
-            tag = None
-    if tag:
-        r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
-        r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체가 {tag} 단일 공급사"
-        _vfix += 1
-print(f"단일 제품 업체 근거로 제품 특정: {_vfix}건 (업체 {len(SINGLE_VENDOR)}곳)")
+# 업체 기반 통계 추론(어떤 업체의 계약 다수가 한 제품이면 나머지도 그 제품으로 봄)은 폐기했다.
+# 근거: 데이터 안내에 "업체명으로 제품을 추정하지 않는다"고 공개해 온 원칙과 어긋나고,
+#       실제로 계약명에 다른 제품이 적힌 건까지 덮어썼다
+#       (안산청석초 '블록 로봇(네오 쏘코)' → 업체가 레고를 주로 판다는 이유로 레고 태그).
+#       레고 유통사로 확인된 퓨너스조차 자체 제품을 함께 팔아, '단일 공급사'라는 전제가 성립하지 않는다.
+# 업체명 자체가 제품명인 경우(Padlet.com·READDY AI 등)만 위 VENDOR_RULES로 남긴다.
 
 # 원자료에 남은 HTML 엔티티(&apos; &amp; 등) 정리 — 화면에 그대로 노출되는 것을 막는다
 _ent = re.compile(r"&[a-zA-Z]{2,8};|&#\d{2,5};")

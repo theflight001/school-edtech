@@ -1,7 +1,7 @@
 # S2B 학교장터 전수(s2b_all.csv) → 에듀테크 계약만 추려 학교에 붙인다.
 # 사용: python3 refine_s2b.py [--src s2b_all.csv] [--out s2b_refined.csv]
 # 판정 규칙은 build_data.py의 정본을 그대로 재사용한다(이중 관리 금지).
-# 기관명에 지역 정보가 없어(학교명 단독) 동명 학교는 특정하지 않고 남긴다.
+# 지역별로 받은 자료라 각 행에 시도가 붙어 있다 — 동명 학교는 그 시도 안에서만 찾는다.
 import argparse, ast, collections, csv, json, re
 
 csv.field_size_limit(10**7)
@@ -31,6 +31,13 @@ EDTECH_CTX = re.compile(
     r"메타버스|\bVR\b|\bXR\b|증강현실|가상현실|로봇|코딩|드론|3D ?프린|이러닝|e-?러닝|"
     r"온라인 ?수업|원격 ?수업|미래교실|스마트교실|전자칠판|태블릿|크롬북|노트북|컴퓨터실", re.I)
 
+# 수집 때 붙인 시도 이름 → 마스터의 시도 표기 (광주·전남은 '전남광주통합특별시(광주)' 형태)
+_SIDO_MAP = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천",
+             "광주": r".*\(광주\)", "대전": "대전", "울산": "울산", "세종": "세종",
+             "경기": "경기", "강원": "강원", "충북": "충청북", "충남": "충청남",
+             "전북": "전북|전라북", "전남": r".*\(전남\)", "경북": "경상북",
+             "경남": "경상남", "제주": "제주"}
+
 FIELDS = ["계약번호", "구분", "계약명", "계약일", "금액", "수요기관", "학교명",
           "업체명", "학교코드", "급별", "시도", "상세URL"]
 
@@ -53,15 +60,25 @@ for _n, _c in by_name.items():
         _endswith_idx[_n[-_k:]].extend(_c)
 
 _cache = {}
-def match_school(raw):
-    """S2B 기관명 → 마스터 학교. 결과를 캐시해 같은 학교를 다시 계산하지 않는다."""
-    if raw in _cache:
-        return _cache[raw]
+def match_school(raw, sido=""):
+    """S2B 기관명 → 마스터 학교. 수집 때 붙여 둔 시도로 동명 학교를 가른다."""
+    ck = (raw, sido)
+    if ck in _cache:
+        return _cache[ck]
     nm = expand_abbrev(ALIAS.get(raw, raw).replace(" ", ""))
+    pat = _SIDO_MAP.get(sido)
+    def in_sido(c):
+        return bool(pat) and bool(re.match(pat, c["sido"]))
+
     cands = by_name.get(nm, [])
-    res = (nm, cands[0]) if len(cands) == 1 else (nm, None)
-    if not cands:
-        # '삼척장원초등학교' → 접두어(삼척)가 시도·교육청·주소에 있으면 그 학교로 본다
+    res = (nm, None)
+    if len(cands) == 1:
+        res = (nm, cands[0])
+    elif len(cands) > 1:
+        hit = [c for c in cands if in_sido(c)]        # 동명이라도 시도가 다르면 하나로 좁혀진다
+        res = (nm, hit[0]) if len(hit) == 1 else (nm, None)
+    else:
+        # '삼척장원초등학교'처럼 접두어가 붙은 표기 — 접두어가 소재지에 있어야 인정
         hit = []
         for k in range(5, len(nm)):
             for c in _by_suffix.get(nm[k:], []):
@@ -70,14 +87,18 @@ def match_school(raw):
                     hit.append(c)
             if hit:
                 break
+        if pat and len(hit) > 1:
+            hit = [c for c in hit if in_sido(c)] or hit
         if len(hit) == 1:
             res = (hit[0]["name"], hit[0])
         else:
-            # 반대로 S2B가 접두어를 뺀 경우: '해송고등학교' → '인천해송고등학교' (전국 유일할 때만)
+            # 반대로 S2B가 접두어를 뺀 경우: '해송고등학교' → '인천해송고등학교'
             back = [c for c in _endswith_idx.get(nm, []) if c["name"] != nm]
+            if pat and len(back) > 1:
+                back = [c for c in back if in_sido(c)] or back
             if len(back) == 1:
                 res = (back[0]["name"], back[0])
-    _cache[raw] = res
+    _cache[ck] = res
     return res
 
 def main():
@@ -107,7 +128,7 @@ def main():
                 drop["행사·임대·비제품"] += 1
                 continue
             school_raw = (r.get("기관명") or "").strip()
-            school, m = match_school(school_raw)
+            school, m = match_school(school_raw, (r.get("시도") or "").strip())
             tags = refine_aidt(tags_of(strip_school(name, school), ""), name, "")
             if not tags:
                 drop["태그 없음"] += 1
