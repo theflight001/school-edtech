@@ -156,7 +156,8 @@ SPECIFIC_RULES = [
     ("하이러닝",            r"하이러닝|Hi-?Learning"),
     ("바당",               r"바당|BADANG"),
     ("클래스팅",            r"클래스팅|Classting"),
-    ("레고 에듀케이션",      r"레고(?!\s?등학교|랜드)|LEGO|스파이크 ?프라임"),
+    # '레고월'은 레고 모양 벽 블록(인테리어 시공)이라 레고 에듀케이션과 무관하다
+    ("레고 에듀케이션",      r"레고(?!\s?등학교|랜드|월|벽)|LEGO|스파이크 ?프라임"),
     ("코디마스터",          r"코디마스터"),
     ("아이스크림",          r"아이스크림|i-?Scream"),
     ("젭(ZEP)",            r"젭|\bZEP\b"),
@@ -320,6 +321,9 @@ FURNITURE = re.compile(
     r"(?:학생용 ?)?(?:의자|걸상|책상(?! ?위)|책걸상|가구|사물함|캐비닛|수납장|서가|책장|"
     r"칸막이|파티션|게시판|커튼|블라인드|소파|테이블|교구장|신발장|우산꽂이)"
     r"(?![^가-힣]{0,4}(?:형|용) ?(?:전자칠판|모니터|태블릿))")
+# 레고월·벽면 장식처럼 공간 꾸미기 시공은 학습 제품 도입이 아니다
+WALL_DECOR = re.compile(r"레고 ?[월벽]|벽면 ?(?:장식|조형)|현관 ?(?:조형|장식)|포토존|조형물")
+
 FURNITURE_KEEP = re.compile(r"충전 ?(?:보관)?함|충전 ?카트|전자 ?교탁|스마트 ?교탁|거치대|모니터 ?암")
 
 # 시설 유지보수·설비 계약 — 학습과 무관하므로 인프라 태그가 붙어도 수록 대상이 아니다
@@ -734,6 +738,12 @@ records = [r for r in records
                    and not (_spec_all & set(r["tags"])))]
 if _before_ns - len(records):
     print(f"여행·운송 업체 계약 제외: {_before_ns - len(records)}건")
+
+# 벽면 장식 시공 제외 (레고월 등)
+_before_wd = len(records)
+records = [r for r in records if not WALL_DECOR.search(r["product"])]
+if _before_wd - len(records):
+    print(f"벽면 장식 시공 계약 제외: {_before_wd - len(records)}건")
 
 # 일반 가구 계약 제외 — 특정 제품 태그나 기기 부속 신호가 있으면 유지
 _before_fn = len(records)
