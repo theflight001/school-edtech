@@ -311,6 +311,14 @@ EDU_TRAINING = re.compile(r"위탁 ?교육|위탁교육|자격증|직무 ?연수
                           r"역량 ?강화 ?프로그램|프로그램 ?위탁")
 # 계약 상대가 여행·운송업이면 제품 공급이 아니라 연수·체험 운영 계약이다
 #  (예: '글로벌 소프트웨어 역량 강화 프로그램 위탁 용역' — 계약업체 ○○항공여행사)
+# 책걸상·수납가구 등 일반 가구 — 컴퓨터실에 놓여도 에듀테크 제품이 아니다
+# (태블릿 충전보관함·전자교탁처럼 기기와 한 몸인 것은 제외 대상이 아니다)
+FURNITURE = re.compile(
+    r"(?:학생용 ?)?(?:의자|걸상|책상(?! ?위)|책걸상|가구|사물함|캐비닛|수납장|서가|책장|"
+    r"칸막이|파티션|게시판|커튼|블라인드|소파|테이블|교구장|신발장|우산꽂이)"
+    r"(?![^가-힣]{0,4}(?:형|용) ?(?:전자칠판|모니터|태블릿))")
+FURNITURE_KEEP = re.compile(r"충전 ?(?:보관)?함|충전 ?카트|전자 ?교탁|스마트 ?교탁|거치대|모니터 ?암")
+
 # 시설 유지보수·설비 계약 — 학습과 무관하므로 인프라 태그가 붙어도 수록 대상이 아니다
 # (예: '기숙사 냉난방기 유지보수 용역' — 냉난방이 인프라 규칙에 걸리지만 에듀테크가 아니다)
 FACILITY_MAINT = re.compile(
@@ -723,6 +731,15 @@ records = [r for r in records
 if _before_ns - len(records):
     print(f"여행·운송 업체 계약 제외: {_before_ns - len(records)}건")
 
+# 일반 가구 계약 제외 — 특정 제품 태그나 기기 부속 신호가 있으면 유지
+_before_fn = len(records)
+records = [r for r in records
+           if not (FURNITURE.search(r["product"])
+                   and not FURNITURE_KEEP.search(r["product"])
+                   and not (_spec_all & set(r["tags"])))]
+if _before_fn - len(records):
+    print(f"책걸상·수납가구 계약 제외: {_before_fn - len(records)}건")
+
 # 시설 유지보수·설비 계약 제외 (냉난방·기숙사·승강기 등) — 특정 제품 태그가 있으면 유지
 _before_fm = len(records)
 records = [r for r in records
@@ -1020,6 +1037,29 @@ if _new_tags:
 elif os.path.exists("tag_review.md"):
     os.remove("tag_review.md")
 json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
+
+# --- 갱신 이력 --- 월 1회 갱신을 전제로, 달마다 한 줄씩 남긴다.
+# 건수·학교 수는 빌드할 때 자동으로 채우고, '무엇을 새로 넣었나'(note)만 사람이 적는다.
+from datetime import date as _date
+_today = _date.today()
+_month = f"{_today.year}.{_today.month}"
+_hist_path = "update_history.json"
+_hist = json.load(open(_hist_path, encoding="utf-8")) if os.path.exists(_hist_path) else []
+_cur = next((h for h in _hist if h["month"] == _month), None)
+if _cur is None:
+    _cur = {"month": _month, "note": ""}
+    _hist.append(_cur)
+_prev = [h for h in _hist if h["month"] != _month]
+_cur["total"] = len(records)
+_cur["schools"] = len({r["school"] for r in records})
+_cur["delta"] = _cur["total"] - (_prev[-1]["total"] if _prev else 0)
+_hist.sort(key=lambda h: [int(x) for x in h["month"].split(".")])
+json.dump(_hist, open(_hist_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+meta["asOf"] = _today.isoformat()
+meta["asOfMonth"] = _month
+meta["nextMonth"] = f"{_today.year + (_today.month == 12)}.{_today.month % 12 + 1}"
+meta["history"] = _hist[-6:][::-1]
+print(f"갱신 이력: {_month} · {_cur['total']:,}건 (직전 대비 {_cur['delta']:+,})")
 
 # --- 저장: 키 이름 반복과 되풀이되는 문자열을 걷어낸 압축 형식 ---
 # 레코드마다 키 이름을 적으면 그것만으로 파일의 3분의 1이 된다. 열 이름을 한 번만 적고
