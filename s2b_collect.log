@@ -741,3 +741,16 @@ collect_s2b.py: error: the following arguments are required: --end
   차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
   차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
   차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+  차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+  차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+  차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+  차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+  차단 감지 → 세션 재발급 후 3600초 대기 (재요청이 차단을 연장하므로 길게 쉰다)
+Traceback (most recent call last):
+  File "/Users/keollim/Claude/Projects/edtech/collect_s2b.py", line 188, in <module>
+    main()
+  File "/Users/keollim/Claude/Projects/edtech/collect_s2b.py", line 156, in main
+    s = post(search_params(kw, wb, we, page))
+  File "/Users/keollim/Claude/Projects/edtech/collect_s2b.py", line 74, in post
+    raise RuntimeError("안티크롤링 차단 지속 — 간격을 더 늘려야 함")
+RuntimeError: 안티크롤링 차단 지속 — 간격을 더 늘려야 함

@@ -23,7 +23,9 @@
       "Bash(git commit -q -m '팝업 바깥 클릭으로 닫히는 동작 제거 — 버튼으로만 닫기 *)",
       "Bash(git push *)",
       "WebSearch",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(curl -s https://school-edtech.vercel.app/data.js)",
+      "Bash(python3 -c \"import json;d=json.load\\(open\\('.ckpt_s2b.json'\\)\\)['done'];print\\(len\\(d\\)\\)\")"
     ]
   }
 }
