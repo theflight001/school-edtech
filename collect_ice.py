@@ -10,6 +10,9 @@ import argparse, csv, html, http.cookiejar, json, os, re, sys, time, urllib.pars
 OFFICES = {
     "인천": ("https://www.ice.go.kr/contract/ir/selectCntrInfoList.do", "contract", "11307"),
     "충북": ("https://www.cbe.go.kr/cbe/ir/selectCntrInfoList.do", "cbe", "11608"),
+    # 전남은 jne.go.kr → jge.go.kr로 넘어간다. 넘어가면서 POST 본문이 사라져
+    # 검색 조건이 통째로 무시되므로 최종 주소를 직접 쓴다.
+    "전남": ("https://www.jge.go.kr/main/ir/selectCntrInfoList.do", "main", ""),
 }
 URL = OFFICES["인천"][0]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
