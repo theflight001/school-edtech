@@ -1,13 +1,21 @@
-# 인천광역시교육청 계약정보공개 시스템 수집기 (학교 수의계약 — 소액 포함)
-# 사용: python3 collect_ice.py [--keywords 에듀테크,코스웨어] [--out ice_candidates.csv]
+# 시도교육청 계약정보공개 수집기 (에듀파인 연계 selectCntrInfoList 계열)
+# 사용: python3 collect_ice.py [--office 인천|충북] [--keywords ...] [--out ...]
+# 같은 화면을 쓰는 시도가 여럿이라 주소·sysId만 바꿔 재사용한다.
 # 배경: 나라장터·S2B에 안 잡히는 소액 구매(수만~수십만 원)가 여기에 남는다.
 #       K-에듀파인과 연계돼 자동 공개되며 로그인이 필요 없다.
 # 결과: ice_candidates.csv (계약번호 대신 기관+계약명+계약일로 중복 판별)
 import argparse, csv, html, http.cookiejar, json, os, re, sys, time, urllib.parse, urllib.request
 
-URL = "https://www.ice.go.kr/contract/ir/selectCntrInfoList.do"
+# 시도별: (주소, sysId, mi) — mi가 없는 곳은 빈 문자열
+OFFICES = {
+    "인천": ("https://www.ice.go.kr/contract/ir/selectCntrInfoList.do", "contract", "11307"),
+    "충북": ("https://www.cbe.go.kr/cbe/ir/selectCntrInfoList.do", "cbe", "11608"),
+}
+URL = OFFICES["인천"][0]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 PAGE = 100          # 한 번에 받는 행 수
+SYSID = OFFICES["인천"][1]
+MI = OFFICES["인천"][2]
 SPACING = 1.5       # 초 — 공개 시스템이라 여유 있으나 예의상 간격을 둔다
 OUT = "ice_candidates.csv"
 CKPT = ".ckpt_ice.json"
@@ -26,17 +34,18 @@ def opener():
         cj = http.cookiejar.CookieJar()
         _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         _opener.addheaders = [("User-Agent", UA)]
-        _opener.open(URL + "?mi=11307", timeout=30).read()   # 세션 쿠키 확보
+        _opener.open(URL + (f"?mi={MI}" if MI else ""), timeout=30).read()   # 세션 쿠키 확보
     return _opener
 
 def fetch(keyword, page):
-    data = {"sysId": "contract", "currPage": str(page), "pageIndex": str(PAGE), "cmSeqNo": "",
+    data = {"sysId": SYSID, "currPage": str(page), "pageIndex": str(PAGE), "cmSeqNo": "",
             "schFsclY": "ALL", "schInstClssDiv": "5",   # 5 = 학교
             "schCntrPodiv": "", "schCntrInstNm": "", "schCntrNm": keyword,
-            "schStCntrDt": "", "schEdCntrDt": "", "schCntrAmt": "", "schCntrPrtnrNm": "",
-            "mi": "11307"}
+            "schStCntrDt": "", "schEdCntrDt": "", "schCntrAmt": "", "schCntrPrtnrNm": ""}
+    if MI:
+        data["mi"] = MI
     req = urllib.request.Request(URL, data=urllib.parse.urlencode(data).encode(),
-                                 headers={"Referer": URL + "?mi=11307"})
+                                 headers={"Referer": URL + (f"?mi={MI}" if MI else "")})
     for attempt, wait in enumerate([5, 20, 60, None]):
         try:
             return opener().open(req, timeout=60).read().decode("utf-8", "replace")
@@ -62,11 +71,18 @@ def parse(page_html):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--office", default="인천", choices=list(OFFICES))
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
     ap.add_argument("--keyword-file", help="검색어를 줄 단위로 담은 파일 (에듀집 제품명 등)")
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--max-pages", type=int, default=200)
     a = ap.parse_args()
+    global URL, SYSID, MI, CKPT
+    URL, SYSID, MI = OFFICES[a.office]
+    if a.office != "인천":
+        CKPT = f".ckpt_{a.office}.json"
+        if a.out == OUT:
+            a.out = f"{a.office}_candidates.csv"
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
     done, seen = set(ckpt["done"]), set(tuple(k) for k in ckpt["seen"])
