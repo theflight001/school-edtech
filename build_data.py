@@ -660,6 +660,8 @@ OFFICE_SOURCES = [
     ("gen_refined.csv", "광주", "광주교육청 계약공개", 600000),
     ("dje_refined.csv", "대전", "대전교육청 계약공개", 700000),
     ("use_refined.csv", "울산", "울산교육청 계약공개", 800000),
+    ("cbe_refined.csv", "충북", "충북교육청 계약공개", 900000),
+    ("jne_refined.csv", "전남", "전남교육청 계약공개", 1000000),
 ]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):
