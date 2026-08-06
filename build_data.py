@@ -242,7 +242,6 @@ SPECIFIC_RULES = [
     ("하드보안관",            r"하드보안관"),
     ("리딩앤",               r"리딩앤(?!드)|Reading& ?"),
     ("네프론",               r"네프론|Nephron"),
-    ("티처몰",               r"티처몰"),
     ("마인크래프트 에듀케이션", r"마인크래프트|Minecraft"),
     ("카훗",               r"카훗|Kahoot"),
     ("김킷",               r"김킷|Gimkit"),
@@ -1018,7 +1017,11 @@ json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
 # 레코드마다 키 이름을 적으면 그것만으로 파일의 3분의 1이 된다. 열 이름을 한 번만 적고
 # 값은 배열로 늘어놓되, 되풀이되는 문자열(출처·비고·지역 등)은 사전으로 치환한다.
 # 화면 쪽 코드는 그대로 두기 위해 index.html이 읽는 시점에 원래 모양으로 되돌린다.
-_cols = sorted({k for r in records for k in r})
+# 화면에서 안 쓰는 열(id)은 싣지 않고, 값이 거의 없는 표시 열(dup·feeOnly)은
+# 행마다 null을 적는 대신 '해당하는 행 번호 목록'으로 따로 넘긴다.
+_DROP_COLS = {"id"}
+_SPARSE_COLS = ["dup", "feeOnly"]
+_cols = sorted({k for r in records for k in r} - _DROP_COLS - set(_SPARSE_COLS))
 _DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
               "hsType", "founding", "confidence", "period",
               # 학교 관련 값은 그 학교의 기록 수만큼 되풀이된다
@@ -1029,12 +1032,18 @@ for c in _DICT_COLS:
     if len(vals) < len(records) / 4:            # 되풀이가 뚜렷할 때만 사전으로 바꾼다
         _dicts[c] = {v: i for i, v in enumerate(vals)}
 _URL_PRE = "https://www.g2b.go.kr/link/FIUA027_01/single/?ctrtNo="
+# 태그는 278종뿐인데 행마다 문자열로 적히고 있었다 — 번호로 바꾸고 표를 한 번만 싣는다
+_tag_list = sorted({t for r in records for t in r["tags"]})
+_tag_no = {t: i for i, t in enumerate(_tag_list)}
+_sparse = {c: [i for i, r in enumerate(records) if r.get(c)] for c in _SPARSE_COLS}
 _rows = []
 for r in records:
     row = []
     for c in _cols:
         v = r.get(c)
-        if c in _dicts and isinstance(v, str):
+        if c == "tags":
+            v = [_tag_no[t] for t in v]
+        elif c in _dicts and isinstance(v, str):
             v = _dicts[c][v]
         elif c == "url" and isinstance(v, str) and v.startswith(_URL_PRE):
             v = "~" + v[len(_URL_PRE):]
@@ -1046,6 +1055,7 @@ with open(OUT, "w", encoding="utf-8") as f:
     f.write("const DB_RAW = ")
     json.dump({"meta": meta, "cols": _cols,
                "dict": {c: sorted(d, key=d.get) for c, d in _dicts.items()},
+               "tagList": _tag_list, "sparse": _sparse,
                "urlPrefix": _URL_PRE, "rows": _rows, "schoolIndex": school_index},
               f, ensure_ascii=False, separators=(",", ":"))
     f.write(";\n")
