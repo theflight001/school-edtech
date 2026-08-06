@@ -75,6 +75,13 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .page p, .page li { color: var(--ink-2); font-size: 15px; word-break: keep-all; overflow-wrap: break-word; }
 .page ul { margin: 6px 0 0; padding-left: 18px; }
 .page li { margin: 3px 0; }
+/* 판정 원리 예시 상자 */
+.example { margin-top: 16px; background: var(--surface); border-radius: 12px; padding: 16px 18px; }
+.example > b { font-size: 14px; }
+.example .ex-q { margin: 8px 0 10px; font-size: 14.5px; color: var(--ink); }
+.example .ex-q span { color: var(--ink-2); }
+.example ul { margin: 0; padding-left: 18px; }
+.example li { font-size: 14px; margin: 5px 0; }
 /* 자료원 카드 — 3열 고정, 모두 같은 크기 */
 .srcgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
 @media (max-width: 900px) { .srcgrid { grid-template-columns: repeat(2, 1fr); } }
@@ -261,7 +268,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260806d"></script>
+<script src="data.js?b=20260807a"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -315,7 +322,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260806d";
+  s.src = "data_detail.js?b=20260807a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -912,6 +919,16 @@ function aboutView() {
         <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외합니다.</li>
         <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교로 합쳐 보여 줍니다. 계약명 원문은 그대로 보존합니다.</li>
       </ul>
+
+      <div class="example">
+        <b>예를 들면</b>
+        <p class="ex-q">명진초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
+        <ul>
+          <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 붙습니다. 계약명에 이름이 적힌 제품은 그것뿐이기 때문입니다.</li>
+          <li>같은 제품이라도 표기는 제각각입니다(챗GPT · ChatGPT · 챗지피티). 어느 쪽으로 적혀 있든 <b>ChatGPT</b>로 모아 두므로, <b>한글로 검색하든 영문으로 검색하든</b> 같은 결과가 나옵니다.</li>
+          <li><b>“외 3종”은 기록하지 않습니다.</b> 무엇을 함께 샀는지 계약명에 없어 확인할 방법이 없습니다. 이런 계약이 많아 실제 도입 제품은 여기 실린 것보다 많습니다.</li>
+        </ul>
+      </div>
 
       <h3>무엇이 빠지나</h3>
       <p>여기 실린 숫자는 <b>하한선</b>입니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
