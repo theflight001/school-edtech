@@ -1013,6 +1013,32 @@ elif os.path.exists("tag_review.md"):
     os.remove("tag_review.md")
 json.dump(sorted(_now), open(_snap_path, "w"), ensure_ascii=False)
 
+# --- content 조립화 ---
+# '내용'의 대부분은 출처·구분·금액·업체로 기계적으로 만든 문구다(같은 문장이 8만 6천 번 반복된다).
+# 조각만 싣고 화면에서 조립한다. 조립 결과가 원문과 한 글자라도 다르면 원문을 그대로 남긴다.
+def _amt_txt(a):
+    if not a:
+        return ""
+    return f"({a/10000:,.0f}만원)" if a >= 10000 else f"({a:,}원)"
+
+_ctpl_n = 0
+for r in records:
+    c = r.get("content") or ""
+    m = re.search(r"계약업체[:：]\s*(.+?)\s*$", c)
+    vend = m.group(1).strip() if m else ""
+    head = c[:m.start()].rstrip(" ·") if m else c
+    # 머리말에서 금액 표기를 떼어 내면 '출처 + 구분'만 남는다
+    head2 = re.sub(r"\s*\([\d,]+(?:만)?원\)\s*$", "", head).strip()
+    built = head2 + (" " + _amt_txt(r.get("amt")) if r.get("amt") else "")
+    if vend:
+        built += " · 계약업체: " + vend
+    if built == c and c:
+        r["vendor"] = vend
+        r["ctpl"] = head2                 # 출처·구분 머리말 (사전으로 압축된다)
+        r["content"] = None
+        _ctpl_n += 1
+print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ctpl_n:,}건)")
+
 # --- 저장: 키 이름 반복과 되풀이되는 문자열을 걷어낸 압축 형식 ---
 # 레코드마다 키 이름을 적으면 그것만으로 파일의 3분의 1이 된다. 열 이름을 한 번만 적고
 # 값은 배열로 늘어놓되, 되풀이되는 문자열(출처·비고·지역 등)은 사전으로 치환한다.
@@ -1023,6 +1049,7 @@ _DROP_COLS = {"id"}
 _SPARSE_COLS = ["dup", "feeOnly"]
 _cols = sorted({k for r in records for k in r} - _DROP_COLS - set(_SPARSE_COLS))
 _DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
+              "vendor", "ctpl",
               "hsType", "founding", "confidence", "period",
               # 학교 관련 값은 그 학교의 기록 수만큼 되풀이된다
               "neisAddress", "school", "schoolName", "schoolCode"]
@@ -1050,14 +1077,37 @@ for r in records:
         row.append(v)
     _rows.append(row)
 
+# 첫 화면과 검색에 필요한 열만 먼저 싣고, 상세 표시용 열은 뒤이어 받도록 나눈다.
+# (모바일에서 첫 로딩이 실용 한계를 넘어선 데 대한 대응 — 전송량은 같지만 첫 화면이 빨라진다)
+_DETAIL_COLS = ["url", "note", "neisAddress", "category", "hsType",
+                "founding", "region", "schoolName", "content"]
+_core_cols = [c for c in _cols if c not in _DETAIL_COLS]
+_det_cols = [c for c in _cols if c in _DETAIL_COLS]
+_ci = [_cols.index(c) for c in _core_cols]
+_di = [_cols.index(c) for c in _det_cols]
+_core_rows = [[r[i] for i in _ci] for r in _rows]
+_det_rows = [[r[i] for i in _di] for r in _rows]
+_core_dict = {c: v for c, v in _dicts.items() if c in _core_cols}
+_det_dict = {c: v for c, v in _dicts.items() if c in _det_cols}
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB_RAW = ")
-    json.dump({"meta": meta, "cols": _cols,
-               "dict": {c: sorted(d, key=d.get) for c, d in _dicts.items()},
-               "tagList": _tag_list, "sparse": _sparse,
-               "urlPrefix": _URL_PRE, "rows": _rows, "schoolIndex": school_index},
+    json.dump({"meta": meta, "cols": _core_cols,
+               "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
+               "tagList": _tag_list, "sparse": _sparse, "rows": _core_rows,
+               "schoolIndex": school_index},
               f, ensure_ascii=False, separators=(",", ":"))
     f.write(";\n")
-_kb = os.path.getsize(OUT) / 1024 / 1024
-print(f"\n{OUT} 생성 완료 — {_kb:.1f}MB (열 {len(_cols)}개, 사전 {len(_dicts)}종)")
+with open("data_detail.js", "w", encoding="utf-8") as f:
+    f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (첫 화면 뒤에 따로 읽는다)\n")
+    f.write("const DB_DETAIL = ")
+    json.dump({"cols": _det_cols,
+               "dict": {c: sorted(d, key=d.get) for c, d in _det_dict.items()},
+               "urlPrefix": _URL_PRE, "rows": _det_rows},
+              f, ensure_ascii=False, separators=(",", ":"))
+    f.write(";\n")
+_a = os.path.getsize(OUT) / 1024 / 1024
+_b = os.path.getsize("data_detail.js") / 1024 / 1024
+print(f"\n{OUT} {_a:.1f}MB (첫 화면·검색용 {len(_core_cols)}열) + "
+      f"data_detail.js {_b:.1f}MB (상세 {len(_det_cols)}열)")
