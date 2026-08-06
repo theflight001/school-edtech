@@ -133,7 +133,9 @@ def resolve_school(row):
 # 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
 # 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
 SPECIFIC_RULES = [
-    ("ChatGPT",            r"Chat[\s\-]?GPT|챗[\s\-]?GPT|GPT[- ]?[45]|OpenAI"),   # 'Chat gpt Plus'처럼 띄어 쓴 표기도 있다
+    # '챗지피티'처럼 한글로 옮겨 적은 표기가 많다. 다만 GPT킬러·MonoGPT·타임리 GPT처럼
+    # 다른 제품에 GPT가 붙는 경우가 있어, GPT 단독은 잡지 않는다.
+    ("ChatGPT",            r"Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇겟][\s\-]?지피티|GPT[- ]?[45]|OpenAI"),
     # Google AI Pro/Ultra는 2025년 개편된 구글 AI 구독 요금제 공식 명칭(구 Gemini Advanced·Google One AI Premium)
     ("Google AI Pro",       r"구글 ?AI ?(?:PRO|프로|Ultra|울트라)|Google ?AI ?(?:Pro|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
     ("Gemini",             r"Gemini|제미나이"),
