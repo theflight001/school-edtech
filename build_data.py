@@ -1105,23 +1105,31 @@ _det_rows = [[r[i] for i in _di] for r in _rows]
 _core_dict = {c: v for c, v in _dicts.items() if c in _core_cols}
 _det_dict = {c: v for c, v in _dicts.items() if c in _det_cols}
 
+# 자료를 자바스크립트 문법으로 적으면 브라우저가 19MB짜리 소스를 통째로 해석하느라
+# 첫 화면이 3초 넘게 늦어진다. 같은 내용을 문자열에 담아 JSON.parse로 넘기면
+# 전용 파서가 처리해 10배 가까이 빠르다(측정: 2.9초 → 0.26초).
+def _js_literal(obj):
+    """JSON 본문을 작은따옴표 문자열로 감싼다 — 큰따옴표를 escape하지 않아 크기가 늘지 않는다"""
+    t = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    t = t.replace("\\", "\\\\").replace("'", "\\'")
+    t = t.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")   # JS에서 줄바꿈으로 취급되는 문자
+    return "'" + t + "'"
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
-    f.write("const DB_RAW = ")
-    json.dump({"meta": meta, "cols": _core_cols,
-               "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-               "tagList": _tag_list, "sparse": _sparse, "rows": _core_rows,
-               "schoolIndex": school_index},
-              f, ensure_ascii=False, separators=(",", ":"))
-    f.write(";\n")
+    f.write("const DB_RAW = JSON.parse(")
+    f.write(_js_literal({"meta": meta, "cols": _core_cols,
+                         "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
+                         "tagList": _tag_list, "sparse": _sparse, "rows": _core_rows,
+                         "schoolIndex": school_index}))
+    f.write(");\n")
 with open("data_detail.js", "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (첫 화면 뒤에 따로 읽는다)\n")
-    f.write("const DB_DETAIL = ")
-    json.dump({"cols": _det_cols,
-               "dict": {c: sorted(d, key=d.get) for c, d in _det_dict.items()},
-               "urlPrefix": _URL_PRE, "rows": _det_rows},
-              f, ensure_ascii=False, separators=(",", ":"))
-    f.write(";\n")
+    f.write("const DB_DETAIL = JSON.parse(")
+    f.write(_js_literal({"cols": _det_cols,
+                         "dict": {c: sorted(d, key=d.get) for c, d in _det_dict.items()},
+                         "urlPrefix": _URL_PRE, "rows": _det_rows}))
+    f.write(");\n")
 _a = os.path.getsize(OUT) / 1024 / 1024
 _b = os.path.getsize("data_detail.js") / 1024 / 1024
 print(f"\n{OUT} {_a:.1f}MB (첫 화면·검색용 {len(_core_cols)}열) + "

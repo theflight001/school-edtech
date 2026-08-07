@@ -337,7 +337,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260808a"></script>
+<script src="data.js?b=20260808c"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -354,6 +354,7 @@ const DB = (() => {
       else if (k === "url" && typeof v === "string" && v[0] === "~") v = pre + v.slice(1);
       o[k] = v;
     }
+    o._i = i;                                   // 상세 열을 나중에 찾아올 때 쓰는 행 번호
     records[i] = o;
   }
   // 값이 거의 없는 표시 열은 해당 행 번호만 넘어온다
@@ -370,14 +371,34 @@ const DB = (() => {
   return { meta: d.meta, records, schoolIndex: d.schoolIndex };
 })();
 const R = DB.records;
+// ?perf=1 로 열면 단계별 시간을 콘솔에 찍는다 (첫 화면이 느릴 때 어디가 오래 걸리는지 보기 위함)
+const PERF = location.search.includes("perf");
+const perfMark = (() => { let last = performance.now(); const t0 = last;
+  return label => { if (!PERF) return; const n = performance.now();
+    console.log(`[perf] ${label}: ${Math.round(n - last)}ms (누적 ${Math.round(n - t0)}ms)`); last = n; }; })();
+perfMark("자료 해석·객체화");
 
 // 상세 표시용 열(출처 링크·주소·비고 등)은 첫 화면을 그린 뒤에 따로 받아 합친다.
 // 검색·통계는 핵심 열만으로 이미 동작하므로 기다리지 않는다.
+// 13만 건 전체에 상세 열을 붙이면 3초 가까이 멈춘다(속성 추가가 그만큼 비싸다).
+// 그래서 받아만 두고, 실제로 화면에 나오는 기록에만 그때그때 채운다.
+let DETAIL = null, DETAIL_DONE = null;
 function mergeDetail(d) {
-  const cols = d.cols, dict = d.dict || {}, pre = d.urlPrefix || "";
-  for (let i = 0; i < d.rows.length; i++) {
-    const row = d.rows[i], o = R[i];
-    if (!o) continue;
+  DETAIL = d;
+  DETAIL_DONE = new Uint8Array(d.rows.length);
+  if (typeof perfMark === "function") perfMark("상세 자료 받기");
+  if (typeof render === "function") render();                  // 받아온 내용으로 다시 그린다
+  if (typeof perfMark === "function") perfMark("상세 반영 후 재그리기");
+}
+function fillDetail(recs) {                                    // 보이는 기록만 채운다
+  if (!DETAIL || !recs || !recs.length) return recs;
+  const cols = DETAIL.cols, dict = DETAIL.dict || {}, pre = DETAIL.urlPrefix || "";
+  for (const o of recs) {
+    const i = o && o._i;
+    if (i == null || DETAIL_DONE[i]) continue;
+    DETAIL_DONE[i] = 1;
+    const row = DETAIL.rows[i];
+    if (!row) continue;
     for (let c = 0; c < cols.length; c++) {
       const k = cols[c];
       let v = row[c];
@@ -387,11 +408,22 @@ function mergeDetail(d) {
       o[k] = v;
     }
   }
-  if (typeof render === "function") render();                  // 받아온 내용으로 다시 그린다
+  return recs;
 }
+// 검색은 13만 건을 훑으므로 속성을 채우지 않고 상세 자료에서 바로 읽는다
+const _detIdx = k => DETAIL ? DETAIL.cols.indexOf(k) : -1;
+function detailVal(i, k) {
+  if (!DETAIL) return "";
+  const c = _detIdx(k);
+  if (c < 0) return "";
+  const v = DETAIL.rows[i] ? DETAIL.rows[i][c] : null;
+  const dict = DETAIL.dict || {};
+  return (dict[k] && typeof v === "number") ? dict[k][v] : (v == null ? "" : v);
+}
+const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260808a";
+  s.src = "data_detail.js?b=20260808c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -454,13 +486,13 @@ function pagedTable(recs, opts) {
   const showFilter = origTotal > PAGE_SIZE || LISTQ;
   if (LISTQ) {
     const terms = queryTerms(LISTQ.toLowerCase());
-    recs = recs.filter(r => terms.some(t => (r.school + r.product + r.content).toLowerCase().includes(t)));
+    recs = recs.filter(r => terms.some(t => (r.school + r.product + contentOf(r)).toLowerCase().includes(t)));
   }
   recs = sortRecs(recs);
   const total = recs.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(PAGE, pages);
-  const slice = recs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const slice = fillDetail(recs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
   let topbar = "";
   if (pages > 1 || showFilter || SORTK !== "new") {
     const sortSel = `<select class="sortsel" onchange="setSort(this.value)" aria-label="정렬">
@@ -840,7 +872,7 @@ function homeView() {
 function schoolView(name) {
   const recs = R.filter(r => r.school === name);
   if (!recs.length) return `<div class="empty">학교를 찾을 수 없습니다: ${esc(name)}</div>`;
-  const info = recs[0];
+  const info = fillDetail([recs[0]])[0];
   const schoolTags = uniq(recs.flatMap(r => r.tags));
   return `
     <div class="crumb"><a href="#/">홈</a> › 학교 상세</div>
@@ -982,7 +1014,7 @@ function searchView(q) {
   for (const r of R) for (const t of r.tags) allTags.add(t.toLowerCase());
   const isProductTerm = t => [...allTags].some(g => g.includes(t));
   const hit = R.filter(r => {
-    const body = (r.product + r.content + r.tags.join("")).toLowerCase();
+    const body = (r.product + contentOf(r) + r.tags.join("")).toLowerCase();
     const school = r.school.toLowerCase();
     return terms.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
   });
@@ -1254,11 +1286,14 @@ function render() {
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; render(); });
+perfMark("화면 코드 준비");
 render();
+perfMark("첫 화면 그리기");
 
 // ---- 자동완성 ----
 const groupBySchool = {};
 R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
+perfMark("학교 색인");
 const suggItems = [
   ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
