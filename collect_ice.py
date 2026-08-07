@@ -13,10 +13,16 @@ OFFICES = {
     # 전남은 jne.go.kr → jge.go.kr로 넘어간다. 넘어가면서 POST 본문이 사라져
     # 검색 조건이 통째로 무시되므로 최종 주소를 직접 쓴다.
     "전남": ("https://www.jge.go.kr/main/ir/selectCntrInfoList.do", "main", ""),
+    # 경기는 학교 조회 시 계약일자 시작·종료가 필수이고 한 번에 6개월까지만 된다
+    # ("대용량 건수로 인하여 6개월 단위로 검색이 가능합니다"). 날짜는 20250101 형식이라야
+    # 인식되고, 하이픈(2025-01-01)으로 보내면 조건이 통째로 무시돼 504가 난다.
+    # --half 옵션으로 반년씩 나눠 조회한다.
+    "경기": ("https://www.goe.go.kr/goe/ir/selectCntrInfoList.do", "goe", ""),
+    "세종": ("https://www.sje.go.kr/sje/ir/selectCntrInfoList.do", "sje", ""),
 }
 URL = OFFICES["인천"][0]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-PAGE = 100          # 한 번에 받는 행 수
+PAGE = 100          # 한 번에 받는 행 수 (경기는 서버가 10으로 고정해 --page-size로 낮춘다)
 SYSID = OFFICES["인천"][1]
 MI = OFFICES["인천"][2]
 SPACING = 1.5       # 초 — 공개 시스템이라 여유 있으나 예의상 간격을 둔다
@@ -40,11 +46,11 @@ def opener():
         _opener.open(URL + (f"?mi={MI}" if MI else ""), timeout=30).read()   # 세션 쿠키 확보
     return _opener
 
-def fetch(keyword, page):
+def fetch(keyword, page, year="ALL", st="", ed=""):
     data = {"sysId": SYSID, "currPage": str(page), "pageIndex": str(PAGE), "cmSeqNo": "",
-            "schFsclY": "ALL", "schInstClssDiv": "5",   # 5 = 학교
+            "schFsclY": year, "schInstClssDiv": "5",   # 5 = 학교
             "schCntrPodiv": "", "schCntrInstNm": "", "schCntrNm": keyword,
-            "schStCntrDt": "", "schEdCntrDt": "", "schCntrAmt": "", "schCntrPrtnrNm": ""}
+            "schStCntrDt": st, "schEdCntrDt": ed, "schCntrAmt": "", "schCntrPrtnrNm": ""}
     if MI:
         data["mi"] = MI
     req = urllib.request.Request(URL, data=urllib.parse.urlencode(data).encode(),
@@ -79,9 +85,17 @@ def main():
     ap.add_argument("--keyword-file", help="검색어를 줄 단위로 담은 파일 (에듀집 제품명 등)")
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--max-pages", type=int, default=200)
+    ap.add_argument("--years", default="ALL",
+                    help="회계연도를 쉼표로 (경기처럼 연도 없이 조회하면 시간 초과되는 곳에서 필요)")
+    ap.add_argument("--page-size", type=int, default=0,
+                    help="한 페이지 행 수 — 경기처럼 서버가 크기를 무시하는 곳은 10으로")
+    ap.add_argument("--half", action="store_true",
+                    help="반년(6개월) 단위로 나눠 조회 — 경기처럼 기간 제한이 있는 곳")
     a = ap.parse_args()
-    global URL, SYSID, MI, CKPT
+    global URL, SYSID, MI, CKPT, PAGE
     URL, SYSID, MI = OFFICES[a.office]
+    if a.page_size:
+        PAGE = a.page_size
     if a.office != "인천":
         CKPT = f".ckpt_{a.office}.json"
         if a.out == OUT:
@@ -109,17 +123,25 @@ def main():
     if a.keyword_file:
         kws = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
     print(f"검색어 {len(kws)}종", flush=True)
+    years = a.years.split(",")
     for kw in kws:
-        if kw in done:
-            continue
-        q = safe_kw(kw)
-        if not q:
-            done.add(kw)
+      q = safe_kw(kw)
+      if not q:
+          continue
+      spans = [("", "")]
+      if a.half:
+          spans = [("0101", "0630"), ("0701", "1231")]
+      for year in years:
+       for si, (s1, s2) in enumerate(spans):
+        st = f"{year}{s1}" if s1 else ""
+        ed = f"{year}{s2}" if s2 else ""
+        tag = kw if year == "ALL" else f"{kw}|{year}" + (f"|{si}" if s1 else "")
+        if tag in done:
             continue
         page = 1
         while page <= a.max_pages:
             try:
-                body = fetch(q, page)
+                body = fetch(q, page, year, st, ed)
             except Exception as e:
                 # 특정 검색어에서만 나는 오류로 전체 수집이 멈추지 않게 한다
                 print(f"  [{kw}] 건너뜀 ({e})", flush=True)
@@ -143,11 +165,11 @@ def main():
                 break
             page += 1
             time.sleep(SPACING)
-        done.add(kw)
+        done.add(tag)
         ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
         with open(CKPT, "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
-        print(f"[{kw}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+        print(f"[{tag}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {a.out}")
 
