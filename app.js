@@ -973,6 +973,11 @@ const suggItems = [
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
 ];
 const q = $("#q"), sugg = $("#sugg");
+// 요약 화면이 걸어 둔 '불러오는 중' 안내를 걷고, 그 사이에 입력한 글자가 있으면 바로 반영한다
+if (q) {
+  if (q.dataset.ph) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
+  if (q.value.trim()) setTimeout(() => q.dispatchEvent(new Event("input")), 0);
+}
 let selIdx = -1, current = [];
 q.addEventListener("input", () => {
   const v = q.value.trim().toLowerCase();
