@@ -145,6 +145,9 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .alpha button.on { background: var(--bar); border-color: var(--bar); color: #fff; font-weight: 600; }
 .mailbtn { display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; padding: 11px 20px; border-radius: 999px; background: var(--bar); color: #fff; font-weight: 600; font-size: 15px; }
 .mailbtn:hover { text-decoration: none; opacity: .9; }
+.mailbtn.alt { background: var(--plane); color: var(--accent); border: 1px solid var(--accent); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 10px; }
+.page .who { margin: 14px 0 2px; font-size: 13.5px; font-weight: 700; color: var(--accent); }
 /* 히어로: 에듀집식 둥근 카드 — 왼쪽 문구, 오른쪽 일러스트 */
 .herocard { position: relative; overflow: hidden; border-radius: 26px; margin: 20px 0 16px;
   padding: 46px 44px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
@@ -334,7 +337,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807q"></script>
+<script src="data.js?b=20260808a"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -388,7 +391,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807q";
+  s.src = "data_detail.js?b=20260808a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -1160,6 +1163,15 @@ function contactView() {
   const body = encodeURIComponent(
     "아래 항목을 채워 보내주시면 확인 후 반영하겠습니다.\n\n" +
     "1. 학교명:\n2. 해당 기록(제품명 또는 계약명):\n3. 어떤 점이 잘못되었나요:\n4. 올바른 내용:\n5. 근거 자료(있으면):\n6. 회신받을 연락처:\n");
+  // 기업은 물어볼 것이 다르다 — 회사·제품이 먼저 오고, 아예 빠진 기록도 함께 받는다
+  const subjCo = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청 (공급 기업)");
+  const bodyCo = encodeURIComponent(
+    "아래 항목을 채워 보내주시면 계약 원문과 대조해 반영하겠습니다.\n\n" +
+    "1. 회사명:\n2. 제품명(표기해야 할 이름):\n" +
+    "3. 어떤 점이 잘못되었나요:\n" +
+    "   (예: 다른 회사 제품으로 표시됨 / 제품군으로만 남아 있음 / 납품 기록이 목록에 없음 / 제품명 표기 오류)\n" +
+    "4. 해당 기록(학교명·계약명·계약일) — 목록에 없다면 '없음'이라고 적어 주세요:\n" +
+    "5. 올바른 내용:\n6. 근거 자료(계약서·납품 확인서·조달 공고 번호 등):\n7. 회신받을 담당자·연락처:\n");
   return `
     <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
     <div class="page">
@@ -1168,11 +1180,19 @@ function contactView() {
       잘못된 내용을 알려 주시면 확인 후 바로잡겠습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
+      <p class="who">학교·교육청</p>
       <ul>
         <li>우리 학교 기록이 아닌데 실려 있는 경우</li>
         <li>제품명이 실제와 다르게 표시된 경우</li>
         <li>학교 이름·지역·계열이 잘못된 경우 (개명·이전 등)</li>
         <li>이미 종료한 계약이 사용 중인 것처럼 보이는 경우</li>
+      </ul>
+      <p class="who">제품을 공급하는 기업</p>
+      <ul>
+        <li>우리 제품인데 <b>다른 회사 제품으로</b> 표시된 경우</li>
+        <li>제품명·회사명 표기가 실제와 다른 경우 (브랜드명 변경·통합 포함)</li>
+        <li>계약명에 제품 이름이 없어 <b>제품군으로만 남아 있는</b> 기록이 우리 제품인 경우</li>
+        <li>납품한 학교가 목록에 <b>빠져 있는</b> 경우</li>
       </ul>
 
       <h3>처리 방식</h3>
@@ -1180,14 +1200,20 @@ function contactView() {
         <li>보내주신 내용은 원본 조달 기록과 대조해 확인합니다.</li>
         <li>확인되면 해당 기록을 수정하거나 내리고, 다음 갱신에 반영합니다.</li>
         <li>계약 원문 자체가 잘못된 경우에는 원문을 바꿀 수 없어, 참고 설명을 덧붙이는 방식으로 처리합니다.</li>
+        <li>이 목록은 <b>공개된 조달 기록</b>만을 근거로 삼습니다. 기록에 없는 납품을 새로 넣거나
+          계약명에 없는 제품명을 채우려면 계약서·납품 확인서 같은 근거가 필요합니다.
+          홍보 목적의 등재 요청은 받지 않습니다.</li>
       </ul>
 
       <h3>보내실 곳</h3>
       <div class="cta-row">
         <div>
-          <p>아래 버튼을 누르면 정정 요청 서식이 채워진 메일 창이 열립니다.
+          <p>아래 버튼을 누르면 보내는 분에 맞는 서식이 채워진 메일 창이 열립니다.
           메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
-          <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">정정 요청 메일 쓰기</a>
+          <div class="btnrow">
+            <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">학교·개인 정정 요청</a>
+            <a class="mailbtn alt" href="mailto:gklim001@gmail.com?subject=${subjCo}&body=${bodyCo}">공급 기업 정정 요청</a>
+          </div>
         </div>
         <img src="contact_person.png?v=1" width="137" height="186" alt="">
       </div>
