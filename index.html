@@ -89,6 +89,14 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+/* 통계 기준 전환 */
+.scope { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; }
+.scope-btns { display: inline-flex; border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; }
+.scope-btns button { font: inherit; font-size: 13.5px; padding: 6px 16px; border: 0; background: none;
+  color: var(--ink-2); cursor: pointer; }
+.scope-btns button.on { background: var(--accent); color: #fff; font-weight: 600; }
+.scope-n { color: var(--muted); font-size: 13px; }
+.scope-n b { color: var(--ink-2); font-weight: 600; }
 .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
 /* 이름이 한 줄이든 두 줄이든 타일 크기를 같게 둔다 (두 줄 기준 높이) */
 .plist a { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 10px 14px; color: var(--ink); font-size: 14.5px; line-height: 1.45; min-height: 63px; box-sizing: border-box; }
@@ -672,16 +680,31 @@ function inPeriod(r) {
 }
 
 // ---- 뷰 ----
+// 제품군 태그 — 계약명에 제품이 안 적혀 '무엇인지 모른다'는 뜻이다.
+// 이들이 제품과 같은 순위표에 섞이면 도입 1위처럼 보여 오해를 부른다.
+const GENERIC_TAGS = new Set(["기기(PC·태블릿·전자칠판 등)", "SW·플랫폼(제품명 미상)",
+  "인프라(교실·설비)", "로봇·교구·키트", "코스웨어(기타)", "VR/XR 장비", "드론",
+  "3D 프린팅/CAD", "운영 부대구매(제품 미상)", "AI 면접시스템"]);
+const hasProduct = r => r.tags.some(t => !GENERIC_TAGS.has(t));
+let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
+function setScope(v) { SCOPE = v; render(); }
+
 function homeView() {
   const active = PF || PT;
   const scActive = SF.size > 0;
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
-  const RF = (anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R).filter(r => !r.dup);
+  const BASE = (anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R).filter(r => !r.dup);
+  // 전환에 따라 세 차트가 모두 같은 기준으로 움직인다
+  const RF = SCOPE === "product" ? BASE.filter(hasProduct) : BASE;
   const byType = count(RF, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
-  const topTags = tagPairs.slice(0, 12).map(([t]) => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length]).sort((a,b)=>b[1]-a[1]);
+  const tagNames = tagPairs.map(([t]) => t)
+    .filter(t => SCOPE !== "product" || !GENERIC_TAGS.has(t));
+  const topTags = tagNames.slice(0, 12)
+    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length])
+    .sort((a, b) => b[1] - a[1]);
   return `
     <div class="tiles">
       <div class="tile clickable" onclick="openRegionPicker()" role="button" aria-label="지역 선택">
@@ -704,8 +727,17 @@ function homeView() {
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
     <div class="section-div">통계 결과</div>
+    <div class="scope">
+      <div class="scope-btns">
+        <button class="${SCOPE === "product" ? "on" : ""}" onclick="setScope('product')">제품 확인 기록</button>
+        <button class="${SCOPE === "all" ? "on" : ""}" onclick="setScope('all')">전체 기록</button>
+      </div>
+      <span class="scope-n">${RF.length.toLocaleString()}건 · ${uniq(RF.map(r => r.school)).length.toLocaleString()}개교
+        ${SCOPE === "product" ? `<b>계약명에 제품이 적힌 기록만</b> — 아래 세 통계가 모두 이 기준입니다`
+          : `<b>제품명 미상 기록까지 포함</b> — 계약명에 제품이 안 적힌 건이 절반가량입니다`}</span>
+    </div>
     <div class="grid2">
-      <div class="card"><h2>주요 제품군별 도입 학교 수<span class="note">단위: 개교 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>${SCOPE === "product" ? "주요 제품별" : "제품·제품군별"} 도입 학교 수<span class="note">단위: 개교 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
     </div>
     <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도 · 막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
