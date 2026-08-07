@@ -89,6 +89,12 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+/* 카드 제목을 눌러 전체 보기로 */
+.h2link { color: inherit; }
+.h2link:hover { text-decoration: none; }
+.h2link .more { font-size: 12.5px; font-weight: 500; color: var(--accent); margin-left: 2px; }
+.h2link:hover .more { text-decoration: underline; }
+.alpha-gap { display: inline-block; width: 10px; }
 /* 통계 기준 전환 — 건수를 단추에 넣어 두 선택지의 규모가 함께 보이게 한다 */
 .scope { margin: 0 0 14px; }
 .scope-btns { display: inline-flex; gap: 8px; }
@@ -279,7 +285,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807d"></script>
+<script src="data.js?b=20260807e"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -333,7 +339,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807d";
+  s.src = "data_detail.js?b=20260807e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -747,10 +753,10 @@ function homeView() {
         : "제품명이 확인되지 않은 기록까지 포함합니다"}</span>
     </div>
     <div class="grid2">
-      <div class="card"><h2>${SCOPE === "product" ? "주요 제품별" : "제품·제품군별"} 도입 학교 수<span class="note">단위: 개교 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수 <span class="more">전체 보기 ›</span></a><span class="note">상위 12종 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2>지역별 사례 수<span class="note">상위 12개 시도 · 막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
+    <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수 <span class="more">전체 보기 ›</span></a><span class="note">상위 12개 시도 · 막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
 function schoolView(name) {
   const recs = R.filter(r => r.school === name);
@@ -994,13 +1000,20 @@ function aboutView() {
     </div>`;
 }
 
+let PSORT = "count";                    // count = 도입 학교 순(순위표), name = 가나다순
+function setPSort(v) { PSORT = v; const y = window.scrollY; render(); window.scrollTo(0, y); }
+
 function productsView() {
   const cnt = {}, sch = {};
-  for (const r of R) for (const t of r.tags) {
+  const src = SCOPE === "product" ? R.filter(hasProduct) : R;
+  for (const r of src) for (const t of r.tags) {
+    if (SCOPE === "product" && GENERIC_TAGS.has(t)) continue;
     cnt[t] = (cnt[t] || 0) + 1;
     (sch[t] = sch[t] || new Set()).add(r.school);
   }
-  const names = Object.keys(cnt).sort((a, b) => a.localeCompare(b, "ko"));
+  const names = Object.keys(cnt).sort(PSORT === "count"
+    ? (a, b) => sch[b].size - sch[a].size || a.localeCompare(b, "ko")
+    : (a, b) => a.localeCompare(b, "ko"));
   const initial = s => {
     const c = s[0];
     if (/[A-Za-z]/.test(c)) return "A–Z";
@@ -1027,14 +1040,41 @@ function productsView() {
   return `
     <div class="crumb"><a href="#/">홈</a> › 제품 전체 보기</div>
     <div class="pagehead"><h2>제품 전체 보기</h2>
-      <div class="sub2">조달 기록에서 확인된 제품·제품군 ${names.length}종 · 이름을 누르면 도입 학교를 볼 수 있습니다</div></div>
+      <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
+        이름을 누르면 도입 학교를 볼 수 있습니다</div></div>
     <div class="alpha">
+      <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
+      <button class="${PSORT === "name" ? "on" : ""}" onclick="setPSort('name')">가나다순</button>
+      <span class="alpha-gap"></span>
       <button class="${sel === "전체" ? "on" : ""}" onclick="PLIST_G='';render()">전체</button>
       ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}
     </div>
     <div class="plist">
       ${show.map(n => `<a href="#/tag/${encodeURIComponent(n)}">${esc(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
     </div>`;
+}
+
+function regionsView() {
+  const src = SCOPE === "product" ? R.filter(hasProduct) : R;
+  const all = count(src.filter(r => !r.dup), r => r.sido);
+  // '미상'·'전국(공동)'·'비공개'처럼 시도가 아닌 항목은 목록 아래에 따로 적는다
+  const isSido = s => SIDOS.includes(s);
+  const rows = all.filter(([s]) => isSido(s));
+  const etc = all.filter(([s]) => !isSido(s));
+  const sch = {};
+  for (const r of src) (sch[r.sido] = sch[r.sido] || new Set()).add(r.school);
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 지역별 전체</div>
+    <div class="pagehead"><h2>지역별 사례 수</h2>
+      <div class="sub2">전국 ${rows.length}개 시도 ·
+        ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다</div></div>
+    <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
+    <div class="plist" style="margin-top:14px">
+      ${rows.map(([s, n]) => `<a href="#/drill/sido/${encodeURIComponent(s)}">${esc(s)}
+        <span class="n">${n.toLocaleString()}건 · ${(sch[s] ? sch[s].size : 0).toLocaleString()}개교</span></a>`).join("")}
+    </div>
+    ${etc.length ? `<p class="sub2" style="margin-top:14px">시도를 특정하지 못한 기록:
+      ${etc.map(([s, n]) => `${esc(s)} ${n.toLocaleString()}건`).join(" · ")}</p>` : ""}`;
 }
 
 function contactView() {
@@ -1091,6 +1131,7 @@ function render() {
   else if (kind === "search") view.innerHTML = searchView(arg);
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "products") view.innerHTML = productsView();
+  else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "contact") view.innerHTML = contactView();
   else {
     view.innerHTML = homeView();
