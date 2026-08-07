@@ -89,6 +89,15 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
+/* 검색바 오른쪽 '제품명 미확인 기록 포함' 스위치 */
+.searchwrap { position: relative; }
+.incl { position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  color: var(--muted); font-size: 13px; white-space: nowrap; background: #fff;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--grid); }
+.incl:hover { border-color: var(--accent); color: var(--ink-2); }
+.incl input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
+@media (max-width: 820px) { .incl { position: static; transform: none; margin: 8px 0 0 2px; } }
 /* 카드 제목을 눌러 전체 보기로 */
 .h2link { color: inherit; }
 .h2link:hover { text-decoration: none; }
@@ -272,6 +281,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 
   <div class="searchwrap">
     <input id="q" type="search" placeholder="학교명 또는 제품명 검색 (예: 서울과학고, ChatGPT)" autocomplete="off">
+    <label class="incl" title="계약명에 제품이 적히지 않은 기록까지 함께 볼지 정합니다">
+      <input type="checkbox" id="inclUnknown" onchange="setScope(this.checked ? 'all' : 'product')">
+      <span>제품명 미확인 기록 포함</span>
+    </label>
     <div id="sugg" hidden></div>
   </div>
   <div id="view"></div>
@@ -285,7 +298,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807e"></script>
+<script src="data.js?b=20260807f"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -339,7 +352,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807e";
+  s.src = "data_detail.js?b=20260807f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -698,6 +711,8 @@ const hasProduct = r => r.tags.some(t => !GENERIC_TAGS.has(t));
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
 function setScope(v) {
   SCOPE = v;
+  const box = document.getElementById("inclUnknown");
+  if (box) box.checked = (v === "all");
   const y = window.scrollY;                  // 다시 그리면 맨 위로 튀므로 보던 자리를 지킨다
   render();
   window.scrollTo(0, y);
@@ -741,17 +756,6 @@ function homeView() {
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
     <div class="section-div">통계 결과</div>
-    <div class="scope">
-      <div class="scope-btns">
-        <button class="${SCOPE === "product" ? "on" : ""}" onclick="setScope('product')">
-          제품 확인 기록<em>${BASE.filter(hasProduct).length.toLocaleString()}건</em></button>
-        <button class="${SCOPE === "all" ? "on" : ""}" onclick="setScope('all')">
-          전체 기록<em>${BASE.length.toLocaleString()}건</em></button>
-      </div>
-      <span class="scope-n">${SCOPE === "product"
-        ? "계약명에 제품이 적힌 기록만 세 통계에 반영합니다"
-        : "제품명이 확인되지 않은 기록까지 포함합니다"}</span>
-    </div>
     <div class="grid2">
       <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수 <span class="more">전체 보기 ›</span></a><span class="note">상위 12종 · 막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
@@ -902,18 +906,20 @@ function searchView(q) {
   const allTags = new Set();
   for (const r of R) for (const t of r.tags) allTags.add(t.toLowerCase());
   const isProductTerm = t => [...allTags].some(g => g.includes(t));
-  const recs = R.filter(r => {
+  const hit = R.filter(r => {
     const body = (r.product + r.content + r.tags.join("")).toLowerCase();
     const school = r.school.toLowerCase();
     return terms.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
   });
+  const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
+  const hidden = hit.length - recs.length;
   // 무상 보급·공동 운영 플랫폼은 검색으로 들어와도 한계 고지가 보여야 한다
   const noteKey = Object.keys(PLATFORM_NOTES).find(k =>
     terms.some(t => k.toLowerCase().includes(t) || t.includes(k.toLowerCase())));
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">제품명 미확인 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(noteKey)} 제품군 페이지 보기 ›</a></p></div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
