@@ -352,7 +352,7 @@ SVC_KEEP = re.compile(r"플랫폼|시스템|구독|라이선스|라이센스|콘
 # 범주형 태그 — 제품명이 특정되지 않는 계약용. 오분류 방지를 위해 제품/서비스명 필드에서만 탐지
 GENERIC_RULES = [
     ("AI 면접시스템",        r"AI ?면접|AI ?비대면 ?면접|면접기"),
-    ("코스웨어(기타)",       r"코스웨어"),
+    ("코스웨어",       r"코스웨어"),
     ("VR/XR 장비",          r"\bVR\b|\bXR\b|가상현실|메타버스"),
     ("로봇·교구·키트",       r"로봇|자율주행|교구|키트|블록코딩"),
     ("드론",                r"드론"),
@@ -414,12 +414,12 @@ def tags_of(name, content):
         paren = " ".join(re.findall(r"\(([^)]*)\)", name))
         ptags = [t for t, pat in GENERIC_RULES if re.search(pat, paren, re.I)] if paren else []
         if not ptags and paren and re.search(SW_KW, paren, re.I):
-            ptags = ["SW·플랫폼(제품명 미상)"]
+            ptags = ["SW·플랫폼"]
         tags += ptags or [t for t, pat in GENERIC_RULES if re.search(pat, name, re.I)]
     # "실습기자재 소프트웨어 구입"처럼 대상이 소프트웨어로 명시되면 시설·기기 태그보다 SW가 우선
     if tags and set(tags) <= {"인프라(교실·설비)", "기기(PC·태블릿·전자칠판 등)"} \
             and re.search(r"소프트웨어|S/?W\b|라이선스|라이센스|구독|프로그램", name, re.I):
-        tags = ["SW·플랫폼(제품명 미상)"]
+        tags = ["SW·플랫폼"]
     # "AI교실 환경 구축 노트북 구입"처럼 '구축·조성'이 목적 문구일 뿐이면 기기 구매이지 인프라가 아님
     if "기기(PC·태블릿·전자칠판 등)" in tags and "인프라(교실·설비)" in tags:
         stripped = re.sub(r"(?:환경 ?)?구축|조성|기자재|실습실|환경개선", "", name)
@@ -435,9 +435,9 @@ def tags_of(name, content):
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
             tags.remove("ChatGPT")
     if aux and not tags:
-        tags.append("운영 부대구매(제품 미상)")
+        tags.append("운영 부대구매")
     if not tags and re.search(r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I):
-        tags.append("SW·플랫폼(제품명 미상)")
+        tags.append("SW·플랫폼")
     return tags
 
 rows = list(csv.reader(open(SRC, encoding="utf-8-sig")))
@@ -866,7 +866,7 @@ for r in records:
         continue
     for pat, tag in VENDOR_RULES:
         if re.search(pat, m.group(1), re.I) and tag not in r["tags"]:
-            r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+            r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼", "코스웨어"})
             r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체명이 제품명({tag})"
             _vr_n += 1
 if _vr_n:
@@ -933,9 +933,9 @@ for r in records:
                 continue
         elif r.get("year") and r["year"] != a2.get("year"):
             continue      # 씨앗에 월이 없으면 연도만 대조 (금액이 원 단위로 같아 충돌 위험은 낮다)
-        gained = sorted(set(r["tags"]) - set(a2["tags"]) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+        gained = sorted(set(r["tags"]) - set(a2["tags"]) - {"SW·플랫폼", "코스웨어"})
         if gained:
-            a2["tags"] = sorted((set(a2["tags"]) | set(gained)) - {"SW·플랫폼(제품명 미상)", "코스웨어(기타)"})
+            a2["tags"] = sorted((set(a2["tags"]) | set(gained)) - {"SW·플랫폼", "코스웨어"})
             a2["note"] = (a2["note"] + " · " if a2.get("note") else "") + "제품 확인 완료"
         _drop_ids.add(id(r))
         _seed_dup += 1

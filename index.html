@@ -334,7 +334,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807n"></script>
+<script src="data.js?b=20260807o"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -388,7 +388,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807n";
+  s.src = "data_detail.js?b=20260807o";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -417,7 +417,7 @@ function barChart(pairs, {linkFn, max: mx, drillFn, labelFn = esc} = {}) {
   const n = pairs.length;
   return `<div class="bars">` + pairs.map(([k, v], i) => `
     <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="location.hash='${drillFn(k)}'" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
-      <span class="lbl" title="${esc(k)}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
+      <span class="lbl" title="${esc(tagName(k))}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
     </div>`).join("") + `</div>`;
 }
@@ -740,13 +740,19 @@ function inPeriod(r) {
 // ---- 뷰 ----
 // 제품군 태그 — 계약명에 제품이 안 적혀 '무엇인지 모른다'는 뜻이다.
 // 이들이 제품과 같은 순위표에 섞이면 도입 1위처럼 보여 오해를 부른다.
-const GENERIC_TAGS = new Set(["기기(PC·태블릿·전자칠판 등)", "SW·플랫폼(제품명 미상)",
-  "인프라(교실·설비)", "로봇·교구·키트", "코스웨어(기타)", "VR/XR 장비", "드론",
-  "3D 프린팅/CAD", "운영 부대구매(제품 미상)", "AI 면접시스템"]);
+const GENERIC_TAGS = new Set(["기기(PC·태블릿·전자칠판 등)", "SW·플랫폼(제품명 미상)", "SW·플랫폼",
+  "인프라(교실·설비)", "로봇·교구·키트", "코스웨어(기타)", "코스웨어", "VR/XR 장비", "드론",
+  "3D 프린팅/CAD", "운영 부대구매(제품 미상)", "운영 부대구매", "AI 면접시스템"]);
+// 이름 표기 통일 — '(제품명 미상)·(기타)'는 '제품군' 딱지가 대신하므로 뺀다.
+// 괄호는 예시를 들 때만 쓴다: 기기(PC·태블릿·전자칠판 등) · 인프라(교실·설비)
+// data.js를 새로 만들면 정본(build_data.py) 이름이 이미 짧아져 이 표는 빈손으로 지나간다.
+const TAG_RENAME = {"SW·플랫폼(제품명 미상)": "SW·플랫폼", "코스웨어(기타)": "코스웨어",
+  "운영 부대구매(제품 미상)": "운영 부대구매"};
+const tagName = t => TAG_RENAME[t] || t;
 const hasProduct = r => r.tags.some(t => !GENERIC_TAGS.has(t));
 // 제품군은 '제품군' 딱지를 앞에 붙이고 글자를 한 단계 흐리게 — 제품과 한눈에 구분된다
 const tagLabel = t => GENERIC_TAGS.has(t)
-  ? `<span class="gbadge" title="제품명이 특정되지 않은 분류입니다">제품군</span><span class="gtag">${esc(t)}</span>`
+  ? `<span class="gbadge" title="제품명이 특정되지 않은 분류입니다">제품군</span><span class="gtag">${esc(tagName(t))}</span>`
   : esc(t);
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
 function toggleTip(e) {
@@ -873,7 +879,7 @@ function noteSchoolList(note) {
 }
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
-  if (!recs.length) return `<div class="empty">제품군을 찾을 수 없습니다: ${esc(tag)}</div>`;
+  if (!recs.length) return `<div class="empty">제품군을 찾을 수 없습니다: ${esc(tagName(tag))}</div>`;
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
@@ -893,7 +899,7 @@ function drillTagView(kind, tag, value) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
   return `
-    <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tag)}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
+    <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
       <div class="meta">학교 ${nSchools}개교 · 기록 ${recs.length}건</div></div>
     <div class="card">${pagedTable(recs)}</div>`;
@@ -1228,7 +1234,7 @@ render();
 const groupBySchool = {};
 R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
 const suggItems = [
-  ...tags.map(([t]) => ({label: t, kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
+  ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
 ];
