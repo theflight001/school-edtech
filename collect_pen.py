@@ -1,10 +1,15 @@
-# 부산광역시교육청 계약정보공개(K-에듀파인 자동연계) 수집기 — 학교 수의계약
-# 사용: python3 collect_pen.py [--begin 2023-01] [--end 2026-08] [--keywords 에듀테크,코스웨어]
+# 부산·경북 계약정보공개(K-에듀파인 자동연계) 수집기 — 학교 수의계약
+# 사용: python3 collect_pen.py [--office 부산|경북] [--begin 2023-01] [--end 2026-08]
+# 두 시도가 같은 화면(selectPrvcntrInfoList)을 써서 주소만 바꿔 재사용한다.
 # 제약: 공개 기준 100만원 이상, 검색 기간 최대 1개월 → 월 단위로 나눠 조회한다.
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 from datetime import date
 
-URL = "https://www.pen.go.kr/main/ir/selectPrvcntrInfoList.do?mi=31735"
+OFFICES = {
+    "부산": ("https://www.pen.go.kr/main/ir/selectPrvcntrInfoList.do?mi=31735", "pen_candidates.csv"),
+    "경북": ("https://www.gbe.kr/kedufine/ir/selectPrvcntrInfoList.do", "경북_candidates.csv"),
+}
+URL = OFFICES["부산"][0]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 SPACING = 1.2
 OUT = "pen_candidates.csv"
@@ -61,12 +66,17 @@ def parse(page_html):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--office", default="부산", choices=list(OFFICES))
     ap.add_argument("--begin", default="2023-01")
     ap.add_argument("--end", default=date.today().strftime("%Y-%m"))
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
     ap.add_argument("--sweep", action="store_true",
                     help="키워드 없이 월별 전수 수집 — 제품명만 적힌 계약도 놓치지 않는다")
     a = ap.parse_args()
+    global URL, OUT, CKPT
+    URL, OUT = OFFICES[a.office]
+    if a.office != "부산":
+        CKPT = f".ckpt_{a.office}.json"
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
     done = set(tuple(d) for d in ckpt["done"])

@@ -199,8 +199,9 @@ SPECIFIC_RULES = [
     ("Scratch",            r"\bScratch\b|스크래치(?!치)"),
     ("엔트리",              r"엔트리(?! ?고|타)|\bEntry\b(?! ?Level)"),
     ("Tinkercad",          r"Tinkercad|팅커캐드"),
-    # 투핸즈인터랙티브의 체육활동 에듀테크 교구 ('디딤' 단독은 디딤돌 등과 겹쳐 제외)
-    ("플레이 디딤",          r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
+    # 투핸즈인터랙티브의 체육활동 에듀테크 교구. 이 회사의 유일한 제품이라 태그는 '디딤'으로 통일한다.
+    # ('디딤' 단독으로 잡으면 디딤돌·디딤학교 등과 겹치므로 앞말이 붙은 표기만 인정)
+    ("디딤",                 r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
     ("Bitly",              r"\bbitly\b|비틀리"),
     ("Readdy AI",          r"\bReaddy\b|리디 ?AI"),
     # 에듀집 등록명은 '코들 AI 클래스룸'이지만 계약서엔 브랜드만 적힌다. '코들리'는 다른 제품
@@ -750,6 +751,16 @@ records = [r for r in records
 if _before_ns - len(records):
     print(f"여행·운송 업체 계약 제외: {_before_ns - len(records)}건")
 
+# 이전·재설치 비용은 이미 도입한 물건을 옮기는 지출이라 새 도입으로 세면 중복이 된다.
+# ('구입 및 이전 설치'처럼 구매가 함께 있으면 도입이므로 남긴다)
+MOVE_ONLY = re.compile(r"이전\s?설치|이설\s?비|이전\s?비용|재설치|이전에 ?따른|철거")
+_before_mv = len(records)
+records = [r for r in records
+           if not (MOVE_ONLY.search(r["product"])
+                   and not re.search(r"구[입매]|구독|라이선스|라이센스|납품|제작", r["product"]))]
+if _before_mv - len(records):
+    print(f"이전·재설치 비용 제외: {_before_mv - len(records)}건")
+
 # 벽면 장식 시공 제외 (레고월 등)
 _before_wd = len(records)
 records = [r for r in records if not WALL_DECOR.search(r["product"])]
@@ -846,7 +857,7 @@ VENDOR_RULES = [
     (r"READDY|리디 ?AI", "Readdy AI"),
     (r"툰스퀘어", "투닝"),
     (r"제로엑스플로우", "원아워"),
-    (r"투핸즈인터랙티브", "플레이 디딤"),
+    (r"투핸즈인터랙티브", "디딤"),
 ]
 _vr_n = 0
 for r in records:
