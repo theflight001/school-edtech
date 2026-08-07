@@ -380,9 +380,16 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     var s = document.createElement("script"); s.src = src; s.onload = cb || null;
     document.body.appendChild(s);
   };
-  requestAnimationFrame(function () { setTimeout(function () {
+  // 첫 그림이 끝나면 바로 시작한다. 다만 배경 탭에서는 requestAnimationFrame이 오지 않으므로
+  // 타이머로도 한 번 더 건다(둘 중 먼저 오는 쪽이 시작하고, 나머지는 그냥 지나간다).
+  var started = false;
+  var go = function () {
+    if (started) return;
+    started = true;
     load("data.js?b=20260808d", function () { load("app.js?b=20260808d"); });
-  }, 0); });
+  };
+  requestAnimationFrame(function () { setTimeout(go, 0); });
+  setTimeout(go, 300);
 })();
 </script>
 
