@@ -319,7 +319,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
         <span class="sw" aria-hidden="true"></span>
       </label>
       <button class="qmark" type="button" aria-label="설명 보기" onclick="toggleTip(event)">?</button>
-      <div class="tip" id="inclTip" hidden>조달 기록에는 있으나 계약 내용에 제품명이 표시되지 않은 사례</div>
+      <div class="tip" id="inclTip" hidden>계약명에 제품 이름이 없어 무엇을 썼는지 특정하지 못한 기록입니다.<br>기기·SW·플랫폼처럼 제품군으로만 분류됩니다.</div>
     </div>
     <div id="sugg" hidden></div>
   </div>
@@ -334,7 +334,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807o"></script>
+<script src="data.js?b=20260807q"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -388,7 +388,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807o";
+  s.src = "data_detail.js?b=20260807q";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -752,7 +752,7 @@ const tagName = t => TAG_RENAME[t] || t;
 const hasProduct = r => r.tags.some(t => !GENERIC_TAGS.has(t));
 // 제품군은 '제품군' 딱지를 앞에 붙이고 글자를 한 단계 흐리게 — 제품과 한눈에 구분된다
 const tagLabel = t => GENERIC_TAGS.has(t)
-  ? `<span class="gbadge" title="제품명이 특정되지 않은 분류입니다">제품군</span><span class="gtag">${esc(tagName(t))}</span>`
+  ? `<span class="gbadge" title="계약명에 제품 이름이 없어 제품군으로만 분류된 기록입니다">제품군</span><span class="gtag">${esc(tagName(t))}</span>`
   : esc(t);
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
 function toggleTip(e) {
@@ -924,9 +924,9 @@ function codeView(code) {
 function drillView(kind, value) {
   const base = R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r));
   let recs, what;
-  if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = `${value} 제품군`; }
-  else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${value} 계열`; }
-  else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${value} 지역`; }
+  if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = tagLabel(value); }
+  else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${esc(value)} 계열`; }
+  else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${esc(value)} 지역`; }
   else return `<div class="empty">알 수 없는 조건입니다</div>`;
   const nd = recs.filter(r => !r.dup);
   const nSchools = uniq(nd.map(r => r.school)).length;
@@ -936,7 +936,7 @@ function drillView(kind, value) {
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
   return `
     <div class="crumb"><a href="#/">홈</a> › 통계 상세</div>
-    <div class="pagehead"><h2>${esc(what)}</h2>
+    <div class="pagehead"><h2>${what}</h2>
       <div class="meta">${conds.length ? "적용 조건: " + esc(conds.join(" · ")) + " · " : ""}학교 ${nSchools}개교 · 기록 ${nd.length.toLocaleString()}건</div></div>
     <div class="card">${pagedTable(recs)}</div>`;
 }
@@ -991,9 +991,9 @@ function searchView(q) {
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">제품명 미확인 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
-      <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(noteKey)} 제품군 페이지 보기 ›</a></p></div>` : ""}
+      <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
 }
 
@@ -1041,7 +1041,7 @@ function aboutView() {
       <p>계약명 원문에서 제품명을 찾아 태그를 붙입니다.</p>
       <ul>
         <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 봅니다.</li>
-        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 제품군(코스웨어·기기·인프라 등)으로만 분류하거나 <b>제품명 미상</b>으로 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
+        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
         <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외합니다.</li>
         <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교로 합쳐 보여 줍니다. 계약명 원문은 그대로 보존합니다.</li>
       </ul>
