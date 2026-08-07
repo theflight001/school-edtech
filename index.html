@@ -265,6 +265,17 @@ tr:hover td { background: var(--plane); }
 .pginfo { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; }
 .chip { display: inline-block; background: var(--mint-bg); border: 1px solid var(--mint-line); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--mint); margin: 1px 2px 1px 0; }
 a.chip:hover { border-color: var(--mint); text-decoration: none; }
+/* 제품명이 특정되지 않은 분류(제품군)는 어디서든 같은 모양으로 알아보게 한다 */
+.chip.gen { background: var(--plane); border-color: var(--grid); color: var(--muted); }
+a.chip.gen:hover { border-color: var(--muted); }
+.gbadge { display: inline-block; font-size: 10.5px; font-weight: 700; line-height: 1.5;
+  color: var(--muted); border: 1px solid var(--grid); background: var(--plane);
+  border-radius: 4px; padding: 0 4px; margin-right: 5px; vertical-align: 1px; white-space: nowrap; }
+.chip .gbadge { border: none; background: none; padding: 0; margin-right: 4px; font-size: 10px; }
+.gtag { color: var(--ink-2); }
+.fnote { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--ink-2);
+  background: var(--sky); border-radius: 999px; padding: 4px 12px; }
+.fnote a { color: var(--accent); margin-left: 4px; }
 .conf { font-size: 12px; color: var(--muted); }
 .crumb { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 .pagehead h2 { font-size: 22px; }
@@ -323,7 +334,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807l"></script>
+<script src="data.js?b=20260807n"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -377,7 +388,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807l";
+  s.src = "data_detail.js?b=20260807n";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -401,12 +412,12 @@ function barColor(i, n) {
   const c = BAR_FROM.map((f, j) => Math.round(f + (BAR_TO[j] - f) * t));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
-function barChart(pairs, {linkFn, max: mx, drillFn} = {}) {
+function barChart(pairs, {linkFn, max: mx, drillFn, labelFn = esc} = {}) {
   const max = mx || Math.max(...pairs.map(p => p[1]), 1);
   const n = pairs.length;
   return `<div class="bars">` + pairs.map(([k, v], i) => `
     <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="location.hash='${drillFn(k)}'" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
-      <span class="lbl" title="${esc(k)}">${linkFn ? `<a href="${linkFn(k)}">${esc(k)}</a>` : esc(k)}</span>
+      <span class="lbl" title="${esc(k)}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
     </div>`).join("") + `</div>`;
 }
@@ -478,7 +489,7 @@ function recordTable(recs, {showSchool = true} = {}) {
   return `<div class="tablewrap"><table><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}</div></td>` : ""}
-      <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip" href="#/tag/${encodeURIComponent(t)}">${esc(t)}</a>`).join("")}</div></td>
+      <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
@@ -733,6 +744,10 @@ const GENERIC_TAGS = new Set(["기기(PC·태블릿·전자칠판 등)", "SW·�
   "인프라(교실·설비)", "로봇·교구·키트", "코스웨어(기타)", "VR/XR 장비", "드론",
   "3D 프린팅/CAD", "운영 부대구매(제품 미상)", "AI 면접시스템"]);
 const hasProduct = r => r.tags.some(t => !GENERIC_TAGS.has(t));
+// 제품군은 '제품군' 딱지를 앞에 붙이고 글자를 한 단계 흐리게 — 제품과 한눈에 구분된다
+const tagLabel = t => GENERIC_TAGS.has(t)
+  ? `<span class="gbadge" title="제품명이 특정되지 않은 분류입니다">제품군</span><span class="gtag">${esc(t)}</span>`
+  : esc(t);
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
 function toggleTip(e) {
   e.preventDefault();
@@ -755,12 +770,26 @@ function setScope(v) {
   window.scrollTo(0, y);
 }
 
+// 조사 기간·지역·계열 조건은 홈뿐 아니라 전체 목록 화면에서도 그대로 이어져야 한다
+function baseRecs() {
+  const anyF = PF || PT || SF.size || RG.size;
+  return anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R;
+}
+function filterNote() {
+  const bits = [];
+  if (PF || PT) bits.push(`조사 기간 ${(PF || "2023-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
+  if (RG.size) bits.push(`지역 ${rgLabel()}`);
+  if (SF.size) bits.push(`계열 ${sfLabel()}`);
+  return bits.length
+    ? `<span class="fnote">${esc(bits.join(" · "))} <a href="#/">홈에서 변경</a></span>` : "";
+}
+
 function homeView() {
   const active = PF || PT;
   const scActive = SF.size > 0;
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
-  const BASE = (anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R).filter(r => !r.dup);
+  const BASE = baseRecs().filter(r => !r.dup);
   // 전환에 따라 세 차트가 모두 같은 기준으로 움직인다
   const RF = SCOPE === "product" ? BASE.filter(hasProduct) : BASE;
   const byType = count(RF, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
@@ -794,7 +823,7 @@ function homeView() {
     </div>` : ""}
     <div class="section-div">통계 결과</div>
     <div class="grid2">
-      <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
       <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
     </div>
     <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
@@ -809,7 +838,7 @@ function schoolView(name) {
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${recs.length}건
         ${info.schoolCode ? `<div class="conf">NEIS ${[info.hsType, info.founding, info.neisAddress, "학교코드 " + info.schoolCode].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">NEIS 학교 마스터 미매칭 — 집합 항목이거나 교명 확인 필요</div>`}
-        <div>${schoolTags.map(t => `<a class="chip" href="#/tag/${encodeURIComponent(t)}">${esc(t)}</a>`).join("")}</div>
+        <div>${schoolTags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div>
       </div></div>
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
 }
@@ -849,8 +878,8 @@ function tagView(tag) {
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
   return `
-    <div class="crumb"><a href="#/">홈</a> › 제품군 상세</div>
-    <div class="pagehead"><h2>${esc(tag)}</h2>
+    <div class="crumb"><a href="#/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
+    <div class="pagehead"><h2>${tagLabel(tag)}</h2>
       <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
@@ -865,7 +894,7 @@ function drillTagView(kind, tag, value) {
   const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
   return `
     <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tag)}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
-    <div class="pagehead"><h2>${esc(tag)} · ${esc(value)}</h2>
+    <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
       <div class="meta">학교 ${nSchools}개교 · 기록 ${recs.length}건</div></div>
     <div class="card">${pagedTable(recs)}</div>`;
 }
@@ -1048,7 +1077,7 @@ function setPSort(v) { PSORT = v; const y = window.scrollY; render(); window.scr
 
 function productsView() {
   const cnt = {}, sch = {};
-  const src = SCOPE === "product" ? R.filter(hasProduct) : R;
+  const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
   for (const r of src) for (const t of r.tags) {
     if (SCOPE === "product" && GENERIC_TAGS.has(t)) continue;
     cnt[t] = (cnt[t] || 0) + 1;
@@ -1084,7 +1113,7 @@ function productsView() {
     <div class="crumb"><a href="#/">홈</a> › 제품 전체 보기</div>
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
-        이름을 누르면 도입 학교를 볼 수 있습니다</div></div>
+        이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
     <div class="alpha">
       <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
       <button class="${PSORT === "name" ? "on" : ""}" onclick="setPSort('name')">가나다순</button>
@@ -1093,12 +1122,12 @@ function productsView() {
       ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}
     </div>
     <div class="plist">
-      ${show.map(n => `<a href="#/tag/${encodeURIComponent(n)}">${esc(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
+      ${show.map(n => `<a href="#/tag/${encodeURIComponent(n)}">${tagLabel(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
     </div>`;
 }
 
 function regionsView() {
-  const src = SCOPE === "product" ? R.filter(hasProduct) : R;
+  const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
   const all = count(src.filter(r => !r.dup), r => r.sido);
   // '미상'·'전국(공동)'·'비공개'처럼 시도가 아닌 항목은 목록 아래에 따로 적는다
   const isSido = s => SIDOS.includes(s);
@@ -1110,7 +1139,7 @@ function regionsView() {
     <div class="crumb"><a href="#/">홈</a> › 지역별 전체</div>
     <div class="pagehead"><h2>지역별 사례 수</h2>
       <div class="sub2">전국 ${rows.length}개 시도 ·
-        ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다</div></div>
+        ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다</div>${filterNote()}</div>
     <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
     <div class="plist" style="margin-top:14px">
       ${rows.map(([s, n]) => `<a href="#/drill/sido/${encodeURIComponent(s)}">${esc(s)}
@@ -1199,7 +1228,7 @@ render();
 const groupBySchool = {};
 R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
 const suggItems = [
-  ...tags.map(([t]) => ({label: t, kind: "제품군", href: `#/tag/${encodeURIComponent(t)}`})),
+  ...tags.map(([t]) => ({label: t, kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
 ];
