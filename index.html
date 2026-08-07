@@ -118,8 +118,11 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
   .tip { right: auto; left: 0; bottom: auto; top: calc(100% + 8px); }
   .tip::after { top: auto; bottom: 100%; right: auto; left: 10px; border-top-color: transparent; border-bottom-color: var(--bar); } }
 /* 카드 제목을 눌러 전체 보기로 */
-.h2link { color: var(--accent); }
-.h2link:hover { text-decoration: underline; }
+/* 제목은 평소 본문색 그대로, 마우스를 올렸을 때만 눌린다는 신호를 준다 */
+.h2link { color: inherit; cursor: pointer; text-decoration: none;
+  text-underline-offset: 4px; transition: color .12s ease; }
+.h2link:hover, .h2link:focus-visible { color: var(--accent);
+  text-decoration: underline; text-decoration-thickness: 2px; }
 .alpha-gap { display: inline-block; width: 10px; }
 /* 통계 기준 전환 — 건수를 단추에 넣어 두 선택지의 규모가 함께 보이게 한다 */
 .scope { margin: 0 0 14px; }
@@ -320,7 +323,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data.js?b=20260807k"></script>
+<script src="data.js?b=20260807l"></script>
 <script>
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
@@ -374,7 +377,7 @@ function mergeDetail(d) {
 }
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260807k";
+  s.src = "data_detail.js?b=20260807l";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
