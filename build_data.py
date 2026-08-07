@@ -201,7 +201,8 @@ SPECIFIC_RULES = [
     ("Tinkercad",          r"Tinkercad|팅커캐드"),
     # 투핸즈인터랙티브의 체육활동 에듀테크 교구. 이 회사의 유일한 제품이라 태그는 '디딤'으로 통일한다.
     # ('디딤' 단독으로 잡으면 디딤돌·디딤학교 등과 겹치므로 앞말이 붙은 표기만 인정)
-    ("디딤",                 r"플레이 ?디딤|play ?didim|투핸즈인터랙티브"),
+    ("디딤",                 r"플레이 ?디딤|play ?didim|투핸즈인터랙티브|디딤_|"
+                             r"디딤 ?(?:소프트웨어|증강|디지털 ?체육)"),
     ("Bitly",              r"\bbitly\b|비틀리"),
     ("Readdy AI",          r"\bReaddy\b|리디 ?AI"),
     # 에듀집 등록명은 '코들 AI 클래스룸'이지만 계약서엔 브랜드만 적힌다. '코들리'는 다른 제품
@@ -1134,3 +1135,10 @@ _a = os.path.getsize(OUT) / 1024 / 1024
 _b = os.path.getsize("data_detail.js") / 1024 / 1024
 print(f"\n{OUT} {_a:.1f}MB (첫 화면·검색용 {len(_core_cols)}열) + "
       f"data_detail.js {_b:.1f}MB (상세 {len(_det_cols)}열)")
+
+# 첫 화면용 요약 파일 — 홈 화면 수치만 미리 계산해 두면 원자료를 기다리지 않고 그릴 수 있다
+import shutil as _sh, subprocess as _sp
+if _sh.which("node"):
+    _sp.run(["node", "make_summary.js"], check=False)
+else:
+    print("! node가 없어 data_summary.js를 만들지 못했습니다 — 첫 화면이 원자료를 기다리게 됩니다")

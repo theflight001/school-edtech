@@ -133,7 +133,13 @@ def main():
     pattern = a.pattern or r"[\s·\-]*".join(re.escape(t) for t in a.tag.split())
     rules = load_rules()
     if any(r["태그"] == a.tag for r in rules):
-        print(f"! 이미 '{a.tag}' 규칙이 있습니다 — 패턴을 고치려면 {RULES}를 직접 손보세요")
+        print(f"! 이미 '{a.tag}' 규칙이 {RULES}에 있습니다 — 패턴을 고치려면 그 파일을 손보세요")
+    # 정본에 같은 태그가 있으면 mined_rules.csv에 넣어도 빌드가 무시한다 (정본이 이긴다)
+    src = open("build_data.py", encoding="utf-8").read()
+    blk = src[src.index("SPECIFIC_RULES = ["):src.index("# 에듀집 등록 제품")]
+    if re.search(r'\("' + re.escape(a.tag) + r'",', blk):
+        print(f"! '{a.tag}'는 build_data.py의 SPECIFIC_RULES에 이미 있습니다.\n"
+              f"  정본이 우선하므로 {RULES}에 넣어도 반영되지 않습니다 — 그쪽 패턴을 넓히세요.")
 
     recs = load_records()
     hit, generic_only, conflict = report(a.tag, pattern, recs, a.ctx, a.sample)
