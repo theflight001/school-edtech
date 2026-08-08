@@ -5,13 +5,25 @@
 #       계약상대자만 title이 없어 상세(InfoView04.do)를 행마다 한 번 더 부른다.
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
-BASE = "https://www.dje.go.kr/clean/contract/"
-LIST = BASE + "InfoList04.do?m=0601&s=contractInfo"
+# 같은 시스템(InfoList04.do)을 쓰는 시도를 함께 다룬다 — 대전·충남
+# (충남은 계약상대자가 목록에 이미 나와 상세를 부르지 않아도 된다)
+OFFICES = {
+    "대전": {"base": "https://www.dje.go.kr/clean/contract/", "list_q": "?m=0601&s=contractInfo",
+             "view_q": "menuID=0601&m=0601&s=contractInfo", "targ": "대전광역시교육청",
+             "out": "dje_candidates.csv", "ckpt": ".ckpt_dje.json", "vendor_col": None},
+    "충남": {"base": "https://www.cne.go.kr/contract/", "list_q": "?m=050204&s=cne&pageInfo=Y",
+             "view_q": "menuID=050204&m=050204&s=cne", "targ": "",
+                          # 충남 목록의 계약상대자는 title 없이 잘려 나온다 — 대전과 같이 상세에서 원문을 가져온다
+             "out": "충남_candidates.csv", "ckpt": ".ckpt_충남.json", "vendor_col": None},
+}
+OFFICE = "대전"                                   # main()에서 --office로 바꾼다
+BASE = OFFICES[OFFICE]["base"]
+LIST = BASE + "InfoList04.do" + OFFICES[OFFICE]["list_q"]
 VIEW = BASE + "InfoView04.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 SPACING = 1.0
-OUT = "dje_candidates.csv"
-CKPT = ".ckpt_dje.json"
+OUT = OFFICES[OFFICE]["out"]
+CKPT = OFFICES[OFFICE]["ckpt"]
 FIELDS = ["회계연도", "기관명", "계약명", "계약일", "계약금액", "계약방법", "계약상대자", "키워드"]
 
 DEFAULT_KEYWORDS = ["에듀테크", "코스웨어", "인공지능", "소프트웨어", "라이선스", "라이센스",
@@ -47,7 +59,7 @@ def req_retry(target, data=None):
 def search(keyword, year, page):
     d = {"realFsclY": "", "realCntrTargNO": "", "pageSize": "100",
          "instClssDiviEtc01": "N", "instClssDiviEtc02": "N", "fsclY": year,
-         "instClssDivi": "5", "cntrInstNM": "", "cntrTargNO": "대전광역시교육청",
+         "instClssDivi": "5", "cntrInstNM": "", "cntrTargNO": OFFICES[OFFICE]["targ"],
          "instClssDiviEtc01CheckBox": "N", "instClssDiviEtc02CheckBox": "N",
          "estbDiv": "", "schlClssDiv": "", "cntrNM": keyword, "cntrPrtnrNM": "",
          "cntrMthdDiv": "", "searchBeginDT": "", "searchFinDT": "",
@@ -56,11 +68,11 @@ def search(keyword, year, page):
 
 def parse(page_html):
     """계약명·기관명은 잘린 표시 텍스트가 아니라 title 속성의 원문을 쓴다"""
+    # 대전은 tbl_list 클래스를 쓰지만 충남 표에는 클래스가 없다 — 있으면 그 표만, 없으면 문서 전체를 훑는다
     m = re.search(r'<table[^>]*tbl_list.*?</table>', page_html, re.S)
-    if not m:
-        return []
+    scope = m.group(0) if m else page_html
     rows = []
-    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", m.group(0), re.S):
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", scope, re.S):
         tds = re.findall(r"(<td[^>]*>.*?</td>)", tr, re.S)   # title 속성까지 포함해서 잡는다
         if len(tds) < 7:
             continue
@@ -70,17 +82,19 @@ def parse(page_html):
             t = re.search(r'title="([^"]*)"', x)
             return html.unescape(t.group(1)).strip() if t else text(x)
         key = re.search(r"goContractView\('([^']+)','([^']+)'\)", tds[3])
+        vc = OFFICES[OFFICE]["vendor_col"]
         rows.append({"회계연도": text(tds[0]), "기관명": full(tds[1]),
                      "계약방법": text(tds[2]), "계약명": full(tds[3]),
                      "계약일": text(tds[4]).replace("/", "-"),
                      "계약금액": text(tds[5]).replace(",", ""),
+                     "계약상대자": full(tds[vc]) if vc is not None and len(tds) > vc else "",
                      "_key": key.groups() if key else None})
     return rows
 
 def vendor_of(fscl_y, targ_no):
     """목록에는 계약상대자가 잘려 나와 상세에서 원문을 가져온다"""
-    url = f"{VIEW}?menuID=0601&realFsclY={urllib.parse.quote(fscl_y)}" \
-          f"&realCntrTargNO={urllib.parse.quote(targ_no)}&instClssDivi=5&m=0601&s=contractInfo"
+    url = (f"{VIEW}?{OFFICES[OFFICE]['view_q']}&realFsclY={urllib.parse.quote(fscl_y)}"
+           f"&realCntrTargNO={urllib.parse.quote(targ_no)}&instClssDivi=5")
     s = req_retry(url)
     m = re.search(r"<th[^>]*>\s*계약상대자\s*</th>\s*<td[^>]*>(.*?)</td>", s, re.S)
     if not m:
@@ -95,12 +109,20 @@ def safe_kw(k):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--office", default="대전", choices=list(OFFICES))
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
     ap.add_argument("--keyword-file")
     ap.add_argument("--years", default="2023,2024,2025,2026")
     ap.add_argument("--max-pages", type=int, default=300)
     ap.add_argument("--no-vendor", action="store_true", help="상세 조회를 건너뛴다(빠름, 업체명 없음)")
     a = ap.parse_args()
+    global OFFICE, BASE, LIST, VIEW, OUT, CKPT
+    OFFICE = a.office
+    BASE = OFFICES[OFFICE]["base"]
+    LIST = BASE + "InfoList04.do" + OFFICES[OFFICE]["list_q"]
+    VIEW = BASE + "InfoView04.do"
+    OUT, CKPT = OFFICES[OFFICE]["out"], OFFICES[OFFICE]["ckpt"]
+    print(f"[{OFFICE}] {LIST}", flush=True)
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
     done, seen = set(ckpt["done"]), set(tuple(k) for k in ckpt["seen"])
@@ -136,8 +158,8 @@ def main():
                     if key in seen:
                         continue
                     seen.add(key)
-                    vendor = ""
-                    if not a.no_vendor and r["_key"]:
+                    vendor = r.pop("계약상대자", "") or ""
+                    if not vendor and not a.no_vendor and r["_key"]:
                         try:
                             vendor = vendor_of(*r["_key"])
                             req_n += 1
