@@ -402,8 +402,20 @@ def strip_school(name, school):
         out = out.replace(base, " ")
     return DEPT_NAME.sub(" ", out)      # 학과명도 제거 ('반도체소프트웨어과 대회 상품권' 오탐 방지)
 
+# 한 제품군의 여러 제품을 줄여 적는 표기를 펼친다.
+# '토도한글&수학' → '토도한글 토도수학' (계약명 원문에 두 제품이 함께 적힌 것이므로 둘 다 인정한다)
+_SHORT_PAIR = re.compile(r"(토도|아이스크림|밀크티|웅진|천재)\s?(한글|수학|영어|국어|과학|사회)"
+                         r"\s?[&/·,]\s?(한글|수학|영어|국어|과학|사회)")
+
+def expand_shorthand(text):
+    prev = None
+    while prev != text:                      # '토도한글&수학&영어'처럼 이어 붙은 것도 푼다
+        prev = text
+        text = _SHORT_PAIR.sub(lambda m: f"{m.group(1)}{m.group(2)} {m.group(1)}{m.group(3)}", text)
+    return text
+
 def tags_of(name, content):
-    hay = f"{name} {content}"
+    hay = expand_shorthand(f"{name} {content}")
     tags = []
     aux = False
     for t, pat in SPECIFIC_RULES:

@@ -282,8 +282,18 @@ function recLeaf(r) {
 const IDX_GROUP_COUNT = {};
 IDX.forEach(s => { const g = idxGroup(s); IDX_GROUP_COUNT[g] = (IDX_GROUP_COUNT[g] || 0) + 1; });
 let SF = new Set();  // 선택된 잎사귀 키들
+// 설립 구분(국·공·사립)은 계열과 겹치지 않는 축이다. 초등학교·중학교처럼 법령상 유형이 없는 급에도
+// 적용되고, 사립은 예산·조달 경로가 달라 도입 양상이 다르다.
+let ES = new Set();  // 선택된 설립 구분
+const FOUNDINGS = ["공립", "사립", "국립"];
+const foundingOf = r => { const s = r.schoolCode ? idxByCode.get(r.schoolCode) : null; return s ? s.f : ""; };
+const esMatch = r => !ES.size || ES.has(foundingOf(r));
+const esLabel = () => ES.size ? [...ES].join("·") : "전체";
 const sfMatch = r => { if (!SF.size) return true; const g = recLeaf(r); return g !== null && SF.has(g); };
-const sfIdxCount = () => IDX.filter(s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))).length;
+const sfIdxCount = () => IDX.filter(s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))
+  && (!ES.size || ES.has(s.f))).length;
+const IDX_FOUND_COUNT = {};
+IDX.forEach(s => { IDX_FOUND_COUNT[s.f] = (IDX_FOUND_COUNT[s.f] || 0) + 1; });
 function setParts(set) {
   const parts = [];
   for (const p of PARENTS) {
@@ -342,8 +352,9 @@ function drawRegionPicker() {
     </div>`;
 }
 
-let scSel = null;
-window.openSchoolPicker = () => { scSel = new Set(SF); drawSchoolPicker(); };
+let scSel = null, esSel = null;
+window.openSchoolPicker = () => { scSel = new Set(SF); esSel = new Set(ES); drawSchoolPicker(); };
+window.esToggle = k => { esSel.has(k) ? esSel.delete(k) : esSel.add(k); drawSchoolPicker(); };
 window.scToggle = k => { scSel.has(k) ? scSel.delete(k) : scSel.add(k); drawSchoolPicker(); };
 window.scParent = p => {
   const ls = leavesOf(p);
@@ -351,8 +362,12 @@ window.scParent = p => {
   ls.forEach(k => all ? scSel.delete(k) : scSel.add(k));
   drawSchoolPicker();
 };
-window.scAll = () => { SF = new Set(); closePicker(); render(); };
-window.scApply = () => { SF = scSel.size === LEAVES.length ? new Set() : scSel; closePicker(); render(); };
+window.scAll = () => { SF = new Set(); ES = new Set(); closePicker(); render(); };
+window.scApply = () => {
+  SF = scSel.size === LEAVES.length ? new Set() : scSel;
+  ES = esSel.size === FOUNDINGS.length ? new Set() : esSel;
+  closePicker(); render();
+};
 function drawSchoolPicker() {
   const cells = PARENTS.map(p => {
     const ls = leavesOf(p.k);
@@ -367,7 +382,11 @@ function drawSchoolPicker() {
       LEAVES.filter(l => l.parent === p.k).map(l =>
         `<button class="sc-chip${scSel.has(l.k) ? " on" : ""}" onclick="scToggle('${l.k}')">${l.label} <span>${(IDX_GROUP_COUNT[l.k] || 0).toLocaleString()}</span></button>`).join("") +
       `</div>`).join("");
-  const picked = setParts(scSel).join(" · ");
+  const esRow = `<div class="sc-subrow"><span class="sc-sublabel">설립</span>` +
+    FOUNDINGS.map(f => `<button class="sc-chip${esSel.has(f) ? " on" : ""}" onclick="esToggle('${f}')">${f} <span>${(IDX_FOUND_COUNT[f] || 0).toLocaleString()}</span></button>`).join("") +
+    `</div>`;
+  const picked = [setParts(scSel).join(" · "), esSel.size ? [...esSel].join("·") : ""]
+    .filter(Boolean).join(" / ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
@@ -377,12 +396,13 @@ function drawSchoolPicker() {
         <span></span></div>
         <div class="pk-grid sc-grid">${cells}</div>
         ${subRows}
+        ${esRow}
         <div class="pk-foot">
-          <span class="pk-hint">계열을 누르면 선택되고, 특성화고·마이스터고와 특목고는 아래에서 세부 선택할 수 있습니다<br>분류 기준: NEIS 학교유형 · 마이스터고(산업수요맞춤형고)는 특성화고·마이스터고 항목에 포함</span>
+          <span class="pk-hint">계열을 누르면 선택되고, 특성화고·마이스터고와 특목고는 아래에서 세부 선택할 수 있습니다<br>설립은 계열과 따로 걸립니다 (예: 중학교 + 사립)<br>분류 기준: NEIS 학교유형·설립 구분 · 마이스터고(산업수요맞춤형고)는 특성화고·마이스터고 항목에 포함</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="scAll()">전체 계열</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
-            <button class="pk-btn primary" onclick="scApply()" ${scSel.size ? "" : "disabled"}>적용</button>
+            <button class="pk-btn primary" onclick="scApply()" ${scSel.size || esSel.size ? "" : "disabled"}>적용</button>
           </span>
         </div>
       </div>
@@ -474,21 +494,22 @@ function setScope(v) {
 
 // 조사 기간·지역·계열 조건은 홈뿐 아니라 전체 목록 화면에서도 그대로 이어져야 한다
 function baseRecs() {
-  const anyF = PF || PT || SF.size || RG.size;
-  return anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r)) : R;
+  const anyF = PF || PT || SF.size || RG.size || ES.size;
+  return anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r)) : R;
 }
 function filterNote() {
   const bits = [];
   if (PF || PT) bits.push(`조사 기간 ${(PF || "2023-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
+  if (ES.size) bits.push(`설립 ${esLabel()}`);
   return bits.length
     ? `<span class="fnote">${esc(bits.join(" · "))} <a href="#/">홈에서 변경</a></span>` : "";
 }
 
 function homeView() {
   const active = PF || PT;
-  const scActive = SF.size > 0;
+  const scActive = SF.size > 0 || ES.size > 0;
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
   const BASE = baseRecs().filter(r => !r.dup);
@@ -510,7 +531,7 @@ function homeView() {
       </div>
       <div class="tile clickable" onclick="openSchoolPicker()" role="button" aria-label="학교 계열 선택">
         <div class="v" id="cntSchools" data-target="${sfIdxCount()}">${sfIdxCount().toLocaleString()}</div>
-        <div class="l">검색 가능 학교 (${sfLabel()}) <span class="hint">변경 ▾</span></div>
+        <div class="l">검색 가능 학교 (${ES.size ? `${sfLabel()}·${esLabel()}` : sfLabel()}) <span class="hint">변경 ▾</span></div>
       </div>
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
         <div class="v">${active ? `${PF || "2023-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
@@ -518,9 +539,9 @@ function homeView() {
       </div>
     </div>
     ${anyF ? `<div class="fnote">
-      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${scActive ? ` · 계열: ${sfLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
+      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${SF.size ? ` · 계열: ${sfLabel()}` : ""}${ES.size ? ` · 설립: ${esLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
       ${active ? `<button onclick="clearPeriod()">전체 기간</button>` : ""}
-      ${scActive ? `<button onclick="scAll()">전체 계열</button>` : ""}
+      ${scActive ? `<button onclick="scAll()">전체 계열·설립</button>` : ""}
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
     <div class="section-div">통계 결과</div>
@@ -630,7 +651,7 @@ function codeView(code) {
       <span style="font-size:12.5px">본 서비스는 공개 조달 기록 기반의 <b>하한 추정치</b>입니다 — 기록이 없다는 것이 에듀테크를 사용하지 않는다는 뜻은 아닙니다.</span></div></div>`;
 }
 function drillView(kind, value) {
-  const base = R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r));
+  const base = R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r));
   let recs, what;
   if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = tagLabel(value); }
   else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${esc(value)} 계열`; }
@@ -641,6 +662,7 @@ function drillView(kind, value) {
   const conds = [];
   if (PF || PT) conds.push(`기간 ${(PF || "2023-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
   if (SF.size) conds.push(`계열 ${sfLabel()}`);
+  if (ES.size) conds.push(`설립 ${esLabel()}`);
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
   return `
     <div class="crumb"><a href="#/">홈</a> › 통계 상세</div>
