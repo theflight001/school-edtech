@@ -530,18 +530,30 @@ function homeView() {
     </div>
     <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
+// 학교 화면의 칩은 그 학교 기록을 걸러 준다 — 누를 때마다 켜고 끈다
+// (전국 제품 화면으로 넘어가면 지금 보던 학교를 잃는다)
+let SCHOOL_TAG = "";
+window.setSchoolTag = t => { SCHOOL_TAG = (SCHOOL_TAG === t ? "" : t); PAGE = 1; const y = window.scrollY; render(); window.scrollTo(0, y); };
+
 function schoolView(name) {
-  const recs = R.filter(r => r.school === name);
-  if (!recs.length) return `<div class="empty">학교를 찾을 수 없습니다: ${esc(name)}</div>`;
-  const info = fillDetail([recs[0]])[0];
-  const schoolTags = uniq(recs.flatMap(r => r.tags));
+  const all = R.filter(r => r.school === name);
+  if (!all.length) return `<div class="empty">학교를 찾을 수 없습니다: ${esc(name)}</div>`;
+  const info = fillDetail([all[0]])[0];
+  const schoolTags = uniq(all.flatMap(r => r.tags));
+  if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
+  const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
     <div class="crumb"><a href="#/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
-      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${recs.length}건
-        ${info.schoolCode ? `<div class="conf">NEIS ${[info.hsType, info.founding, info.neisAddress, "학교코드 " + info.schoolCode].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">NEIS 학교 마스터 미매칭 — 집합 항목이거나 교명 확인 필요</div>`}
-        <div>${schoolTags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div>
+      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
+        ${info.schoolCode ? `<div class="conf">${[info.hsType, info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
+        <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
+          onclick="setSchoolTag('${t.replace(/'/g, "\\'")}')"
+          title="${SCHOOL_TAG === t ? "누르면 전체 기록으로 돌아갑니다" : "이 학교의 해당 기록만 봅니다"}">${tagLabel(t)}</button>`).join("")}</div>
       </div></div>
+    ${SCHOOL_TAG ? `<div class="fnote"><span>${esc(tagName(SCHOOL_TAG))} 기록 ${recs.length}건만 보는 중</span>
+      <a href="javascript:void(0)" onclick="setSchoolTag('${SCHOOL_TAG.replace(/'/g, "\\'")}')">전체 ${all.length}건 보기</a>
+      <a href="#/tag/${encodeURIComponent(SCHOOL_TAG)}">다른 학교의 도입 현황 ›</a></div>` : ""}
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
 }
 // 교육청 등이 무상 보급하는 플랫폼 — 조달 기록에 나타나지 않아 공식 발표로 보완
@@ -946,7 +958,7 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; render(); });
+window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; render(); });
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");

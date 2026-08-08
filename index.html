@@ -97,7 +97,9 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
   color: var(--muted); font-size: 13.5px; white-space: nowrap; user-select: none; }
 .qmark { width: 19px; height: 19px; flex: none; border-radius: 50%; border: 1px solid var(--grid);
   background: none; color: var(--muted); font: inherit; font-size: 12px; line-height: 1;
-  cursor: pointer; padding: 0; }
+  cursor: pointer; padding: 0;
+  /* 물음표가 동그라미 한가운데 오도록 — 기본 글자 기준선으로는 아래로 처진다 */
+  display: inline-flex; align-items: center; justify-content: center; }
 .qmark:hover { border-color: var(--accent); color: var(--accent); }
 .tip { position: absolute; right: 0; bottom: calc(100% + 10px); width: max-content; max-width: min(440px, 86vw);
   background: var(--bar); color: #fff; font-size: 12.5px; line-height: 1.5;
@@ -271,6 +273,13 @@ a.chip:hover { border-color: var(--mint); text-decoration: none; }
 /* 제품명이 특정되지 않은 분류(제품군)는 어디서든 같은 모양으로 알아보게 한다 */
 .chip.gen { background: var(--plane); border-color: var(--grid); color: var(--muted); }
 a.chip.gen:hover { border-color: var(--muted); }
+button.chip { font: inherit; font-size: 12px; cursor: pointer; }
+button.chip:hover { border-color: var(--mint); }
+button.chip.gen:hover { border-color: var(--muted); }
+.chip.on { background: var(--mint); border-color: var(--mint); color: #fff; }
+.chip.gen.on { background: var(--ink-2); border-color: var(--ink-2); color: #fff; }
+.chip.on .gbadge, .chip.on .gtag { color: #fff; }
+.fnote a { color: var(--accent); margin-left: 10px; }
 .gbadge { display: inline-block; font-size: 10.5px; font-weight: 700; line-height: 1.5;
   color: var(--muted); border: 1px solid var(--grid); background: var(--plane);
   border-radius: 4px; padding: 0 4px; margin-right: 5px; vertical-align: 1px; white-space: nowrap; }
@@ -386,7 +395,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260808f", function () { load("app.js?b=20260808f"); });
+    load("data.js?b=20260808f", function () { load("app.js?b=20260808h"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
