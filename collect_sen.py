@@ -46,8 +46,12 @@ def req(url, data=None):
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
 
-def list_page(page, per=100):
-    q = {"searchOraCode": "002", "searchSchoolCode": "", "pageIndex": str(page),
+# searchOraCode는 관할 교육지원청 코드다. 빈값으로 두면 학원·기관까지 49만 건이 섞여 나오고,
+# 한 코드만 쓰면 그 지원청 관내 학교만 나온다(처음에 002=강남서초만 받아 97개교에서 멈췄다).
+ORA_CODES = ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011"]
+
+def list_page(page, ora, per=100):
+    q = {"searchOraCode": ora, "searchSchoolCode": "", "pageIndex": str(page),
          "pageUnit": str(per), "searchCondition": "", "searchKeyword": "",
          "searchStaDate": "", "searchEndDate": ""}
     return req(LIST + "?" + urllib.parse.urlencode(q))
@@ -92,6 +96,7 @@ def main():
     ap.add_argument("--months", default="", help="기준월을 직접 지정 (예: 202601,202602)")
     ap.add_argument("--max-list-pages", type=int, default=400)
     ap.add_argument("--relist", action="store_true", help="게시물 목록을 다시 훑는다(새 달이 올라온 뒤)")
+    ap.add_argument("--ora", default="", help="관할 교육지원청 코드 (기본: 11곳 전부)")
     a = ap.parse_args()
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"posts": [], "done": [], "seen": []}
@@ -102,16 +107,20 @@ def main():
     # 1단계 — 게시물 목록
     posts = ckpt.get("posts") or []
     if not posts or a.relist:
-        posts, page = [], 1
-        while page <= a.max_list_pages:
-            got = posts_of(list_page(page))
-            if not got:
-                break
-            posts += [p for p in got if SCHOOL_END.search(p["name"])
-                      and (p["month"][:4] in years if not months else p["month"] in months)]
-            print(f"  목록 {page}쪽 · 학교 게시물 누적 {len(posts):,}건", flush=True)
-            page += 1
-            time.sleep(SPACING)
+        posts = []
+        for ora in (a.ora or ",".join(ORA_CODES)).split(","):
+            page = 1
+            while page <= a.max_list_pages:
+                got = posts_of(list_page(page, ora))
+                if not got:
+                    break
+                posts += [p for p in got if SCHOOL_END.search(p["name"])
+                          and (p["month"][:4] in years if not months else p["month"] in months)]
+                if page % 20 == 0:
+                    print(f"  [{ora}] 목록 {page}쪽 · 학교 게시물 누적 {len(posts):,}건", flush=True)
+                page += 1
+                time.sleep(SPACING)
+            print(f"  [{ora}] 목록 {page - 1}쪽까지 · 누적 {len(posts):,}건", flush=True)
         # 같은 게시물이 여러 쪽에 걸쳐 나오는 경우를 없앤다
         uniq, keys = [], set()
         for p in posts:
