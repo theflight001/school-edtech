@@ -743,6 +743,23 @@ function animateCount() {
 }
 
 // ---- 라우팅 ----
+// '외 ○종'으로 묶여 이름이 가려진 품목이 얼마나 되는지 — 데이터 안내에서 숫자로 밝힌다
+let _bundle = null;
+function bundleNote() {
+  if (!_bundle) {
+    const pat = /외\s?(\d+)\s?종/;
+    let n = 0, hidden = 0;
+    for (const r of R) {
+      const m = pat.exec(r.product || "") || pat.exec(r.ctpl || "");
+      if (m) { n++; hidden += +m[1]; }
+    }
+    _bundle = n
+      ? `지금 기록의 ${(n / R.length * 100).toFixed(1)}%(${n.toLocaleString()}건)가 이런 형태이고,
+         이름 없이 넘어간 품목이 ${hidden.toLocaleString()}개입니다.` : "";
+  }
+  return _bundle;
+}
+
 function aboutView() {
   const m = DB.meta || {};
   return `
@@ -772,6 +789,9 @@ function aboutView() {
       <ul>
         <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 봅니다.</li>
         <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
+        <li><b>'외 ○종'으로 묶인 품목은 이름이 없어 잡히지 않습니다.</b> 예를 들어 <i>"AI 코스웨어 구독료(토도수학 외 1종)"</i>는
+          토도수학만 태그되고, 함께 산 나머지 1종은 어느 제품에도 집계되지 않습니다.
+          ${bundleNote()} 계약 금액은 묶음 전체 금액이므로, 이름이 적힌 제품 쪽 금액은 실제보다 클 수 있습니다.</li>
         <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외합니다.</li>
         <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교로 합쳐 보여 줍니다. 계약명 원문은 그대로 보존합니다.</li>
       </ul>
