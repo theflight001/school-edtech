@@ -232,6 +232,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
 .sc-chip { font: inherit; font-size: 13px; border: 1px solid var(--grid); background: var(--plane); color: var(--ink-2); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
 .sc-chip span { opacity: .65; font-size: 11.5px; }
 .sc-chip.on { background: var(--bar); border-color: var(--bar); color: #fff; }
+.sc-chip.part { border-color: var(--bar); color: var(--bar); }
 .sc-chip:hover:not(.on) { border-color: var(--bar); }
 .rg-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
 @media (max-width: 620px) { .rg-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -396,7 +397,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260808f", function () { load("app.js?b=20260808j"); });
+    load("data.js?b=20260808f", function () { load("app.js?b=20260808l"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

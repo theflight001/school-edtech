@@ -368,39 +368,77 @@ window.scApply = () => {
   ES = esSel.size === FOUNDINGS.length ? new Set() : esSel;
   closePicker(); render();
 };
+// 고르는 순서를 학교급 → (고등학교면) 유형 → 설립으로 바꿨다.
+// 처음에 일곱 칸을 늘어놓으면 초·중처럼 유형이 없는 급까지 같은 무게로 보여 복잡했다.
+const LEVELS = [
+  {k: "elem", label: "초등학교", leaves: ["elem"]},
+  {k: "mid", label: "중학교", leaves: ["mid"]},
+  {k: "high", label: "고등학교", leaves: ["gen", "voc_v", "voc_m", "spc_sci", "spc_lang", "spc_art", "aut"]},
+  {k: "etc", label: "특수·기타학교", leaves: ["spe", "alt"]},
+];
+const HIGH_PARENTS = ["gen", "voc", "spc", "aut"];          // 고등학교 안의 유형
+window.scLevel = k => {
+  const ls = LEVELS.find(x => x.k === k).leaves;
+  const all = ls.every(x => scSel.has(x));
+  ls.forEach(x => all ? scSel.delete(x) : scSel.add(x));
+  drawSchoolPicker();
+};
 function drawSchoolPicker() {
-  const cells = PARENTS.map(p => {
-    const ls = leavesOf(p.k);
-    const sel = ls.filter(k => scSel.has(k)).length;
-    const cls = sel === ls.length ? " end" : sel ? " part" : "";
-    const cnt = ls.reduce((a, k) => a + (IDX_GROUP_COUNT[k] || 0), 0);
-    return `<button class="pk-cell sc-cell${cls}" onclick="scParent('${p.k}')">
-      <span>${p.label}</span><span class="sc-n">${cnt.toLocaleString()}개교</span></button>`;
+  const cells = LEVELS.map(lv => {
+    const sel = lv.leaves.filter(k => scSel.has(k)).length;
+    const cls = sel === lv.leaves.length ? " end" : sel ? " part" : "";
+    const cnt = lv.leaves.reduce((a, k) => a + (IDX_GROUP_COUNT[k] || 0), 0);
+    return `<button class="pk-cell sc-cell${cls}" onclick="scLevel('${lv.k}')">
+      <span>${lv.label}</span><span class="sc-n">${cnt.toLocaleString()}개교</span></button>`;
   }).join("");
-  const subRows = PARENTS.filter(p => leavesOf(p.k).length > 1 && leavesOf(p.k).some(k => scSel.has(k)))
+
+  // 고등학교를 골랐을 때만 유형 줄을 보여 준다
+  const highOn = LEVELS[2].leaves.some(k => scSel.has(k));
+  const typeRow = highOn ? `<div class="sc-subrow"><span class="sc-sublabel">고등학교 유형</span>` +
+    HIGH_PARENTS.map(pk => {
+      const p = PARENTS.find(x => x.k === pk), ls = leavesOf(pk);
+      const sel = ls.filter(k => scSel.has(k)).length;
+      const cnt = ls.reduce((a, k) => a + (IDX_GROUP_COUNT[k] || 0), 0);
+      return `<button class="sc-chip${sel === ls.length ? " on" : sel ? " part" : ""}" onclick="scParent('${pk}')">${p.label} <span>${cnt.toLocaleString()}</span></button>`;
+    }).join("") + `</div>` : "";
+  // 특성화고·마이스터고, 특목고는 한 단계 더 나눌 수 있다
+  // 고등학교를 통째로 고른 상태에서는 세부 줄까지 펼치면 어수선하다.
+  // 유형을 좁힌 뒤에만 세부를 보여 준다.
+  const allHigh = LEVELS[2].leaves.every(k => scSel.has(k));
+  const subRows = highOn && !allHigh ? PARENTS.filter(p => HIGH_PARENTS.includes(p.k) && leavesOf(p.k).length > 1
+      && leavesOf(p.k).some(k => scSel.has(k)))
     .map(p => `<div class="sc-subrow"><span class="sc-sublabel">${p.label} 세부</span>` +
       LEAVES.filter(l => l.parent === p.k).map(l =>
         `<button class="sc-chip${scSel.has(l.k) ? " on" : ""}" onclick="scToggle('${l.k}')">${l.label} <span>${(IDX_GROUP_COUNT[l.k] || 0).toLocaleString()}</span></button>`).join("") +
-      `</div>`).join("");
+      `</div>`).join("") : "";
+
+  // 설립 숫자는 지금 고른 학교급 기준으로 센다 (예: 중학교만 골랐으면 중학교의 공·사·국립)
+  const inSel = s => !scSel.size || scSel.has(idxGroup(s));
+  const fCount = {};
+  IDX.forEach(s => { if (inSel(s)) fCount[s.f] = (fCount[s.f] || 0) + 1; });
   const esRow = `<div class="sc-subrow"><span class="sc-sublabel">설립</span>` +
-    FOUNDINGS.map(f => `<button class="sc-chip${esSel.has(f) ? " on" : ""}" onclick="esToggle('${f}')">${f} <span>${(IDX_FOUND_COUNT[f] || 0).toLocaleString()}</span></button>`).join("") +
+    FOUNDINGS.map(f => `<button class="sc-chip${esSel.has(f) ? " on" : ""}" onclick="esToggle('${f}')">${f} <span>${(fCount[f] || 0).toLocaleString()}</span></button>`).join("") +
     `</div>`;
-  const picked = [setParts(scSel).join(" · "), esSel.size ? [...esSel].join("·") : ""]
-    .filter(Boolean).join(" / ");
+
+  const lvNames = LEVELS.filter(lv => lv.leaves.some(k => scSel.has(k)))
+    .map(lv => lv.k === "high" && !lv.leaves.every(k => scSel.has(k))
+      ? setParts(scSel).join("·") : lv.label);
+  const picked = [lvNames.join(" · "), esSel.size ? [...esSel].join("·") : ""].filter(Boolean).join(" / ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
         <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top"><span></span>
-          <div style="text-align:center"><div class="pk-title">학교 계열 선택</div><div class="pk-range">${picked || "전체 (전국 모든 계열)"}</div></div>
+          <div style="text-align:center"><div class="pk-title">학교 선택</div><div class="pk-range">${picked || "전체 (전국 모든 학교)"}</div></div>
         <span></span></div>
         <div class="pk-grid sc-grid">${cells}</div>
-        ${subRows}
-        ${esRow}
+        ${typeRow}${subRows}${esRow}
         <div class="pk-foot">
-          <span class="pk-hint">계열을 누르면 선택되고, 특성화고·마이스터고와 특목고는 아래에서 세부 선택할 수 있습니다<br>설립은 계열과 따로 걸립니다 (예: 중학교 + 사립)<br>분류 기준: NEIS 학교유형·설립 구분 · 마이스터고(산업수요맞춤형고)는 특성화고·마이스터고 항목에 포함</span>
+          <span class="pk-hint">학교급을 먼저 고르면 그 안에서 설립(공·사·국립)을 고를 수 있습니다.
+            고등학교는 유형까지 나눠 고를 수 있습니다<br>분류 기준: NEIS 학교유형·설립 구분 ·
+            마이스터고(산업수요맞춤형고)는 특성화고·마이스터고에 포함</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="scAll()">전체 계열</button>
+            <button class="pk-btn" onclick="scAll()">전체 학교</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="scApply()" ${scSel.size || esSel.size ? "" : "disabled"}>적용</button>
           </span>
