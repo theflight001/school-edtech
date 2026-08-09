@@ -6,8 +6,12 @@
 # 그 달의 계약 목록이 나온다. 그래서 두 단계로 받는다.
 #   1단계  목록(list0010v.do)에서 게시물 = (학교코드, NEIS코드, 기관명, 기준월)을 모은다
 #   2단계  게시물마다 상세(list0010d.do)를 한 번씩 열어 계약을 전부 받는다
-# 두 화면 모두 pageUnit=100이 먹혀 한 번에 100건씩 받는다(기본 10건 → 요청 수 1/10).
-# 게시물 하나에 계약이 보통 20건 안팎이라 상세는 게시물당 1회면 끝난다.
+# 두 화면 모두 pageUnit이 먹혀 한 번에 여러 건씩 받는다(기본 10건 → 요청 수가 크게 준다).
+# 상세는 게시물당 1회로 끝내되 100건을 넘는 달이 있어(서울일원초 2026-06 = 109건) 500으로 받는다.
+#
+# 주의: 옛 기준월 게시물은 목록에 남아 있어도 상세를 열면 '승인된 건이 없습니다'가 돌아온다.
+# 2023~2025년 표본 15건이 모두 비어 있었다 — 실제로 받을 수 있는 것은 최근(2026년) 자료뿐이다.
+# 그래서 기본값을 2026년으로 두고, 필요하면 --years로 넓힌다.
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://open.sen.go.kr/fus/1/contractOpen/"
@@ -68,7 +72,7 @@ def posts_of(page_html):
         out.append({"sc": sc, "neis": neis, "name": html.unescape(name).strip(), "month": month})
     return out
 
-def detail(post, per=100):
+def detail(post, per=500):
     d = {"detPageIndex": "1", "pageIndex": "1", "pageUnit": str(per),
          "school_code": post["sc"], "neis_cd": post["neis"], "stdr_month": post["month"],
          "seq": "", "searchOraCode": "002", "searchSchoolCode": ""}
@@ -92,7 +96,7 @@ def detail(post, per=100):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--years", default="2023,2024,2025,2026")
+    ap.add_argument("--years", default="2026")   # 옛 달은 상세가 비어 있다(위 주석 참고)
     ap.add_argument("--months", default="", help="기준월을 직접 지정 (예: 202601,202602)")
     ap.add_argument("--max-list-pages", type=int, default=400)
     ap.add_argument("--relist", action="store_true", help="게시물 목록을 다시 훑는다(새 달이 올라온 뒤)")
