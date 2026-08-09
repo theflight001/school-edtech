@@ -355,11 +355,18 @@ function drawRegionPicker() {
 let scSel = null, esSel = null;
 window.openSchoolPicker = () => { scSel = new Set(SF); esSel = new Set(ES); drawSchoolPicker(); };
 window.esToggle = k => { esSel.has(k) ? esSel.delete(k) : esSel.add(k); drawSchoolPicker(); };
-window.scToggle = k => { scSel.has(k) ? scSel.delete(k) : scSel.add(k); drawSchoolPicker(); };
+window.scToggle = k => {
+  scSel.has(k) ? scSel.delete(k) : scSel.add(k);
+  if (scSel.size && !esSel.size) FOUNDINGS.forEach(f => esSel.add(f));
+  if (!scSel.size) esSel.clear();
+  drawSchoolPicker();
+};
 window.scParent = p => {
   const ls = leavesOf(p);
   const all = ls.every(k => scSel.has(k));
   ls.forEach(k => all ? scSel.delete(k) : scSel.add(k));
+  if (scSel.size && !esSel.size) FOUNDINGS.forEach(f => esSel.add(f));
+  if (!scSel.size) esSel.clear();
   drawSchoolPicker();
 };
 window.scAll = () => { SF = new Set(); ES = new Set(); closePicker(); render(); };
@@ -381,6 +388,9 @@ window.scLevel = k => {
   const ls = LEVELS.find(x => x.k === k).leaves;
   const all = ls.every(x => scSel.has(x));
   ls.forEach(x => all ? scSel.delete(x) : scSel.add(x));
+  // 학교급을 고르면 설립은 '전부 포함'이 기본이다 — 빈 칩으로 두면 아무것도 안 고른 것처럼 보인다
+  if (scSel.size && !esSel.size) FOUNDINGS.forEach(f => esSel.add(f));
+  if (!scSel.size) esSel.clear();
   drawSchoolPicker();
 };
 function drawSchoolPicker() {
@@ -423,7 +433,9 @@ function drawSchoolPicker() {
   const lvNames = LEVELS.filter(lv => lv.leaves.some(k => scSel.has(k)))
     .map(lv => lv.k === "high" && !lv.leaves.every(k => scSel.has(k))
       ? setParts(scSel).join("·") : lv.label);
-  const picked = [lvNames.join(" · "), esSel.size ? [...esSel].join("·") : ""].filter(Boolean).join(" / ");
+  const esAll = esSel.size === FOUNDINGS.length;
+  const picked = [lvNames.join(" · "), esSel.size && !esAll ? [...esSel].join("·") : ""]
+    .filter(Boolean).join(" / ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
