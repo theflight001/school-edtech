@@ -233,6 +233,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
 .sc-chip span { opacity: .65; font-size: 11.5px; }
 .sc-chip.on { background: var(--bar); border-color: var(--bar); color: #fff; }
 .sc-chip.part { border-color: var(--bar); color: var(--bar); }
+/* 고등학교를 고르면 유형·세부 줄이 늘어나 창이 갑자기 커졌다 — 처음부터 넉넉히 잡아 둔다 */
+.sc-panel { min-height: 500px; display: flex; flex-direction: column; }
+.sc-panel .pk-foot { margin-top: auto; }
 .sc-chip:hover:not(.on) { border-color: var(--bar); }
 .rg-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
 @media (max-width: 620px) { .rg-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -397,7 +400,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260808f", function () { load("app.js?b=20260808m"); });
+    load("data.js?b=20260808f", function () { load("app.js?b=20260808n"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

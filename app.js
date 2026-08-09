@@ -426,7 +426,7 @@ function drawSchoolPicker() {
   const inSel = s => !scSel.size || scSel.has(idxGroup(s));
   const fCount = {};
   IDX.forEach(s => { if (inSel(s)) fCount[s.f] = (fCount[s.f] || 0) + 1; });
-  const esRow = `<div class="sc-subrow"><span class="sc-sublabel">설립</span>` +
+  const esRow = `<div class="sc-subrow"><span class="sc-sublabel">설립 주체</span>` +
     FOUNDINGS.map(f => `<button class="sc-chip${esSel.has(f) ? " on" : ""}" onclick="esToggle('${f}')">${f} <span>${(fCount[f] || 0).toLocaleString()}</span></button>`).join("") +
     `</div>`;
 
@@ -438,7 +438,7 @@ function drawSchoolPicker() {
     .filter(Boolean).join(" / ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
-      <div class="pk-panel" role="dialog" aria-label="학교 계열 선택">
+      <div class="pk-panel sc-panel" role="dialog" aria-label="학교 선택">
         <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">학교 선택</div><div class="pk-range">${picked || "전체 (전국 모든 학교)"}</div></div>
@@ -446,7 +446,7 @@ function drawSchoolPicker() {
         <div class="pk-grid sc-grid">${cells}</div>
         ${typeRow}${subRows}${esRow}
         <div class="pk-foot">
-          <span class="pk-hint">학교급을 먼저 고르면 그 안에서 설립(공·사·국립)을 고를 수 있습니다.
+          <span class="pk-hint">학교급을 먼저 고르면 그 안에서 설립 주체(국·공·사립)를 고를 수 있습니다.
             고등학교는 유형까지 나눠 고를 수 있습니다<br>분류 기준: NEIS 학교유형·설립 구분 ·
             마이스터고(산업수요맞춤형고)는 특성화고·마이스터고에 포함</span>
           <span style="display:flex;gap:8px">
@@ -552,7 +552,7 @@ function filterNote() {
   if (PF || PT) bits.push(`조사 기간 ${(PF || "2023-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
-  if (ES.size) bits.push(`설립 ${esLabel()}`);
+  if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
   return bits.length
     ? `<span class="fnote">${esc(bits.join(" · "))} <a href="#/">홈에서 변경</a></span>` : "";
 }
@@ -589,9 +589,9 @@ function homeView() {
       </div>
     </div>
     ${anyF ? `<div class="fnote">
-      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${SF.size ? ` · 계열: ${sfLabel()}` : ""}${ES.size ? ` · 설립: ${esLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
+      <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${SF.size ? ` · 계열: ${sfLabel()}` : ""}${ES.size ? ` · 설립 주체: ${esLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
       ${active ? `<button onclick="clearPeriod()">전체 기간</button>` : ""}
-      ${scActive ? `<button onclick="scAll()">전체 계열·설립</button>` : ""}
+      ${scActive ? `<button onclick="scAll()">전체 학교</button>` : ""}
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
     <div class="section-div">통계 결과</div>
@@ -712,7 +712,7 @@ function drillView(kind, value) {
   const conds = [];
   if (PF || PT) conds.push(`기간 ${(PF || "2023-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
   if (SF.size) conds.push(`계열 ${sfLabel()}`);
-  if (ES.size) conds.push(`설립 ${esLabel()}`);
+  if (ES.size) conds.push(`설립 주체 ${esLabel()}`);
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
   return `
     <div class="crumb"><a href="#/">홈</a> › 통계 상세</div>
