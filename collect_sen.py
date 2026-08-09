@@ -6,12 +6,14 @@
 # 그 달의 계약 목록이 나온다. 그래서 두 단계로 받는다.
 #   1단계  목록(list0010v.do)에서 게시물 = (학교코드, NEIS코드, 기관명, 기준월)을 모은다
 #   2단계  게시물마다 상세(list0010d.do)를 한 번씩 열어 계약을 전부 받는다
-# 두 화면 모두 pageUnit이 먹혀 한 번에 여러 건씩 받는다(기본 10건 → 요청 수가 크게 준다).
-# 상세는 게시물당 1회로 끝내되 100건을 넘는 달이 있어(서울일원초 2026-06 = 109건) 500으로 받는다.
+# 상세 화면은 기본으로 '최근 3개월'만 보여 준다(화면 안내: "작성시작일자를 선택하지 않으면
+# 현재일 기준 3개월 전까지 검색됩니다"). 그래서 옛 달을 그냥 열면 '승인된 건이 없습니다'가 돌아온다.
+# 작성일자 범위를 함께 넘기면 2023년 자료까지 나온다.
 #
-# 주의: 옛 기준월 게시물은 목록에 남아 있어도 상세를 열면 '승인된 건이 없습니다'가 돌아온다.
-# 2023~2025년 표본 15건이 모두 비어 있었다 — 실제로 받을 수 있는 것은 최근(2026년) 자료뿐이다.
-# 그래서 기본값을 2026년으로 두고, 필요하면 --years로 넓힌다.
+# 게다가 기준월(stdr_month)을 비우고 날짜 범위만 주면 그 학교의 전 기간이 한 번에 나온다
+# (서울일원초 2023~2026 = 4,240건). 그래서 '기관 × 기준월' 4만여 건을 도는 대신
+# 학교마다 전 기간을 받아 온다 — 요청이 20분의 1로 준다.
+
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://open.sen.go.kr/fus/1/contractOpen/"
@@ -72,31 +74,36 @@ def posts_of(page_html):
         out.append({"sc": sc, "neis": neis, "name": html.unescape(name).strip(), "month": month})
     return out
 
-def detail(post, per=500):
-    d = {"detPageIndex": "1", "pageIndex": "1", "pageUnit": str(per),
-         "school_code": post["sc"], "neis_cd": post["neis"], "stdr_month": post["month"],
-         "seq": "", "searchOraCode": "002", "searchSchoolCode": ""}
+PERIOD_FROM, PERIOD_TO = "20230101", "20261231"   # 화면이 받아 주는 작성일자 범위
+
+def detail(school, page=1, per=1000):
+    """학교 하나의 전 기간 계약 — 기준월을 비우고 작성일자 범위를 준다"""
+    d = {"detPageIndex": str(page), "pageIndex": "1", "pageUnit": str(per),
+         "school_code": school["sc"], "neis_cd": school["neis"], "stdr_month": "",
+         "seq": "", "searchOraCode": "002", "searchSchoolCode": "",
+         "searchDetStaDate": PERIOD_FROM, "searchDetEndDate": PERIOD_TO,
+         "searchSect": "", "searchDetCondition": "all", "searchDetKeyword": ""}
     s = req(DET, urllib.parse.urlencode(d).encode())
     if "승인된 건이 없습니다" in s:
-        return []
+        return 0, []
+    total = re.search(r"전체\s*<strong>(\d+)</strong>", s)
+    total = int(total.group(1)) if total else 0
     tb = re.findall(r"<tbody>(.*?)</tbody>", s, re.S)
-    if not tb:
-        return []
     rows = []
-    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", tb[0], re.S):
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", tb[0] if tb else "", re.S):
         c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", x))).strip()
              for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         # 번호·구분·계약명·계약일자·계약금액·계약업체명·승인자
         if len(c) < 6 or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", c[3] or ""):
             continue
-        rows.append({"회계연도": c[3][:4], "기관명": post["name"], "계약명": c[2],
+        rows.append({"회계연도": c[3][:4], "기관명": school["name"], "계약명": c[2],
                      "계약일": c[3], "계약금액": c[4].replace(",", ""),
                      "계약방법": c[1], "계약상대자": c[5], "키워드": "(전수)"})
-    return rows
+    return total, rows
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--years", default="2026")   # 옛 달은 상세가 비어 있다(위 주석 참고)
+    ap.add_argument("--years", default="2023,2024,2025,2026")
     ap.add_argument("--months", default="", help="기준월을 직접 지정 (예: 202601,202602)")
     ap.add_argument("--max-list-pages", type=int, default=400)
     ap.add_argument("--relist", action="store_true", help="게시물 목록을 다시 훑는다(새 달이 올라온 뒤)")
@@ -139,35 +146,50 @@ def main():
                       cf, ensure_ascii=False)
     print(f"학교 게시물 {len(posts):,}건 (남은 것 {len(posts) - len(done):,}건)", flush=True)
 
-    # 2단계 — 게시물별 계약 목록
+    # 2단계 — 학교마다 전 기간을 받는다 (게시물이 아니라 학교 단위)
+    schools, seen_sc = [], set()
+    for p in posts:
+        if p["sc"] in seen_sc:
+            continue
+        seen_sc.add(p["sc"])
+        schools.append(p)
+    print(f"학교 {len(schools):,}곳 (남은 곳 {len([x for x in schools if x['sc'] not in done]):,})", flush=True)
+
     new_file = not os.path.exists(OUT)
     f = open(OUT, "a", encoding="utf-8-sig", newline="")
     w = csv.DictWriter(f, fieldnames=FIELDS)
     if new_file:
         w.writeheader()
     kept = req_n = 0
-    for i, p in enumerate(posts, 1):
-        tag = f"{p['sc']}|{p['month']}"
-        if tag in done:
+    for i, sc in enumerate(schools, 1):
+        if sc["sc"] in done:
             continue
-        for r in detail(p):
-            if EXCLUDE.search(r["계약명"]):
-                continue
-            key = (r["기관명"], r["계약명"], r["계약일"])
-            if key in seen:
-                continue
-            seen.add(key)
-            w.writerow(r)
-            kept += 1
-        req_n += 1
-        done.add(tag)
+        page, total = 1, None
+        while True:
+            tot, rows = detail(sc, page)
+            req_n += 1
+            if total is None:
+                total = tot
+            for r in rows:
+                if EXCLUDE.search(r["계약명"]):
+                    continue
+                key = (r["기관명"], r["계약명"], r["계약일"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                w.writerow(r)
+                kept += 1
+            if not rows or page * 1000 >= total:
+                break
+            page += 1
+            time.sleep(SPACING)
+        done.add(sc["sc"])
         f.flush()
-        if req_n % 50 == 0:
+        if i % 20 == 0:
             ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
             with open(CKPT, "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
-            print(f"[{i}/{len(posts)}] {p['name']} {p['month']} · 누적 {kept:,}건 "
-                  f"(요청 {req_n:,}회)", flush=True)
+            print(f"[{i}/{len(schools)}] {sc['name']} · 누적 {kept:,}건 (요청 {req_n:,}회)", flush=True)
         time.sleep(SPACING)
     ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
     with open(CKPT, "w") as cf:
