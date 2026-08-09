@@ -443,8 +443,10 @@ function drawSchoolPicker() {
         <div class="pk-top"><span></span>
           <div style="text-align:center"><div class="pk-title">학교 선택</div><div class="pk-range">${picked || "전체 (전국 모든 학교)"}</div></div>
         <span></span></div>
-        <div class="pk-grid sc-grid">${cells}</div>
-        ${typeRow}${subRows}${esRow}
+        <div class="sc-body">
+          <div class="pk-grid sc-grid">${cells}</div>
+          ${typeRow}${subRows}${esRow}
+        </div>
         <div class="pk-foot">
           <span class="pk-hint">학교급을 먼저 고르면 그 안에서 설립 주체(국·공·사립)를 고를 수 있습니다.
             고등학교는 유형까지 나눠 고를 수 있습니다<br>분류 기준: NEIS 학교유형·설립 구분 ·
