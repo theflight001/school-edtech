@@ -234,9 +234,10 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
 .sc-chip.on { background: var(--bar); border-color: var(--bar); color: #fff; }
 .sc-chip.part { border-color: var(--bar); color: var(--bar); }
 /* 고등학교를 고르면 유형·세부 줄이 늘어나 창이 갑자기 커졌다 — 처음부터 넉넉히 잡아 둔다 */
-.sc-panel { height: min(520px, 86vh); display: flex; flex-direction: column; }
+.sc-panel { height: min(580px, 88vh); display: flex; flex-direction: column; }
 /* 창 폭이 좁아 칩이 여러 줄로 접히면 내용만 스크롤되고 창 크기는 그대로다 */
-.sc-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+/* 안쪽만 스크롤하면 스크롤 상자가 칸 테두리(2px outline)를 잘라 먹는다 — 사방에 여유를 준다 */
+.sc-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 3px 3px 8px; margin: -3px -3px 0; }
 .sc-panel .pk-foot { margin-top: auto; }
 .sc-chip:hover:not(.on) { border-color: var(--bar); }
 .rg-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
@@ -402,7 +403,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260808f", function () { load("app.js?b=20260808q"); });
+    load("data.js?b=20260808f", function () { load("app.js?b=20260808s"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
