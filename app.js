@@ -703,7 +703,8 @@ function codeView(code) {
       <span style="font-size:12.5px">본 서비스는 공개 조달 기록 기반의 <b>하한 추정치</b>입니다 — 기록이 없다는 것이 에듀테크를 사용하지 않는다는 뜻은 아닙니다.</span></div></div>`;
 }
 function drillView(kind, value) {
-  const base = R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r));
+  // 막대에서 들어온 화면이므로 막대와 같은 기준(미확인 제품 포함 여부)을 써야 숫자가 어긋나지 않는다
+  const base = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
   let recs, what;
   if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = tagLabel(value); }
   else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${esc(value)} 계열`; }
@@ -934,7 +935,7 @@ function regionsView() {
         <span class="n">${n.toLocaleString()}건 · ${(sch[s] ? sch[s].size : 0).toLocaleString()}개교</span></a>`).join("")}
     </div>
     ${etc.length ? `<p class="sub2" style="margin-top:14px">시도를 특정하지 못한 기록:
-      ${etc.map(([s, n]) => `${esc(s)} ${n.toLocaleString()}건`).join(" · ")}</p>` : ""}`;
+      ${etc.map(([s, n]) => `<a href="#/drill/sido/${encodeURIComponent(s)}">${esc(s)} ${n.toLocaleString()}건</a>`).join(" · ")}</p>` : ""}`;
 }
 
 function contactView() {
