@@ -8,3 +8,7 @@ s2b_all.csv
 nara_full_*.csv
 s2b_all*.csv
 s2b_refined_nationwide.csv
+
+# 시도교육청 원자료(전수 수집분) — 정제 결과만 커밋한다
+*_candidates.csv
+서울_candidates.csv
