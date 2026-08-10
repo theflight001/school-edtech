@@ -685,6 +685,15 @@ OFFICE_SOURCES = [
     ("use_refined.csv", "울산", "울산교육청 계약공개", 800000),
     ("cbe_refined.csv", "충북", "충북교육청 계약공개", 900000),
     ("jne_refined.csv", "전남", "전남교육청 계약공개", 1000000),
+    # 2026-08 추가분
+    ("goe_refined.csv", "경기", "경기교육청 계약공개", 1100000),
+    ("gbe_refined.csv", "경북", "경북교육청 계약공개", 1200000),
+    ("gwe_refined.csv", "강원", "강원교육청 계약공개", 1300000),
+    ("sje_refined.csv", "세종", "세종교육청 계약공개", 1400000),
+    ("jje_refined.csv", "제주", "제주교육청 계약공개", 1500000),
+    ("cne_refined.csv", "충남", "충남교육청 계약공개", 1600000),
+    ("gne_refined.csv", "경남", "경남교육청 계약공개", 1700000),
+    ("sen_refined.csv", "서울", "서울교육청 계약공개", 1800000),
 ]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):

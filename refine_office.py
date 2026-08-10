@@ -16,7 +16,30 @@ OFFICES = {
     "울산": ("use_candidates.csv", "use_refined.csv", "울산", r"울산"),
     "충북": ("충북_candidates.csv", "cbe_refined.csv", "충북", r"충청북"),
     "전남": ("전남_candidates.csv", "jne_refined.csv", "전남", r".*\(전남\)"),
+    # 2026-08 추가분 — 도 단위는 교명에 시도 접두어가 붙지 않는다(접두어 "")
+    "경기": ("경기_candidates.csv", "goe_refined.csv", "", r"경기도"),
+    "경북": ("경북_candidates.csv", "gbe_refined.csv", "", r"경상북도"),
+    "강원": ("강원_candidates.csv", "gwe_refined.csv", "", r"강원"),
+    "세종": ("세종_candidates.csv", "sje_refined.csv", "", r"세종"),
+    "제주": ("제주_candidates.csv", "jje_refined.csv", "", r"제주"),
+    "충남": ("충남_candidates.csv", "cne_refined.csv", "", r"충청남도"),
+    "경남": ("경남_candidates.csv", "gne_refined.csv", "", r"경상남도"),
+    "서울": ("서울_candidates.csv", "sen_refined.csv", "서울", r"서울"),
 }
+# 수요기관에 적을 교육청 이름 (광역시가 아닌 곳이 있다)
+OFFICE_NAME = {"인천": "인천광역시교육청", "부산": "부산광역시교육청", "대구": "대구광역시교육청",
+               "광주": "광주광역시교육청", "대전": "대전광역시교육청", "울산": "울산광역시교육청",
+               "서울": "서울특별시교육청", "세종": "세종특별자치시교육청",
+               "경기": "경기도교육청", "강원": "강원특별자치도교육청", "제주": "제주특별자치도교육청",
+               "충북": "충청북도교육청", "충남": "충청남도교육청",
+               "전남": "전라남도교육청", "경북": "경상북도교육청", "경남": "경상남도교육청"}
+# 마스터에 적힌 시도 이름 (미매칭 기록에도 지역을 남긴다)
+OFFICE_SIDO = {"인천": "인천광역시", "부산": "부산광역시", "대구": "대구광역시",
+               "광주": "전남광주통합특별시(광주)", "대전": "대전광역시", "울산": "울산광역시",
+               "서울": "서울특별시", "세종": "세종특별자치시", "경기": "경기도",
+               "강원": "강원특별자치도", "제주": "제주특별자치도", "충북": "충청북도",
+               "충남": "충청남도", "전남": "전남광주통합특별시(전남)",
+               "경북": "경상북도", "경남": "경상남도"}
 
 def load_rules():
     src = open("build_data.py", encoding="utf-8").read()
@@ -87,10 +110,10 @@ def refine(sido):
         out.append({
             "계약번호": f"{prefix}-{key}", "구분": r.get("구분") or "물품", "계약명": name,
             "계약일": r.get("계약일", ""), "금액": r.get("계약금액", ""),
-            "수요기관": f"{sido}광역시교육청 {school_raw}", "학교명": school,
+            "수요기관": f"{OFFICE_NAME.get(sido, sido + '교육청')} {school_raw}", "학교명": school,
             "업체명": r.get("계약상대자", ""),
             "학교코드": m["code"] if m else "", "급별": m["level"] if m else "",
-            "시도": m["sido"] if m else f"{sido}광역시", "상세URL": "",
+            "시도": m["sido"] if m else OFFICE_SIDO.get(sido, sido), "상세URL": "",
         })
     with open(out_path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
