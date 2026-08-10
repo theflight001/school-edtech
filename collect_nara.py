@@ -29,9 +29,13 @@ for s in master:
     master_by_name[s["name"]].append(s)
 
 def fetch(op, begin, end, page):
-    params = {"serviceKey": KEY, "inqryDiv": 1, "inqryBgnDt": begin + "0000",
+    # serviceKey는 인코딩하지 않는다 — urlencode를 거치면 이중 인코딩돼
+
+    # "등록되지 않은 서비스키"(403)로 거부된다
+
+    params = {"inqryDiv": 1, "inqryBgnDt": begin + "0000",
               "inqryEndDt": end + "2359", "numOfRows": 999, "pageNo": page, "type": "json"}
-    url = f"{BASE}{op}?" + urllib.parse.urlencode(params)
+    url = f"{BASE}{op}?serviceKey={KEY}&" + urllib.parse.urlencode(params)
     backoff = [10, 30, 60, 120, 240]
     for attempt in range(len(backoff) + 1):
         try:

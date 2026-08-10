@@ -97,6 +97,26 @@ const uniq = arr => [...new Set(arr)];
 const schools = uniq(R.map(r => r.school)).sort();
 const tags = count(R.flatMap(r => r.tags.map(t => [t])), x => x[0]);
 const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(r => r.school)).length;
+// 공급 기업 — 계약 상대자를 그대로 모은다(업체로 제품을 추정하지 않는다).
+// 한 회사가 여러 제품을 팔아도 '이 회사가 어디에 무엇을 팔았나'는 그 자체로 볼 만하다.
+const vnorm = n => (n || "").replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "").replace(/\s+/g, "").trim();
+const VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
+for (const r of R) {
+  const v = vnorm(r.vendor);
+  if (!v) continue;
+  let e = VENDORS.get(v);
+  if (!e) VENDORS.set(v, e = {key: v, n: 0, forms: new Map()});
+  e.n++;
+  e.forms.set(r.vendor, (e.forms.get(r.vendor) || 0) + 1);
+}
+for (const e of VENDORS.values())             // 가장 많이 쓰인 표기를 대표 이름으로
+  e.name = [...e.forms.entries()].sort((a, b) => b[1] - a[1])[0][0];
+const vendorRecs = key => R.filter(r => vnorm(r.vendor) === key);
+// 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
+const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|이웃닷컴|다나와|하이마트/;
+const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
+const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : "공급 기업";
+
 const IDX = DB.schoolIndex || [];
 const idxByCode = new Map(IDX.map(s => [s.c, s]));
 const recordCodes = new Set(R.map(r => r.schoolCode).filter(Boolean));
@@ -187,7 +207,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
-      <td style="max-width:320px">${esc(r.content)}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
+      <td style="max-width:320px">${esc(r.content)}${r.vendor ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vnorm(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
@@ -675,6 +695,56 @@ function tagView(tag) {
     </div>
     <div class="card"><h2>도입 학교 목록</h2>${pagedTable(recs)}</div>`;
 }
+function vendorView(key) {
+  const e = VENDORS.get(key);
+  const recs = vendorRecs(key);
+  if (!recs.length) return `<div class="empty">공급 기업을 찾을 수 없습니다: ${esc(key)}</div>`;
+  const nd = recs.filter(r => !r.dup);
+  const kind = vendorKind(key);
+  const byTag = count(nd.flatMap(r => r.tags.map(t => [t])), x => x[0]).slice(0, 12);
+  const bySido = count(nd, r => r.sido).slice(0, 10);
+  const byType = count(nd, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
+  const won = a => a >= 100000000 ? `${(a / 100000000).toFixed(1)}억원` : `${Math.round(a / 10000).toLocaleString()}만원`;
+  const amt = nd.reduce((a, r) => a + (r.amt || 0), 0);
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 공급 기업</div>
+    <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
+      <div class="meta">${kind} · 거래 학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 ·
+        기록 ${nd.length.toLocaleString()}건${amt ? ` · 계약금액 합계 ${won(amt)}` : ""}</div>
+      ${kind !== "공급 기업" ? `<span class="fnote">여러 회사의 물건을 파는 창구입니다 —
+        여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>제품·제품군<span class="note">막대를 눌러 제품 화면으로</span></h2>
+        ${barChart(byTag, {linkFn: t => `#/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
+      <div class="card"><h2>계열별<span class="note">이 업체와 거래한 학교</span></h2>${barChart(byType)}</div>
+    </div>
+    <div class="card"><h2>지역별</h2>${barChart(bySido)}</div>
+    <div class="card"><h2>거래 기록</h2>${pagedTable(recs)}</div>`;
+}
+
+function vendorsView() {
+  const rows = [...VENDORS.values()].filter(v => v.n >= 5)
+    .map(v => ({...v, kind: vendorKind(v.key)}))
+    .sort((a, b) => b.n - a.n);
+  const shown = VLIST_KIND ? rows.filter(v => v.kind === VLIST_KIND) : rows;
+  const kinds = ["공급 기업", "구매 창구", "제조사"];
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 공급 기업 전체</div>
+    <div class="pagehead"><h2>공급 기업</h2>
+      <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
+        이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다</div></div>
+    <div class="alpha">
+      <button class="${VLIST_KIND ? "" : "on"}" onclick="VLIST_KIND='';render()">전체 ${rows.length.toLocaleString()}</button>
+      ${kinds.map(k => `<button class="${VLIST_KIND === k ? "on" : ""}" onclick="VLIST_KIND='${k}';render()">${k} ${rows.filter(v => v.kind === k).length.toLocaleString()}</button>`).join("")}
+    </div>
+    <div class="plist">
+      ${shown.slice(0, 400).map(v => `<a href="#/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
+        <span class="n">${v.n.toLocaleString()}건</span></a>`).join("")}
+    </div>
+    ${shown.length > 400 ? `<p class="sub2" style="margin-top:12px">기록이 많은 400곳만 보여 줍니다 — 나머지는 검색으로 찾을 수 있습니다</p>` : ""}`;
+}
+
 function drillTagView(kind, tag, value) {
   const recs = R.filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
@@ -864,6 +934,7 @@ function aboutView() {
     </div>`;
 }
 
+let VLIST_KIND = "";                    // 공급 기업 목록에서 고른 갈래
 let PSORT = "count";                    // count = 도입 학교 순(순위표), name = 가나다순
 function setPSort(v) { PSORT = v; const y = window.scrollY; render(); window.scrollTo(0, y); }
 
@@ -1019,6 +1090,8 @@ function render() {
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "products") view.innerHTML = productsView();
   else if (kind === "regions") view.innerHTML = regionsView();
+  else if (kind === "vendor") view.innerHTML = vendorView(arg);
+  else if (kind === "vendors") view.innerHTML = vendorsView();
   else if (kind === "contact") view.innerHTML = contactView();
   else {
     view.innerHTML = homeView();
@@ -1036,7 +1109,7 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; render(); });
+window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; render(); });
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");
@@ -1061,6 +1134,8 @@ const suggItems = [
   ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
+  ...[...VENDORS.values()].filter(v => v.n >= 5)
+     .map(v => ({label: v.name, kind: vendorKind(v.key), href: `#/vendor/${encodeURIComponent(v.key)}`})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 // 요약 화면이 걸어 둔 '불러오는 중' 안내를 걷고, 그 사이에 입력한 글자가 있으면 바로 반영한다

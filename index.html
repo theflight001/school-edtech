@@ -317,6 +317,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     <div class="navlinks">
       <a href="#/about">데이터 안내</a>
       <a href="#/products">제품 전체 보기</a>
+      <a href="#/vendors">공급 기업</a>
       <a href="#/contact">정정 요청</a>
     </div>
   </div>
@@ -404,7 +405,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260810a", function () { load("app.js?b=20260810b"); });
+    load("data.js?b=20260810a", function () { load("app.js?b=20260810d"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
