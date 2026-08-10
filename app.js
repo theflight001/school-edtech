@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260810r";
+  s.src = "data_detail.js?b=20260810s";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -102,7 +102,24 @@ const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(r => r.
 // 계약서에 적힌 회사 이름은 표기가 제각각이다.
 //   (주)지란지교컴즈 · (주)지란지교컴즈(쿨메신저) · (주)지란지교컴 …
 // 법인 형태와 괄호 안 덧말을 떼어 같은 이름으로 모은다. 다른 회사를 억지로 합치지는 않는다.
-const vnorm = n => (n || "")
+// 해외 구독은 결제 표기가 업체명 칸에 그대로 들어와 회사명과 제품명이 붙어 있다
+//   openAIchatGPT(챗지피티) · OPENAI *CHATGPT SUBSCR · CHATGPT SUBSCRIPTION → 회사는 OpenAI 하나다
+// 이런 표기는 회사 이름으로 되돌려 한곳에 모은다(제품 태그는 따로 붙는다).
+const VENDOR_CANON = [
+  [/open ?ai|chat ?gpt|챗지피티|오픈에이아이/i, "OpenAI"],
+  [/anthropic|claude/i, "Anthropic"],
+  [/padlet|패들렛/i, "Padlet"],
+  [/kahoot|카훗/i, "Kahoot!"],
+  [/^\s*canva|canva ?(?:pro|for|inc)/i, "Canva"],
+  [/^\s*notion|notion ?labs/i, "Notion Labs"],
+  [/quizlet|퀴즐렛/i, "Quizlet"],
+  [/^\s*suno(?:\s|,|$)|suno ?ai/i, "Suno"],
+  [/perplexity/i, "Perplexity AI"],
+  [/adobe|어도비/i, "Adobe"],        // 'KCP-결제-Adobe'처럼 결제 대행이 앞에 붙기도 한다
+];
+const canonOf = raw => { for (const [re, nm] of VENDOR_CANON) if (re.test(raw || "")) return nm; return null; };
+
+const vnorm = n => canonOf(n) ? canonOf(n).replace(/\s+/g, "") : (n || "")
   .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")
   .replace(/[（(][^)）]*[)）]/g, "")          // 괄호 안 덧말 — 제품명·지점명이 붙어 나온다
   .replace(/[\s.,·]+/g, "").trim();
@@ -115,8 +132,10 @@ for (const r of R) {
   e.n++;
   e.forms.set(r.vendor, (e.forms.get(r.vendor) || 0) + 1);
 }
-for (const e of VENDORS.values())             // 가장 많이 쓰인 표기를 대표 이름으로
-  e.name = [...e.forms.entries()].sort((a, b) => b[1] - a[1])[0][0];
+for (const e of VENDORS.values()) {           // 가장 많이 쓰인 표기를 대표 이름으로
+  const raw = [...e.forms.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  e.name = canonOf(raw) || raw;              // 결제 표기는 회사 이름으로 되돌린다
+}
 // 끝 글자가 한둘 잘린 표기는 훨씬 많이 쓰인 쪽에 합친다 (지란지교컴 4건 → 지란지교컴즈 763건).
 // 다른 회사가 잘못 묶이지 않도록 '앞부분이 같고 · 차이 2글자 이내 · 10배 이상 많을 때'만 합친다.
 const VMERGE = new Map();
