@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.edtech.monthly</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd /Users/keollim/Claude/Projects/edtech &amp;&amp; ./update_monthly.sh</string>
+  </array>
+  <!-- 매월 1일 새벽 3시. 그때 맥이 꺼져 있었으면 켜진 뒤 곧바로 한 번 돈다 -->
+  <key>StartCalendarInterval</key>
+  <dict><key>Day</key><integer>1</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/keollim/Claude/Projects/edtech/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/keollim/Claude/Projects/edtech/logs/launchd.err.log</string>
+  <key>WorkingDirectory</key><string>/Users/keollim/Claude/Projects/edtech</string>
+</dict>
+</plist>
