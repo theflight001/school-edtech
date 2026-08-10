@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260810f";
+  s.src = "data_detail.js?b=20260810h";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -686,7 +686,7 @@ function tagView(tag) {
   const bySido = count(recs, r => r.sido);
   return `
     <div class="crumb"><a href="#/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
-    <div class="pagehead"><h2>${tagLabel(tag)}</h2>
+    <div class="pagehead"><h2>${tagLabel(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
       <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
@@ -934,6 +934,11 @@ function aboutView() {
 }
 
 let VLIST_KIND = "";                    // 공급 기업 목록에서 고른 갈래
+// 제품 국적 — build_data.py가 product_origin.csv를 실어 보낸다 (근거는 그 파일에 남아 있다)
+const ORIGIN = DB_RAW.origin || {};
+const originOf = t => ORIGIN[t] || "";
+let PORIGIN = "";                       // "" 전체 · 국내 · 해외
+window.setPOrigin = v => { PORIGIN = v; const y = window.scrollY; render(); window.scrollTo(0, y); };
 let PSORT = "count";                    // count = 도입 학교 순(순위표), name = 가나다순
 function setPSort(v) { PSORT = v; const y = window.scrollY; render(); window.scrollTo(0, y); }
 
@@ -945,6 +950,7 @@ function productsView() {
     cnt[t] = (cnt[t] || 0) + 1;
     (sch[t] = sch[t] || new Set()).add(r.school);
   }
+  if (PORIGIN) for (const k of Object.keys(cnt)) if (originOf(k) !== PORIGIN) { delete cnt[k]; delete sch[k]; }
   const names = Object.keys(cnt).sort(PSORT === "count"
     ? (a, b) => sch[b].size - sch[a].size || a.localeCompare(b, "ko")
     : (a, b) => a.localeCompare(b, "ko"));
@@ -979,6 +985,10 @@ function productsView() {
     <div class="alpha">
       <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
       <button class="${PSORT === "name" ? "on" : ""}" onclick="setPSort('name')">가나다순</button>
+      <span class="alpha-gap"></span>
+      <button class="${PORIGIN === "" ? "on" : ""}" onclick="setPOrigin('')">국내·해외 전체</button>
+      <button class="${PORIGIN === "국내" ? "on" : ""}" onclick="setPOrigin('국내')">국내</button>
+      <button class="${PORIGIN === "해외" ? "on" : ""}" onclick="setPOrigin('해외')">해외</button>
       <span class="alpha-gap"></span>
       <button class="${sel === "전체" ? "on" : ""}" onclick="PLIST_G='';render()">전체</button>
       ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}

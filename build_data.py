@@ -1146,12 +1146,18 @@ def _js_literal(obj):
     t = t.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")   # JS에서 줄바꿈으로 취급되는 문자
     return "'" + t + "'"
 
+# 제품 국적 — product_origin.csv(제품·구분·근거)를 화면에서 쓸 수 있게 실어 보낸다
+_origin = {}
+if os.path.exists("product_origin.csv"):
+    for _r in csv.DictReader(open("product_origin.csv", encoding="utf-8-sig")):
+        _origin[_r["제품"]] = _r["구분"]
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB_RAW = JSON.parse(")
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-                         "tagList": _tag_list, "sparse": _sparse, "rows": _core_rows,
+                         "tagList": _tag_list, "origin": _origin, "sparse": _sparse, "rows": _core_rows,
                          "schoolIndex": school_index}))
     f.write(");\n")
 with open("data_detail.js", "w", encoding="utf-8") as f:
