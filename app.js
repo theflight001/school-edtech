@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260810m";
+  s.src = "data_detail.js?b=20260810n";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -628,9 +628,42 @@ function homeView() {
 let SCHOOL_TAG = "";
 window.setSchoolTag = t => { SCHOOL_TAG = (SCHOOL_TAG === t ? "" : t); PAGE = 1; const y = window.scrollY; render(); window.scrollTo(0, y); };
 
+// 못 찾은 화면은 막다른 길이 된다 — 비슷한 이름을 권하고 돌아갈 길을 함께 준다
+function notFound(what, name, cands, hrefOf) {
+  const near = (cands || [])
+    .map(c => [c, sim(String(name), String(c))])
+    .filter(([, v]) => v >= 0.34)
+    .sort((a, b) => b[1] - a[1]).slice(0, 6).map(([c]) => c);
+  return `<div class="pagehead"><h2>${esc(what)}${eulReul(what)} 찾지 못했습니다</h2>
+      <div class="meta">“${esc(name)}”에 해당하는 기록이 없습니다.
+        철자가 다르거나, 조달 기록에 아직 없는 것일 수 있습니다.</div></div>
+    ${near.length ? `<div class="card"><h2>혹시 이것을 찾으셨나요</h2>
+      <div class="plist">${near.map(c => `<a href="${hrefOf(c)}">${esc(tagName(c))}</a>`).join("")}</div></div>` : ""}
+    <div class="page"><p>검색창에 학교명이나 제품명을 넣어 보시거나,
+      <a href="#/products">제품 전체 보기</a> ·
+      <a href="#/vendors">공급 기업</a> ·
+      <a href="#/regions">지역별</a>에서 찾아보실 수 있습니다.</p>
+      <p>있어야 할 기록이 없다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
+}
+// 받침이 있으면 '을', 없으면 '를' (학교를 / 제품을)
+function eulReul(w) {
+  const c = (w || "").trim().slice(-1).charCodeAt(0);
+  if (isNaN(c) || c < 0xac00 || c > 0xd7a3) return "을";
+  return (c - 0xac00) % 28 ? "을" : "를";
+}
+// 두 이름이 얼마나 겹치는지 — 글자 두 개씩 잘라 견준다(오타·띄어쓰기에 강하다)
+function sim(a, b) {
+  const bi = x => { const s = new Set(); const t = x.toLowerCase().replace(/\s/g, "");
+    for (let i = 0; i < t.length - 1; i++) s.add(t.slice(i, i + 2)); return s; };
+  const A = bi(a), B = bi(b);
+  if (!A.size || !B.size) return 0;
+  let n = 0; for (const x of A) if (B.has(x)) n++;
+  return 2 * n / (A.size + B.size);
+}
+
 function schoolView(name) {
   const all = R.filter(r => r.school === name);
-  if (!all.length) return `<div class="empty">학교를 찾을 수 없습니다: ${esc(name)}</div>`;
+  if (!all.length) return notFound("학교", name, schools, c => `#/school/${encodeURIComponent(c)}`);
   const info = fillDetail([all[0]])[0];
   const schoolTags = uniq(all.flatMap(r => r.tags));
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
@@ -680,7 +713,7 @@ function noteSchoolList(note) {
 }
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
-  if (!recs.length) return `<div class="empty">제품군을 찾을 수 없습니다: ${esc(tagName(tag))}</div>`;
+  if (!recs.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `#/tag/${encodeURIComponent(c)}`);
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
@@ -698,7 +731,8 @@ function tagView(tag) {
 function vendorView(key) {
   const e = VENDORS.get(key);
   const recs = vendorRecs(key);
-  if (!recs.length) return `<div class="empty">공급 기업을 찾을 수 없습니다: ${esc(key)}</div>`;
+  if (!recs.length) return notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
+                                    c => `#/vendor/${encodeURIComponent(vnorm(c))}`);
   const nd = recs.filter(r => !r.dup);
   const kind = vendorKind(key);
   // 온라인몰·조달 대행·대형 제조사는 공급 기업이 아니다 — 화면을 만들지 않는다
@@ -765,7 +799,7 @@ function drillTagView(kind, tag, value) {
 }
 function codeView(code) {
   const s = idxByCode.get(code);
-  if (!s) return `<div class="empty">학교를 찾을 수 없습니다 (코드: ${esc(code)})</div>`;
+  if (!s) return notFound("학교", code, schools, c => `#/school/${encodeURIComponent(c)}`);
   const recs = R.filter(r => r.schoolCode === code);
   if (recs.length) {
     const names = uniq(recs.map(r => r.school));
