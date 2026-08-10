@@ -793,6 +793,9 @@ function animateCount() {
     if (p < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+  // 배경 탭에서는 requestAnimationFrame이 멈춰 숫자가 중간값(예: 1,253)에 붙어 버린다.
+  // 애니메이션 시간이 지나면 최종값을 못 박는다.
+  setTimeout(() => { el.textContent = target.toLocaleString(); }, dur + 200);
 }
 
 // ---- 라우팅 ----
