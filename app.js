@@ -983,13 +983,16 @@ function productsView() {
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
         이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
     <div class="alpha">
+      <span class="alab">정렬</span>
       <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
       <button class="${PSORT === "name" ? "on" : ""}" onclick="setPSort('name')">가나다순</button>
       <span class="alpha-gap"></span>
-      <button class="${PORIGIN === "" ? "on" : ""}" onclick="setPOrigin('')">국내·해외 전체</button>
+      <span class="alab">국적</span>
+      <button class="${PORIGIN === "" ? "on" : ""}" onclick="setPOrigin('')">전체</button>
       <button class="${PORIGIN === "국내" ? "on" : ""}" onclick="setPOrigin('국내')">국내</button>
       <button class="${PORIGIN === "해외" ? "on" : ""}" onclick="setPOrigin('해외')">해외</button>
       <span class="alpha-gap"></span>
+      <span class="alab">첫 글자</span>
       <button class="${sel === "전체" ? "on" : ""}" onclick="PLIST_G='';render()">전체</button>
       ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}
     </div>
