@@ -694,6 +694,7 @@ OFFICE_SOURCES = [
     ("cne_refined.csv", "충남", "충남교육청 계약공개", 1600000),
     ("gne_refined.csv", "경남", "경남교육청 계약공개", 1700000),
     ("sen_refined.csv", "서울", "서울교육청 계약공개", 1800000),
+    ("nara_bid_refined.csv", "", "나라장터 입찰공고", 1900000),   # 전국 — 시도는 행마다 다르다
 ]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):
@@ -729,7 +730,7 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         records.append({
             "id": _idbase + office_count,
             "school": row["학교명"], "type": stype,
-            "region": _sido, "sido": _sido,
+            "region": _sido or row.get("시도") or "미상", "sido": _sido or row.get("시도") or "미상",
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": amt or None, "ym": ym,
@@ -737,7 +738,8 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
                 + (f" · 계약업체: {row['업체명']}" if row.get("업체명") else ""),
             "sourceType": _label,
             "url": "", "confidence": "중",
-            "note": "교육청 계약정보공개 자동수집분 — 소액 구매 포함",
+            "note": ("나라장터 입찰공고 자동수집분 — 낙찰 전이라 계약 상대자가 없고 금액은 기초금액"
+                     if "입찰" in _label else "교육청 계약정보공개 자동수집분 — 소액 구매 포함"),
             "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], row.get("업체명", "")),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
