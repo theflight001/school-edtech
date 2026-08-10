@@ -891,6 +891,18 @@ VENDOR_RULES = [
     (r"툰스퀘어", "투닝"),
     (r"제로엑스플로우", "원아워"),
     (r"투핸즈인터랙티브", "디딤"),
+    # 해외 구독은 카드 결제 표기가 그대로 업체명 칸에 들어온다 — 'OPENAI *CHATGPT SUBSCR'처럼
+    # 업체명이 곧 제품명이라 추론이 아니다. 계약명에는 '에듀테크 소프트웨어 구입'만 적혀 있다.
+    (r"chat ?gpt|챗지피티|openai", "ChatGPT"),
+    (r"^\s*(?:\(주\)|주식회사)?\s*adobe|어도비", "Adobe"),
+    (r"padlet|패들렛", "Padlet"),
+    (r"kahoot|카훗", "카훗"),
+    (r"anthropic|claude\.ai|클로드", "Claude"),
+    (r"^\s*canva|canva ?(?:pro|for|inc)", "Canva"),
+    (r"^\s*notion|notion ?labs", "Notion"),
+    (r"quizlet|퀴즐렛", "Quizlet"),
+    (r"^\s*suno(?:\s|,|$)|suno ?ai", "Suno"),
+    (r"perplexity", "Perplexity"),
 ]
 _vr_n = 0
 for r in records:
