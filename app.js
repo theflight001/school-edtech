@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260810n";
+  s.src = "data_detail.js?b=20260810q";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -99,7 +99,13 @@ const tags = count(R.flatMap(r => r.tags.map(t => [t])), x => x[0]);
 const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(r => r.school)).length;
 // 공급 기업 — 계약 상대자를 그대로 모은다(업체로 제품을 추정하지 않는다).
 // 한 회사가 여러 제품을 팔아도 '이 회사가 어디에 무엇을 팔았나'는 그 자체로 볼 만하다.
-const vnorm = n => (n || "").replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "").replace(/\s+/g, "").trim();
+// 계약서에 적힌 회사 이름은 표기가 제각각이다.
+//   (주)지란지교컴즈 · (주)지란지교컴즈(쿨메신저) · (주)지란지교컴 …
+// 법인 형태와 괄호 안 덧말을 떼어 같은 이름으로 모은다. 다른 회사를 억지로 합치지는 않는다.
+const vnorm = n => (n || "")
+  .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")
+  .replace(/[（(][^)）]*[)）]/g, "")          // 괄호 안 덧말 — 제품명·지점명이 붙어 나온다
+  .replace(/[\s.,·]+/g, "").trim();
 const VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
 for (const r of R) {
   const v = vnorm(r.vendor);
@@ -111,7 +117,32 @@ for (const r of R) {
 }
 for (const e of VENDORS.values())             // 가장 많이 쓰인 표기를 대표 이름으로
   e.name = [...e.forms.entries()].sort((a, b) => b[1] - a[1])[0][0];
-const vendorRecs = key => R.filter(r => vnorm(r.vendor) === key);
+// 끝 글자가 한둘 잘린 표기는 훨씬 많이 쓰인 쪽에 합친다 (지란지교컴 4건 → 지란지교컴즈 763건).
+// 다른 회사가 잘못 묶이지 않도록 '앞부분이 같고 · 차이 2글자 이내 · 10배 이상 많을 때'만 합친다.
+const VMERGE = new Map();
+{
+  const list = [...VENDORS.values()].sort((a, b) => b.n - a.n);
+  for (const small of list) {
+    if (small.key.length < 4) continue;
+    // 앞부분이 같은 회사가 둘 이상이면 어디에 붙일지 알 수 없다 —
+    // '아이스크림'은 아이스크림에듀·아이스크림미디어 둘 다일 수 있고,
+    // '지란지교'는 지란지교컴즈·지란지교테크 둘 다일 수 있다. 이런 것은 합치지 않는다.
+    const cands = list.filter(b => b !== small && b.key.startsWith(small.key));
+    if (cands.length !== 1) continue;
+    const big = cands[0];
+    if (big.n >= small.n * 10 && big.key.length - small.key.length <= 2)
+      VMERGE.set(small.key, big.key);
+  }
+  for (const [from, to] of VMERGE) {
+    const a = VENDORS.get(from), b = VENDORS.get(to);
+    if (!a || !b) continue;
+    b.n += a.n;
+    for (const [f, c] of a.forms) b.forms.set(f, (b.forms.get(f) || 0) + c);
+    VENDORS.delete(from);
+  }
+}
+const vkey = n => { const k = vnorm(n); return VMERGE.get(k) || k; };
+const vendorRecs = key => R.filter(r => vkey(r.vendor) === key);
 // 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
 const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|이웃닷컴|다나와|하이마트/;
 const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
@@ -207,7 +238,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
-      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vnorm(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vnorm(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
+      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
@@ -726,13 +757,41 @@ function tagView(tag) {
       <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
+    ${vendorsOfTag(recs)}
     <div class="card"><h2>도입 학교 목록</h2>${pagedTable(recs)}</div>`;
+}
+
+// 이 제품을 학교에 넣은 회사 — 계약 상대자를 그대로 세어 보여 준다(추론이 아니다).
+// 온라인몰·조달 대행은 만든 곳이 아니므로 따로 적는다.
+function vendorsOfTag(recs) {
+  const cnt = new Map();
+  for (const r of recs.filter(x => !x.dup)) {
+    const v = vkey(r.vendor);
+    if (!v) continue;
+    const e = cnt.get(v) || {n: 0, sch: new Set()};
+    e.n++; e.sch.add(r.school); cnt.set(v, e);
+  }
+  if (!cnt.size) return "";
+  const rows = [...cnt.entries()].map(([k, e]) => ({k, n: e.n, sch: e.sch.size, kind: vendorKind(k)}))
+    .sort((a, b) => b.n - a.n);
+  const sup = rows.filter(v => v.kind === "공급 기업").slice(0, 10);
+  const etc = rows.filter(v => v.kind !== "공급 기업").slice(0, 5);
+  const nameOf = k => (VENDORS.get(k) || {}).name || k;
+  if (!sup.length && !etc.length) return "";
+  return `<div class="card"><h2>납품한 회사<span class="note">계약에 적힌 상대자 기준</span></h2>
+    ${sup.length ? `<div class="plist">${sup.map(v =>
+      `<a href="#/vendor/${encodeURIComponent(v.k)}">${esc(nameOf(v.k))}
+        <span class="n">${v.n.toLocaleString()}건 · ${v.sch.toLocaleString()}개교</span></a>`).join("")}</div>` : ""}
+    ${etc.length ? `<p class="sub2" style="margin-top:10px">구매 창구·제조사로 잡힌 곳:
+      ${etc.map(v => `${esc(nameOf(v.k))} ${v.n.toLocaleString()}건`).join(" · ")}
+      <br>이 업체가 만든 제품이라는 뜻은 아닙니다 — 학교가 그곳을 통해 샀다는 기록입니다</p>` : ""}
+  </div>`;
 }
 function vendorView(key) {
   const e = VENDORS.get(key);
   const recs = vendorRecs(key);
   if (!recs.length) return notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
-                                    c => `#/vendor/${encodeURIComponent(vnorm(c))}`);
+                                    c => `#/vendor/${encodeURIComponent(vkey(c))}`);
   const nd = recs.filter(r => !r.dup);
   const kind = vendorKind(key);
   // 온라인몰·조달 대행·대형 제조사는 공급 기업이 아니다 — 화면을 만들지 않는다
