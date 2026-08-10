@@ -207,7 +207,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
-      <td style="max-width:320px">${esc(r.content)}${r.vendor ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vnorm(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
+      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vnorm(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vnorm(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
@@ -701,6 +701,15 @@ function vendorView(key) {
   if (!recs.length) return `<div class="empty">공급 기업을 찾을 수 없습니다: ${esc(key)}</div>`;
   const nd = recs.filter(r => !r.dup);
   const kind = vendorKind(key);
+  // 온라인몰·조달 대행·대형 제조사는 공급 기업이 아니다 — 화면을 만들지 않는다
+  if (kind !== "공급 기업") return `
+    <div class="crumb"><a href="#/">홈</a> › <a href="#/vendors">공급 기업</a></div>
+    <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
+      <div class="meta">${kind}입니다 — 공급 기업으로 다루지 않습니다</div></div>
+    <div class="page"><p class="lead">${kind === "구매 창구"
+      ? "온라인몰·조달 대행처럼 여러 회사의 물건을 파는 창구입니다. 학교가 무엇을 샀는지는 기록에 남지만, 그 물건을 이 업체가 만든 것은 아니어서 공급 기업 통계에서 뺐습니다."
+      : "여러 종류의 기기를 만드는 제조사입니다. 계약명에 제품이 적혀 있으면 그 제품으로 집계되므로, 제조사 단위로 묶어 보여 주지 않습니다."}</p>
+      <p>기록은 <a href="#/products">제품별</a>이나 학교 화면에서 그대로 보실 수 있습니다.</p></div>`;
   const byTag = count(nd.flatMap(r => r.tags.map(t => [t])), x => x[0]).slice(0, 12);
   const bySido = count(nd, r => r.sido).slice(0, 10);
   const byType = count(nd, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
