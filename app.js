@@ -724,20 +724,19 @@ function vendorView(key) {
 }
 
 function vendorsView() {
-  const rows = [...VENDORS.values()].filter(v => v.n >= 5)
-    .map(v => ({...v, kind: vendorKind(v.key)}))
-    .sort((a, b) => b.n - a.n);
-  const shown = VLIST_KIND ? rows.filter(v => v.kind === VLIST_KIND) : rows;
-  const kinds = ["공급 기업", "구매 창구", "제조사"];
+  // 온라인몰·조달 대행·대형 제조사는 공급사가 아니라 사는 창구라 목록에서 뺀다
+  const all = [...VENDORS.values()].filter(v => v.n >= 5).map(v => ({...v, kind: vendorKind(v.key)}));
+  const rows = all.filter(v => v.kind === "공급 기업").sort((a, b) => b.n - a.n);
+  const dropped = all.length - rows.length;
+  const shown = rows;
   return `
     <div class="crumb"><a href="#/">홈</a> › 공급 기업 전체</div>
     <div class="pagehead"><h2>공급 기업</h2>
       <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
-        이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다</div></div>
-    <div class="alpha">
-      <button class="${VLIST_KIND ? "" : "on"}" onclick="VLIST_KIND='';render()">전체 ${rows.length.toLocaleString()}</button>
-      ${kinds.map(k => `<button class="${VLIST_KIND === k ? "on" : ""}" onclick="VLIST_KIND='${k}';render()">${k} ${rows.filter(v => v.kind === k).length.toLocaleString()}</button>`).join("")}
-    </div>
+        이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다<br>
+        온라인몰·조달 대행·대형 제조사 ${dropped.toLocaleString()}곳은 제품을 만든 곳이 아니라
+        사는 창구여서 뺐습니다</div></div>
+
     <div class="plist">
       ${shown.slice(0, 400).map(v => `<a href="#/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
         <span class="n">${v.n.toLocaleString()}건</span></a>`).join("")}
@@ -1134,8 +1133,8 @@ const suggItems = [
   ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
-  ...[...VENDORS.values()].filter(v => v.n >= 5)
-     .map(v => ({label: v.name, kind: vendorKind(v.key), href: `#/vendor/${encodeURIComponent(v.key)}`})),
+  ...[...VENDORS.values()].filter(v => v.n >= 5 && vendorKind(v.key) === "공급 기업")
+     .map(v => ({label: v.name, kind: "공급 기업", href: `#/vendor/${encodeURIComponent(v.key)}`})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 // 요약 화면이 걸어 둔 '불러오는 중' 안내를 걷고, 그 사이에 입력한 글자가 있으면 바로 반영한다
