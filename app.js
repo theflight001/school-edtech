@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260810s";
+  s.src = "data_detail.js?b=20260810t";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -119,10 +119,12 @@ const VENDOR_CANON = [
 ];
 const canonOf = raw => { for (const [re, nm] of VENDOR_CANON) if (re.test(raw || "")) return nm; return null; };
 
-const vnorm = n => canonOf(n) ? canonOf(n).replace(/\s+/g, "") : (n || "")
+const vnorm = n => (canonOf(n) ? canonOf(n) : (n || "")
   .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")
   .replace(/[（(][^)）]*[)）]/g, "")          // 괄호 안 덧말 — 제품명·지점명이 붙어 나온다
-  .replace(/[\s.,·]+/g, "").trim();
+  // 사이에 낀 기호와 대소문자 차이로 갈라지던 것을 모은다
+  //   S2B / s2b · Padlet / PADLET · 지마켓옥션 / 지마켓-옥션 / 지마켓&옥션
+  .replace(/[\s.,·\-_*/&'"]+/g, "")).toLowerCase().trim();
 const VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
 for (const r of R) {
   const v = vnorm(r.vendor);
