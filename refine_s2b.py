@@ -124,6 +124,11 @@ def main():
             if not PREGATE.search(name):
                 continue
             n_gate += 1
+            # 거래구분이 '공사'면 건물·설비를 짓는 계약이다 — 계약명이 '공사'로 끝나지 않아도 뺀다
+            # ('메타버스 특별실 메타팩토리 구축 공사 견적요청', '전자칠판용 배선작업')
+            if (r.get('거래구분') or '') == '공사':
+                drop['공사 계약'] += 1
+                continue
             if EXCLUDE_EVENT.search(name):
                 drop["행사·임대·비제품"] += 1
                 continue

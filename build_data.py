@@ -713,7 +713,11 @@ for path in sorted(glob.glob("refined_*.csv")):
         elif level in ("초등학교", "중학교"):
             stype = level
         else:
-            stype = level or "미확정"
+            # 마스터 대조에 실패해도 교명 끝이 말해 준다 — '남산초등학교'는 초등학교다
+            # (동명 학교가 여럿이라 어느 곳인지 못 정한 것이지, 학교급을 모르는 것이 아니다)
+            _nm = row.get("학교명") or ""
+            stype = level or next((lv for lv in ("초등학교", "중학교", "고등학교")
+                                   if _nm.endswith(lv)), None) or "미확정"
         s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
         amt = int(row["금액"] or 0)
         amt_txt = f"({amt/10000:,.0f}만원)" if amt else ""
@@ -775,7 +779,11 @@ if os.path.exists("s2b_refined.csv"):
         elif level in ("초등학교", "중학교"):
             stype = level
         else:
-            stype = level or "미확정"
+            # 마스터 대조에 실패해도 교명 끝이 말해 준다 — '남산초등학교'는 초등학교다
+            # (동명 학교가 여럿이라 어느 곳인지 못 정한 것이지, 학교급을 모르는 것이 아니다)
+            _nm = row.get("학교명") or ""
+            stype = level or next((lv for lv in ("초등학교", "중학교", "고등학교")
+                                   if _nm.endswith(lv)), None) or "미확정"
         s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
         records.append({
             "id": 200000 + s2b_count,
@@ -784,7 +792,7 @@ if os.path.exists("s2b_refined.csv"):
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": None, "ym": ym,
-            "content": f"S2B 학교장터 수의계약 공고({row['구분']})",
+            "content": f"S2B 학교장터 수의계약({row['구분']})",   # 공고가 아니라 체결분 — 계약일·금액이 있다
             "sourceType": "S2B 학교장터",
             "url": "", "confidence": "중",
             "note": "S2B 자동수집분 — 공고 기준(금액·계약업체 미표시)",
@@ -848,7 +856,11 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         elif level in ("초등학교", "중학교"):
             stype = level
         else:
-            stype = level or "미확정"
+            # 마스터 대조에 실패해도 교명 끝이 말해 준다 — '남산초등학교'는 초등학교다
+            # (동명 학교가 여럿이라 어느 곳인지 못 정한 것이지, 학교급을 모르는 것이 아니다)
+            _nm = row.get("학교명") or ""
+            stype = level or next((lv for lv in ("초등학교", "중학교", "고등학교")
+                                   if _nm.endswith(lv)), None) or "미확정"
         amt = int(row["금액"] or 0)
         amt_txt = f"({amt/10000:,.0f}만원)" if amt >= 10000 else (f"({amt:,}원)" if amt else "")
         records.append({

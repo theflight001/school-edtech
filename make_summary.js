@@ -89,7 +89,19 @@ const count = (arr, key) => {
 const BASE = records.filter(r => !r.dup);
 function homeOf(scope) {
   const RF = scope === "product" ? BASE.filter(hasProduct) : BASE;
-  const types = count(RF, r => { const g = recLeaf(r); return g ? PARENT_LABEL[PARENT_OF[g]] : "기타·미분류"; });
+  // 첫 화면 막대도 학교 선택 창과 같은 층으로 — 초·중·고·특수기타
+  // (app.js의 LEVELS와 같은 묶음이다. 여기서 다르게 묶으면 자료가 다 온 뒤 막대가 바뀌어 보인다)
+  const LEVELS = [
+    ["초등학교", ["elem"]], ["중학교", ["mid"]],
+    ["고등학교", ["gen", "voc_v", "voc_m", "spc_sci", "spc_lang", "spc_art", "aut"]],
+    ["특수·기타학교", ["spe", "alt"]],
+  ];
+  const types = count(RF, r => {
+    const g = recLeaf(r);
+    if (!g) return "기타·미분류";
+    const lv = LEVELS.find(x => x[1].includes(g));
+    return lv ? lv[0] : "기타·미분류";
+  });
   const sidos = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const names = tagPairs.map(([t]) => t).filter(t => scope !== "product" || !isGeneric(t));

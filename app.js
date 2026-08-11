@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260811h";
+  s.src = "data_detail.js?b=20260811i";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -143,20 +143,30 @@ for (const e of VENDORS.values()) {           // 가장 많이 쓰인 표기를 
 const VMERGE = new Map();
 {
   const list = [...VENDORS.values()].sort((a, b) => b.n - a.n);
+  // 앞부분이 같은 회사가 둘 이상이면 어디에 붙일지 알 수 없다 —
+  // '아이스크림'은 아이스크림에듀·아이스크림미디어 둘 다일 수 있고,
+  // '지란지교'는 지란지교컴즈·지란지교테크 둘 다일 수 있다. 이런 것은 합치지 않는다.
+  // 9천 곳을 서로 견주면 8천만 번이라 1초가 넘게 걸린다 — 앞부분을 미리 세어 둔다.
+  const prefN = new Map(), prefOne = new Map();
+  for (const v of list) {
+    for (let i = 4; i < v.key.length; i++) {
+      const p = v.key.slice(0, i);
+      const c = (prefN.get(p) || 0) + 1;
+      prefN.set(p, c);
+      if (c === 1) prefOne.set(p, v);
+    }
+  }
   for (const small of list) {
     if (small.key.length < 4) continue;
-    // 앞부분이 같은 회사가 둘 이상이면 어디에 붙일지 알 수 없다 —
-    // '아이스크림'은 아이스크림에듀·아이스크림미디어 둘 다일 수 있고,
-    // '지란지교'는 지란지교컴즈·지란지교테크 둘 다일 수 있다. 이런 것은 합치지 않는다.
-    const cands = list.filter(b => b !== small && b.key.startsWith(small.key));
-    if (cands.length !== 1) continue;
-    const big = cands[0];
-    if (big.n >= small.n * 10 && big.key.length - small.key.length <= 2)
+    if (prefN.get(small.key) !== 1) continue;
+    const big = prefOne.get(small.key);
+    if (big && big.n >= small.n * 10 && big.key.length - small.key.length <= 2)
       VMERGE.set(small.key, big.key);
   }
   // 한 글자만 어긋난 오타 표기도 합친다 ('다이얼커퓨티케이션즈' → '다이얼커뮤니케이션즈').
   // 앞 두 글자는 회사를 가르는 자리라 거기서 어긋나면 합치지 않는다 —
   // '이레·이안·이현·한솔정보통신'은 '이솔정보통신'의 오타가 아니라 저마다 다른 회사다.
+  // 그래서 앞 두 글자가 같은 것끼리만 묶어 견준다(전부 견주면 또 8천만 번이다).
   const diffAt = (a, b) => {
     if (Math.abs(a.length - b.length) > 1) return -1;
     if (a.length === b.length) {
@@ -171,11 +181,19 @@ const VMERGE = new Map();
     }
     return at >= 0 ? at : s2.length - 1;
   };
-  for (const small of list) {
-    if (VMERGE.has(small.key) || small.key.length < 6) continue;
-    const big = list.find(b => b !== small && !VMERGE.has(b.key) && b.key.length >= 6
-      && b.n >= small.n * 10 && diffAt(small.key, b.key) >= 2);
-    if (big) VMERGE.set(small.key, big.key);
+  const bucket = new Map();
+  for (const v of list) {
+    if (v.key.length < 6) continue;
+    const h = v.key.slice(0, 2);
+    (bucket.get(h) || bucket.set(h, []).get(h)).push(v);
+  }
+  for (const group of bucket.values()) {
+    for (const small of group) {
+      if (VMERGE.has(small.key)) continue;
+      const big = group.find(b => b !== small && !VMERGE.has(b.key)
+        && b.n >= small.n * 10 && diffAt(small.key, b.key) >= 2);
+      if (big) VMERGE.set(small.key, big.key);
+    }
   }
   for (const [from, to] of VMERGE) {
     const a = VENDORS.get(from), b = VENDORS.get(to);
@@ -341,6 +359,13 @@ const leafLabel = {}, parentOf = {}, parentLabel = {};
 LEAVES.forEach(l => { leafLabel[l.k] = l.label; parentOf[l.k] = l.parent; });
 PARENTS.forEach(p => parentLabel[p.k] = p.label);
 const leavesOf = p => LEAVES.filter(l => l.parent === p).map(l => l.k);
+// 기록이 어느 학교급인지 — 초·중·고·특수기타 (고교 유형은 한 층 아래다)
+function levelLabelOf(r) {
+  const g = recLeaf(r);
+  if (!g) return "기타·미분류";
+  const lv = LEVELS.find(x => x.leaves.includes(g));
+  return lv ? lv.label : "기타·미분류";
+}
 
 function spcLeaf(name, detail) {
   const d = detail || "";
@@ -662,7 +687,9 @@ function homeView() {
   const BASE = baseRecs().filter(r => !r.dup);
   // 전환에 따라 세 차트가 모두 같은 기준으로 움직인다
   const RF = SCOPE === "product" ? BASE.filter(hasProduct) : BASE;
-  const byType = count(RF, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
+  // 학교 선택 창이 초·중·고로 바뀌었으니 이 막대도 같은 층으로 보인다.
+  // 고등학교는 눌러 들어가면 유형(일반고·특성화고·특목고·자율고)으로 나뉜다.
+  const byType = count(RF, r => levelLabelOf(r));
   const bySido = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const tagNames = tagPairs.map(([t]) => t)
@@ -694,7 +721,7 @@ function homeView() {
     <div class="section-div">통계 결과</div>
     <div class="grid2">
       <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
-      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
     </div>
     <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
@@ -937,6 +964,9 @@ function drillTagView(kind, tag, value) {
     <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
       <div class="meta">학교 ${nSchools}개교 · 기록 ${recs.length}건</div></div>
+    ${kind === "level" && value === "고등학교" ? `<div class="card"><h2>고등학교 유형별<span class="note">막대를 눌러 목록 보기</span></h2>
+      ${barChart(count(recs, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; }),
+                 {drillFn: t => `/drill/group/${encodeURIComponent(t)}`})}</div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
 }
 function codeView(code) {
@@ -962,6 +992,7 @@ function drillView(kind, value) {
   let recs, what;
   if (kind === "tag") { recs = base.filter(r => r.tags.includes(value)); what = tagLabel(value); }
   else if (kind === "group") { recs = base.filter(r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; }); what = `${esc(value)} 계열`; }
+  else if (kind === "level") { recs = base.filter(r => levelLabelOf(r) === value); what = `${esc(value)}`; }
   else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${esc(value)} 지역`; }
   else return `<div class="empty">알 수 없는 조건입니다</div>`;
   const nd = recs.filter(r => !r.dup);

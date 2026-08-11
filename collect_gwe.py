@@ -58,6 +58,9 @@ def main():
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
     ap.add_argument("--keyword-file")
     ap.add_argument("--max-pages", type=int, default=300)
+    # 끝난 검색어를 다시 훑는다. 목록이 최신순이라 한 번 받아 둔 검색어는
+    # 새 계약이 올라와도 영영 받지 못했다 (중복은 seen이 막는다)
+    ap.add_argument("--refresh", action="store_true")
     a = ap.parse_args()
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
@@ -73,7 +76,7 @@ def main():
     print(f"검색어 {len(kws)}종", flush=True)
     kept = req_n = 0
     for kw in kws:
-        if kw in done:
+        if kw in done and not a.refresh:
             continue
         q = safe_kw(kw)
         if not q:
