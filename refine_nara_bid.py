@@ -22,7 +22,7 @@ tags_of, refine_aidt, strip_school = R["tags_of"], R["refine_aidt"], R["strip_sc
 EXCLUDE_EVENT, EDU_SERVICE, HARD_SERVICE = R["EXCLUDE_EVENT"], R["EDU_SERVICE"], R["HARD_SERVICE"]
 SVC_KEEP, SPECIFIC_RULES = R["SVC_KEEP"], R["SPECIFIC_RULES"]
 AIDT_PUBLISHERS, AIDT_TAG, ALIAS = R["AIDT_PUBLISHERS"], R["AIDT_TAG"], R["ALIAS"]
-master_by_name = R["master_by_name"]
+master_by_name, lookup_school = R["master_by_name"], R["lookup_school"]
 SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
 EDTECH_CTX = re.compile(
@@ -44,6 +44,11 @@ def main():
     matched = 0
     rows = list(csv.DictReader(open(SRC, encoding="utf-8-sig")))
     for r in rows:
+        # 공사 발주는 건물·설비를 짓는 계약이다 — 이름에 낀 제품·시설명이 도입 기록으로 잘못 잡힌다
+        # (예: 인천영종고 "지능형과학실, 실내스크린골프연습장, 온니유클래스 구축공사")
+        if (r.get("구분") or "") == "공사":
+            drop["공사 발주"] += 1
+            continue
         name = (r["공고명"] or "").strip()
         school = clean_school(r.get("학교명") or r.get("수요기관"))
         if not SCHOOL_END.search(school):
@@ -69,8 +74,9 @@ def main():
         if "용역" in name and not SVC_KEEP.search(name) and not has:
             drop["일반 용역"] += 1
             continue
-        nm = ALIAS.get(school, school)
-        cands = master_by_name.get(nm, [])
+        # 띄어쓰기·시도 접두어가 다른 표기까지 본다 (build_data.py의 정본 대조 함수)
+        cands = lookup_school(school)
+        nm = cands[0]["name"] if len(cands) == 1 else ALIAS.get(school, school)
         m = cands[0] if len(cands) == 1 else None
         if m:
             matched += 1

@@ -32,6 +32,7 @@ ALIAS = {
     # 2026-07-27 웹 검증 확정분
     "보영여자중학교": "한빛누리중학교",                  # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
     "보영여자고등학교": "한빛누리고등학교",               # 2023.3 교명 변경·남녀공학 전환 (경기 동두천)
+    "화곡보건경영고등학교": "서울홍신고등학교",        # 2024.3 교명 변경 (제보 2026-08-11, 마스터 대조 확인)
     # 2026-08-02 웹 검증 확정분
     "김화공업고등학교": "한국국방과학고등학교",            # 2026.3 마이스터고 전환 (강원 철원)
     "의정부공업고등학교": "한국모빌리티고등학교",          # 2026.3 교명 변경 (경기 의정부)
@@ -56,12 +57,38 @@ SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인�
                "경북": "경상북", "경남": "경상남", "제주": "제주"}
 
 master_by_name = collections.defaultdict(list)
+master_by_nkey = collections.defaultdict(list)
+# 띄어쓰기·기호만 다른 표기를 함께 찾는다 ('경화여자EnglishBusiness고' ↔ '경화여자English Business고')
+def _nkey(n):
+    return re.sub(r"[\s·ㆍ\-_()（）]", "", n or "")
 if os.path.exists(MASTER):
     for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
         master_by_name[s["name"]].append(s)
+        master_by_nkey[_nkey(s["name"])].append(s)
+
+# 시도 접두어가 붙거나 빠진 표기 ('인천재능고' ↔ '재능고', '담방초' ↔ '인천담방초').
+# 다른 시도에 같은 이름이 있을 수 있으니 후보가 딱 하나일 때만 인정한다.
+_SIDO_PFX = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
+             "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]
+def lookup_school(name):
+    """교명 하나로 마스터에서 찾는다 — 정확 일치 → 띄어쓰기 무시 → 시도 접두어 가감"""
+    nm = ALIAS.get(name, name)
+    cands = master_by_name.get(nm, [])
+    if cands:
+        return cands
+    cands = master_by_nkey.get(_nkey(nm), [])
+    if len(cands) == 1:
+        return cands
+    alts = []
+    for p in _SIDO_PFX:
+        alts.append(p + nm)
+        if nm.startswith(p):
+            alts.append(nm[len(p):])
+    hit = [c for a in alts for c in master_by_nkey.get(_nkey(a), [])]
+    return hit if len(hit) == 1 else []
 
 def find_school(name, region):
-    cands = master_by_name.get(ALIAS.get(name, name), [])
+    cands = lookup_school(name)
     if len(cands) == 1:
         return cands[0]
     if len(cands) > 1:
@@ -109,6 +136,12 @@ def resolve_school(row):
                 cands = _by_name[name[len(pre):]]
                 name = name[len(pre):]
                 break
+    if not cands:
+        # 띄어쓰기·기호만 다른 표기 ('경화여자EnglishBusiness고' ↔ '경화여자English Business고')와
+        # 시도 접두어가 반대로 붙은 표기 ('담방초' ↔ '인천담방초') — 후보가 하나일 때만
+        alt = lookup_school(name)
+        if len(alt) == 1:
+            cands, name = alt, alt[0]["name"]
     if len(cands) > 1 and head:
         for kw, pat in SIDO_FROM_ORG:
             if head.startswith(kw):
@@ -202,7 +235,7 @@ SPECIFIC_RULES = [
     ("Mathematica",        r"Math\s?e?matica|매스매티카"),
     ("MATLAB",             r"\bMATLAB\b|매트랩"),
     ("OrCAD",              r"\bOr ?CAD\b|오르캐드"),
-    ("ANSYS",              r"\bANSYS\b|안시스"),
+    ("ANSYS",              r"\bANSYS\b|(?<![가-힣])안시스(?![가-힣])"),   # '보안시스템'·'이안시스테크'에 걸리던 것을 막는다
     ("SolidWorks",         r"Solid ?Works|솔리드웍스"),
     ("AutoCAD",            r"Auto ?CAD|오토캐드"),
     ("Movavi",             r"\bMovavi\b|모바비"),
@@ -732,7 +765,8 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         records.append({
             "id": _idbase + office_count,
             "school": row["학교명"], "type": stype,
-            "region": _sido or row.get("시도") or "미상", "sido": _sido or row.get("시도") or "미상",
+            "region": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),
+            "sido": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": amt or None, "ym": ym,
