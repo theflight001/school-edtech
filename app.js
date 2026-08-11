@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260811f";
+  s.src = "data_detail.js?b=20260811h";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -1010,7 +1010,21 @@ function noteLine(r) {
 
 // 훑을 곳 — 계약명·내용·제품 태그에 업체명까지 넣는다.
 // (업체명이 빠져 있어 '퓨너스'처럼 회사 이름으로는 계약을 찾을 수 없었다)
-const hayOf = r => (r.product + contentOf(r) + r.tags.join("") + (r.vendor || "")).toLowerCase();
+// 칸 사이를 띄워 붙여 놓는다 — 붙이면 없던 낱말이 생긴다
+const hayOf = r => [r.product, contentOf(r), r.tags.join(" "), r.vendor || ""].join(" ").toLowerCase();
+
+// 한글 검색어가 다른 한글에 붙어 있으면 다른 낱말이다.
+// ('러닝스파크'로 찾을 때 'AI로봇러닝스파크 교구'가 걸리던 것 — 수업 이름이 우연히 겹쳤을 뿐이다)
+const WORD_RE = new Map();
+function hasWord(hay, term) {
+  if (!/^[가-힣]{3,}$/.test(term)) return hay.includes(term);
+  let re = WORD_RE.get(term);
+  if (!re) {
+    re = new RegExp("(?<![가-힣])" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    WORD_RE.set(term, re);
+  }
+  return re.test(hay);
+}
 
 // 검색어를 통째로 먼저 찾고, 한 건도 없으면 낱말로 나눠 '모두 든' 기록을 찾는다.
 // ('퓨너스 챗gpt'는 회사가 업체명 칸에, 제품이 태그에 있어 한 덩어리로는 영영 안 걸린다)
@@ -1023,8 +1037,8 @@ function searchHits(q) {
   const match = (r, group) => {
     const body = hayOf(r);
     // 개명 전 이름으로 찾아도 걸리게 한다 (계약서에 적힌 이름은 옛 이름이다)
-    const school = (r.school + (r.origSchool || "")).toLowerCase();
-    return group.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
+    const school = (r.school + " " + (r.origSchool || "")).toLowerCase();
+    return group.some(t => hasWord(body, t) || (hasWord(school, t) && !isProductTerm(t)));
   };
   const terms = queryTerms(q);
   let hit = R.filter(r => match(r, terms));
@@ -1036,7 +1050,9 @@ function searchHits(q) {
   }
   if (hit.length) return {hit, terms, words: null, fixed: null};
   // 오타로 한 건도 못 찾았으면 가장 가까운 이름으로 고쳐서 다시 찾는다 (권하고 끝내지 않는다)
-  const cand = nearNames(q, 0.5)[0];
+  // 어지간히 닮지 않으면 고치지 않는다 — '러닝스파크'를 '젠스파크'로 고쳐 놓으면
+  // 없는 기록을 있는 것처럼 보여 주게 된다. 그런 것은 아래에서 후보로만 권한다.
+  const cand = nearNames(q, 0.62)[0];
   if (cand) {
     const fixedTerms = queryTerms(cand[3].toLowerCase());
     const again = R.filter(r => match(r, fixedTerms));

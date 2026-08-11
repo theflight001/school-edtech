@@ -297,7 +297,9 @@ SPECIFIC_RULES = [
     ("SolidWorks",         r"Solid ?Works|솔리드웍스"),
     ("AutoCAD",            r"Auto ?CAD|오토캐드"),
     ("Movavi",             r"\bMovavi\b|모바비"),
-    ("Unity",              r"\bUnity\b(?! ?교육)|유니티"),
+    # Unity 규칙을 뺀다 — 걸린 24건이 유니티비(TV 셋톱박스)·원두커피 탬핑기·젠더였고
+    # 영문 UNITY 1건도 동아리 이름이었다
+    # ("Unity", r"\bUnity\b(?! ?교육)|유니티"),
     # 스크래치·엔트리는 뺀다. 둘 다 무료 도구라 학교가 사들일 일이 없고,
     # 계약명에 나오는 '스크래치/엔트리'는 산 물건(로봇·교구·교재)이 그 도구와 호환된다는 설명이다.
     # 게다가 한글 '스크래치'는 미술 재료(스크래치북·스크래치 페이퍼)와 수세미(제로스크래치)에도 쓰인다.
@@ -321,7 +323,7 @@ SPECIFIC_RULES = [
     ("뚜루뚜루",           r"뚜루뚜루"),
     ("소프트웨어야 놀자",  r"소프트웨어야\s?놀자"),
     ("곰캠",               r"곰캠"),
-    ("말랑말랑 코딩여행",  r"말랑말랑\s?코딩"),
+    ("말랑말랑 코딩여행",  r"말랑말랑\s?코딩\s?여행"),   # '말랑말랑코딩'만으로는 방과후 과정 이름이다
     ("네오봇",             r"네오봇"),
     ("알티노",             r"알티노"),
     ("파이보츠",           r"파이보츠"),
@@ -334,7 +336,8 @@ SPECIFIC_RULES = [
     ("로보마스터",          r"로보마스터|RoboMaster"),
     ("메타퀘스트",          r"메타 ?퀘스트|Meta ?Quest"),
     ("Canva",              r"\bCanva\b|캔바"),
-    ("Figma",              r"\bFigma\b|피그마"),
+    # 한글 '피그마'는 사쿠라 피그마 드로잉펜이다(73건 전부). 진짜 Figma 계약은 영문을 함께 적는다
+    ("Figma",              r"\bFigma\b"),
     ("Miro",               r"\bMiro\b(?! ?사|타)|미로 ?보드"),
     ("Perplexity",         r"Perplexity|퍼플렉시티"),
     ("Gamma",              r"\bGamma ?(?:Pro|AI)\b|감마 ?(?:프로|AI)"),
@@ -517,6 +520,9 @@ def expand_shorthand(text):
         text = _SHORT_PAIR.sub(lambda m: f"{m.group(1)}{m.group(2)} {m.group(1)}{m.group(3)}", text)
     return text
 
+SW_KW = r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱"
+GENERIC_SET = {t for t, _ in GENERIC_RULES}
+
 def tags_of(name, content):
     hay = expand_shorthand(f"{name} {content}")
     tags = []
@@ -525,7 +531,7 @@ def tags_of(name, content):
         if not re.search(pat, hay, re.I):
             continue
         # "○○(선도학교) 운영/활용/수업용 물품 구입"처럼 브랜드가 맥락으로만 등장하면 그 브랜드 사용 기록이 아님
-        CTX = r"\s*(?:프로그램|플랫폼|집중|선도)*\s*(?:선도학교|운영|연계|활용|수업|주간|에듀테크)"
+        CTX = r"\s*(?:프로그램|플랫폼|집중|선도)*\s*(?:선도학교|운영|연계|활용|수업|주간)"
         ctx = re.search(f"(?:{pat})" + CTX, hay, re.I)
         plain = re.search(f"(?:{pat})" + f"(?!{CTX})", hay, re.I)
         if ctx and not plain:
@@ -533,7 +539,17 @@ def tags_of(name, content):
             continue
         tags.append(t)
     # 특정 제품명이 확인되면 범주 태그는 생략 (제품명 속 단어에 범주 규칙이 오반응하는 것도 방지)
-    SW_KW = r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱"
+    # "영어 튜터로봇 활용 수업에 필요한 영어 전자책 도서관 앱 구입" —
+    # '활용·위한·필요한' 앞은 무엇에 쓰려는지(목적)이고, 뒤가 실제로 산 것이다.
+    # 제품명이 잡힌 계약은 건드리지 않고, 범주만 붙은 계약에서만 뒤쪽을 우선한다.
+    if not tags or all(t in GENERIC_SET for t in tags):
+        mp = re.search(r"(?:활용|위한|필요한)\s*(.+)$", name)
+        if mp and re.search(r"구[입매]|구매|구독|납품|지출|대금", mp.group(1)):
+            ttags = [t for t, pat in GENERIC_RULES if re.search(pat, mp.group(1), re.I)]
+            if not ttags and re.search(SW_KW, mp.group(1), re.I):
+                ttags = ["SW·플랫폼"]          # '… 도서관 앱 구입'처럼 산 것이 소프트웨어일 때
+            if ttags:
+                tags = ttags
     if not tags:
         # "기자재(EDA소프트웨어)"처럼 괄호 안이 실제 구매 대상이면 괄호 내용만으로 분류
         paren = " ".join(re.findall(r"\(([^)]*)\)", name))
@@ -560,7 +576,8 @@ def tags_of(name, content):
         if not re.search(r"ChatGPT|챗GPT|GPT[- ]?[45]|OpenAI", name_wo, re.I):
             tags.remove("ChatGPT")
     if aux and not tags:
-        tags.append("운영 부대구매")
+        tags.append("SW·플랫폼" if re.search(r"서비스|구독|이용권|이용료|사용료|라이선스|라이센스|콘텐츠", name)
+                    else "운영 부대구매")
     # 통화녹음 단말기(알티폰·RT폰)는 '단말시스템'이라는 말 때문에 소프트웨어로 잡혔다 — 기기다
     if not tags and re.search(r"알티폰|\bRT ?폰\b|알티텔레콤|녹음기|녹취기|키폰", name, re.I):
         return ["기기(PC·태블릿·전자칠판 등)"]
