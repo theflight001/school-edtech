@@ -23,6 +23,8 @@ EXCLUDE_EVENT, EDU_SERVICE, HARD_SERVICE = R["EXCLUDE_EVENT"], R["EDU_SERVICE"],
 SVC_KEEP, SPECIFIC_RULES = R["SVC_KEEP"], R["SPECIFIC_RULES"]
 AIDT_PUBLISHERS, AIDT_TAG, ALIAS = R["AIDT_PUBLISHERS"], R["AIDT_TAG"], R["ALIAS"]
 master_by_name, lookup_school = R["master_by_name"], R["lookup_school"]
+resolve_school = R["resolve_school"]
+master_by_code = {c["code"]: c for cs in master_by_name.values() for c in cs}
 SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
 EDTECH_CTX = re.compile(
@@ -75,9 +77,15 @@ def main():
             drop["일반 용역"] += 1
             continue
         # 띄어쓰기·시도 접두어가 다른 표기까지 본다 (build_data.py의 정본 대조 함수)
-        cands = lookup_school(school)
-        nm = cands[0]["name"] if len(cands) == 1 else ALIAS.get(school, school)
-        m = cands[0] if len(cands) == 1 else None
+        # 수요기관(관할 교육청)을 근거로 동명 학교를 가린다 — build_data.py의 정본 대조를 그대로 쓴다
+        rr = resolve_school({"학교명": school, "학교코드": "", "시도": "",
+                             "수요기관": r.get("수요기관") or "", "계약명": name})
+        if rr.get("학교코드"):
+            nm, m = rr["학교명"], master_by_code[rr["학교코드"]]
+        else:
+            cands = lookup_school(school)
+            nm = cands[0]["name"] if len(cands) == 1 else ALIAS.get(school, school)
+            m = cands[0] if len(cands) == 1 else None
         if m:
             matched += 1
         key = hashlib.md5(f"{school}|{name}|{r['공고일']}".encode()).hexdigest()[:12]

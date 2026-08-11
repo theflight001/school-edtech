@@ -136,6 +136,24 @@ def resolve_school(row):
                 cands = _by_name[name[len(pre):]]
                 name = name[len(pre):]
                 break
+    if not cands and len(toks) > 1:
+        # '경상국립대학교 대학 사범대학 부설고등학교' — 붙이면 '대학'이 한 번 더 낀다
+        for k in (2, 3, 4):
+            if len(toks) >= k:
+                cand_name = re.sub(r"대학교대학", "대학교", "".join(toks[-k:]))
+                if _by_name.get(cand_name):
+                    cands, name = _by_name[cand_name], cand_name
+                    break
+    if not cands:
+        # 교명 앞에 시·군 이름이 붙은 표기 ('파주광일중' ↔ '광일중').
+        # 아무 말이나 떼지 않는다 — 수요기관의 교육지원청 이름에 그 지명이 있을 때만.
+        loc = re.sub(r"(교육지원청|교육청)$", "", toks[-2] if len(toks) > 2 else head)
+        loc = re.sub(r"^(경기도|강원특별자치도|강원도|충청남도|충청북도|경상남도|경상북도|"
+                     r"전라남도|전라북도|전북특별자치도|제주특별자치도|제주도)", "", loc)
+        if len(loc) >= 2 and name.startswith(loc) and _by_name.get(name[len(loc):]):
+            c2 = _by_name[name[len(loc):]]
+            if len(c2) == 1:
+                cands, name = c2, name[len(loc):]
     if not cands:
         # 띄어쓰기·기호만 다른 표기 ('경화여자EnglishBusiness고' ↔ '경화여자English Business고')와
         # 시도 접두어가 반대로 붙은 표기 ('담방초' ↔ '인천담방초') — 후보가 하나일 때만
