@@ -946,18 +946,32 @@ function noteLine(r) {
   return parts.length ? `<div class="conf note-x">${esc(parts.join(" · "))}</div>` : "";
 }
 
-function searchView(q) {
-  const terms = queryTerms(q.toLowerCase());
+// 훑을 곳 — 계약명·내용·제품 태그에 업체명까지 넣는다.
+// (업체명이 빠져 있어 '퓨너스'처럼 회사 이름으로는 계약을 찾을 수 없었다)
+const hayOf = r => (r.product + contentOf(r) + r.tags.join("") + (r.vendor || "")).toLowerCase();
+
+// 검색어를 통째로 먼저 찾고, 한 건도 없으면 낱말로 나눠 '모두 든' 기록을 찾는다.
+// ('퓨너스 챗gpt'는 회사가 업체명 칸에, 제품이 태그에 있어 한 덩어리로는 영영 안 걸린다)
+function searchHits(q) {
   // 제품명으로 검색한 경우에는 학교명에만 걸린 기록을 뺀다.
   // ('레고'로 검색하면 한겨'레고'등학교가 딸려 나오던 문제 — 학교명은 부분 일치로 훑기 때문)
   const allTags = new Set();
   for (const r of R) for (const t of r.tags) allTags.add(t.toLowerCase());
   const isProductTerm = t => [...allTags].some(g => g.includes(t));
-  const hit = R.filter(r => {
-    const body = (r.product + contentOf(r) + r.tags.join("")).toLowerCase();
-    const school = r.school.toLowerCase();
-    return terms.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
-  });
+  const match = (r, group) => {
+    const body = hayOf(r), school = r.school.toLowerCase();
+    return group.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
+  };
+  const terms = queryTerms(q);
+  const hit = R.filter(r => match(r, terms));
+  const words = q.split(/\s+/).filter(Boolean);
+  if (hit.length || words.length < 2) return {hit, terms, words: null};
+  const groups = words.map(queryTerms);
+  return {hit: R.filter(r => groups.every(g => match(r, g))), terms, words};
+}
+
+function searchView(q) {
+  const {hit, terms, words} = searchHits(q.toLowerCase());
   const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
   const hidden = hit.length - recs.length;
   // 무상 보급·공동 운영 플랫폼은 검색으로 들어와도 한계 고지가 보여야 한다
@@ -966,7 +980,7 @@ function searchView(q) {
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
     <div class="card">${pagedTable(recs)}</div>`;
