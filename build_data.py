@@ -561,6 +561,9 @@ def tags_of(name, content):
             tags.remove("ChatGPT")
     if aux and not tags:
         tags.append("운영 부대구매")
+    # 통화녹음 단말기(알티폰·RT폰)는 '단말시스템'이라는 말 때문에 소프트웨어로 잡혔다 — 기기다
+    if not tags and re.search(r"알티폰|\bRT ?폰\b|알티텔레콤|녹음기|녹취기|키폰", name, re.I):
+        return ["기기(PC·태블릿·전자칠판 등)"]
     if not tags and re.search(r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I) \
             and not (BOOK_BUY.search(name) and not re.search(r"소프트웨어|S/?W\b|라이선스|라이센스|구독|플랫폼", name, re.I)):
         tags.append("SW·플랫폼")

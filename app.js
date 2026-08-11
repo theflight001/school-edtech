@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260811e";
+  s.src = "data_detail.js?b=20260811f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -980,6 +980,22 @@ function searchHits(q) {
   return {hit: R.filter(r => groups.every(g => match(r, g))), terms, words};
 }
 
+// 한 건도 못 찾았을 때 — 제품·학교·회사 이름 중 비슷한 것을 권한다
+// ('아이포트톨리오'처럼 한 글자만 어긋나도 빈 화면만 보이던 것)
+function nearMisses(q) {
+  const pool = [];
+  for (const [t] of tags) pool.push([tagName(t), `#/tag/${encodeURIComponent(t)}`, "제품"]);
+  for (const v of VENDORS.values()) if (v.n >= 3 && vendorKind(v.key) === "공급 기업")
+    pool.push([v.name, `#/vendor/${encodeURIComponent(v.key)}`, "회사"]);
+  for (const s of schools) pool.push([s, `#/school/${encodeURIComponent(s)}`, "학교"]);
+  const near = pool.map(p => [p, sim(q, p[0])]).filter(([, v]) => v >= 0.4)
+    .sort((a, b) => b[1] - a[1]).slice(0, 6).map(([p]) => p);
+  if (!near.length) return "";
+  return `<div class="card"><h2>혹시 이것을 찾으셨나요</h2>
+    <div class="plist">${near.map(([nm, href, kind]) =>
+      `<a href="${href}">${esc(nm)}<span class="n">${kind}</span></a>`).join("")}</div></div>`;
+}
+
 function searchView(q) {
   const {hit, terms, words} = searchHits(q.toLowerCase());
   const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
@@ -993,6 +1009,7 @@ function searchView(q) {
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
+    ${hit.length ? "" : nearMisses(q)}
     <div class="card">${pagedTable(recs)}</div>`;
 }
 
