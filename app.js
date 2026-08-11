@@ -154,6 +154,29 @@ const VMERGE = new Map();
     if (big.n >= small.n * 10 && big.key.length - small.key.length <= 2)
       VMERGE.set(small.key, big.key);
   }
+  // 한 글자만 어긋난 오타 표기도 합친다 ('다이얼커퓨티케이션즈' → '다이얼커뮤니케이션즈').
+  // 앞 두 글자는 회사를 가르는 자리라 거기서 어긋나면 합치지 않는다 —
+  // '이레·이안·이현·한솔정보통신'은 '이솔정보통신'의 오타가 아니라 저마다 다른 회사다.
+  const diffAt = (a, b) => {
+    if (Math.abs(a.length - b.length) > 1) return -1;
+    if (a.length === b.length) {
+      let at = -1;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { if (at >= 0) return -1; at = i; }
+      return at;
+    }
+    const [s1, s2] = a.length < b.length ? [a, b] : [b, a];
+    let i = 0, j = 0, at = -1;
+    while (i < s1.length && j < s2.length) {
+      if (s1[i] === s2[j]) { i++; j++; } else { if (at >= 0) return -1; at = j; j++; }
+    }
+    return at >= 0 ? at : s2.length - 1;
+  };
+  for (const small of list) {
+    if (VMERGE.has(small.key) || small.key.length < 6) continue;
+    const big = list.find(b => b !== small && !VMERGE.has(b.key) && b.key.length >= 6
+      && b.n >= small.n * 10 && diffAt(small.key, b.key) >= 2);
+    if (big) VMERGE.set(small.key, big.key);
+  }
   for (const [from, to] of VMERGE) {
     const a = VENDORS.get(from), b = VENDORS.get(to);
     if (!a || !b) continue;
@@ -697,6 +720,13 @@ function notFound(what, name, cands, hrefOf) {
       <a href="#/regions">지역별</a>에서 찾아보실 수 있습니다.</p>
       <p>있어야 할 기록이 없다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
 }
+// 받침이 있으면 '으로', 없거나 ㄹ이면 '로' (아이포트폴리오로 / 클래스카드로)
+function euRo(w) {
+  const c = (w || "").trim().slice(-1).charCodeAt(0);
+  if (isNaN(c) || c < 0xac00 || c > 0xd7a3) return "로";
+  const t = (c - 0xac00) % 28;
+  return (t === 0 || t === 8) ? "로" : "으로";
+}
 // 받침이 있으면 '을', 없으면 '를' (학교를 / 제품을)
 function eulReul(w) {
   const c = (w || "").trim().slice(-1).charCodeAt(0);
@@ -846,11 +876,13 @@ function vendorView(key) {
         여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
     </div>
     <div class="grid2">
-      <div class="card"><h2>제품·제품군<span class="note">막대를 눌러 제품 화면으로</span></h2>
-        ${barChart(byTag, {linkFn: t => `#/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
-      <div class="card"><h2>계열별<span class="note">이 업체와 거래한 학교</span></h2>${barChart(byType)}</div>
+      <div class="card"><h2>제품·제품군<span class="note">막대를 눌러 이 회사가 판 기록 보기</span></h2>
+        ${barChart(byTag, {drillFn: t => `/drill2/vt/${encodeURIComponent(key)}/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
+      <div class="card"><h2>계열별<span class="note">이 업체와 거래한 학교</span></h2>
+        ${barChart(byType, {drillFn: t => `/drill2/vy/${encodeURIComponent(key)}/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2>지역별</h2>${barChart(bySido)}</div>
+    <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>
+      ${barChart(bySido, {drillFn: t => `/drill2/vs/${encodeURIComponent(key)}/${encodeURIComponent(t)}`})}</div>
     <div class="card"><h2>거래 기록</h2>${pagedTable(recs)}</div>`;
 }
 
@@ -876,6 +908,28 @@ function vendorsView() {
 }
 
 function drillTagView(kind, tag, value) {
+  // 회사 화면의 막대 — 그 회사가 그 제품(지역·계열)으로 판 기록만 보여 준다.
+  // 제품 화면으로 보내면 전국 것이 다 나와 '이 회사가 무엇을 팔았나'를 잃는다.
+  if (kind === "vt" || kind === "vs" || kind === "vy") {
+    const e = VENDORS.get(tag);
+    const nm = e ? e.name : tag;
+    const recs = vendorRecs(tag).filter(r =>
+      kind === "vt" ? r.tags.includes(value)
+      : kind === "vs" ? r.sido === value
+      : (r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; })(r));
+    if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
+    const nd = recs.filter(r => !r.dup);
+    return `
+      <div class="crumb"><a href="#/">홈</a> › <a href="#/vendors">공급 기업</a> ›
+        <a href="#/vendor/${encodeURIComponent(tag)}">${esc(nm)}</a> ›
+        ${kind === "vt" ? "제품" : kind === "vs" ? "지역" : "계열"} 상세</div>
+      <div class="pagehead"><h2>${esc(nm)} · ${kind === "vt" ? tagLabel(value) : esc(value)}</h2>
+        <div class="meta">이 회사가 납품한 기록만 봅니다 ·
+          학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 기록 ${nd.length.toLocaleString()}건
+          ${kind === "vt" ? `<div class="conf"><a href="#/tag/${encodeURIComponent(value)}">${esc(tagName(value))} 전체 보기(다른 회사 포함) ›</a></div>` : ""}
+        </div></div>
+      <div class="card">${pagedTable(recs)}</div>`;
+  }
   const recs = R.filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
@@ -973,23 +1027,44 @@ function searchHits(q) {
     return group.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
   };
   const terms = queryTerms(q);
-  const hit = R.filter(r => match(r, terms));
+  let hit = R.filter(r => match(r, terms));
   const words = q.split(/\s+/).filter(Boolean);
-  if (hit.length || words.length < 2) return {hit, terms, words: null};
-  const groups = words.map(queryTerms);
-  return {hit: R.filter(r => groups.every(g => match(r, g))), terms, words};
+  if (!hit.length && words.length > 1) {
+    const groups = words.map(queryTerms);
+    hit = R.filter(r => groups.every(g => match(r, g)));
+    if (hit.length) return {hit, terms, words, fixed: null};
+  }
+  if (hit.length) return {hit, terms, words: null, fixed: null};
+  // 오타로 한 건도 못 찾았으면 가장 가까운 이름으로 고쳐서 다시 찾는다 (권하고 끝내지 않는다)
+  const cand = nearNames(q, 0.5)[0];
+  if (cand) {
+    const fixedTerms = queryTerms(cand[3].toLowerCase());
+    const again = R.filter(r => match(r, fixedTerms));
+    if (again.length) return {hit: again, terms, words: null, fixed: cand};
+  }
+  return {hit, terms, words: null, fixed: null};
 }
 
-// 한 건도 못 찾았을 때 — 제품·학교·회사 이름 중 비슷한 것을 권한다
+// 오타로 한 건도 못 찾았을 때 기댈 이름 목록 — 제품·회사·학교
 // ('아이포트톨리오'처럼 한 글자만 어긋나도 빈 화면만 보이던 것)
-function nearMisses(q) {
-  const pool = [];
-  for (const [t] of tags) pool.push([tagName(t), `#/tag/${encodeURIComponent(t)}`, "제품"]);
+let NAME_POOL = null;
+function namePool() {
+  if (NAME_POOL) return NAME_POOL;
+  NAME_POOL = [];
+  // 네 번째 칸은 견주고 다시 찾을 때 쓰는 이름 — 회사는 법인 표기를 뺀 알맹이로 견준다
+  // ('주식회사 아이포트폴리오'를 통째로 견주면 '아이포트톨리오'와 덜 닮아 보인다)
+  const core = n => (n || "").replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|유한책임회사|\(재\)|재단법인|\(사\)|사단법인/g, "").trim();
+  for (const [t] of tags) NAME_POOL.push([tagName(t), `#/tag/${encodeURIComponent(t)}`, "제품", tagName(t)]);
   for (const v of VENDORS.values()) if (v.n >= 3 && vendorKind(v.key) === "공급 기업")
-    pool.push([v.name, `#/vendor/${encodeURIComponent(v.key)}`, "회사"]);
-  for (const s of schools) pool.push([s, `#/school/${encodeURIComponent(s)}`, "학교"]);
-  const near = pool.map(p => [p, sim(q, p[0])]).filter(([, v]) => v >= 0.4)
-    .sort((a, b) => b[1] - a[1]).slice(0, 6).map(([p]) => p);
+    NAME_POOL.push([v.name, `#/vendor/${encodeURIComponent(v.key)}`, "회사", core(v.name) || v.name]);
+  for (const s of schools) NAME_POOL.push([s, `#/school/${encodeURIComponent(s)}`, "학교", s]);
+  return NAME_POOL;
+}
+const nearNames = (q, min) => namePool().map(p => [p, sim(q, p[3])])
+  .filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1]).map(([p]) => p);
+
+function nearMisses(q) {
+  const near = nearNames(q, 0.4).slice(0, 6);
   if (!near.length) return "";
   return `<div class="card"><h2>혹시 이것을 찾으셨나요</h2>
     <div class="plist">${near.map(([nm, href, kind]) =>
@@ -997,7 +1072,7 @@ function nearMisses(q) {
 }
 
 function searchView(q) {
-  const {hit, terms, words} = searchHits(q.toLowerCase());
+  const {hit, terms, words, fixed} = searchHits(q.toLowerCase());
   const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
   const hidden = hit.length - recs.length;
   // 무상 보급·공동 운영 플랫폼은 검색으로 들어와도 한계 고지가 보여야 한다
@@ -1006,7 +1081,7 @@ function searchView(q) {
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
     ${hit.length ? "" : nearMisses(q)}
