@@ -691,6 +691,11 @@ function homeView() {
   // 고등학교는 눌러 들어가면 유형(일반고·특성화고·특목고·자율고)으로 나뉜다.
   const byType = count(RF, r => levelLabelOf(r));
   const bySido = count(RF, r => r.sido).slice(0, 12);
+  // 공급 기업 — 온라인몰·조달 대행·제조사는 만든 곳이 아니라 사는 창구라 뺀다
+  const vcnt = new Map();
+  for (const r of RF) { const k = vkey(r.vendor); if (!k || vendorKind(k) !== "공급 기업") continue;
+    (vcnt.get(k) || vcnt.set(k, new Set()).get(k)).add(r.school); }
+  const topVendors = [...vcnt].map(([k, s]) => [k, s.size]).sort((a, b) => b[1] - a[1]).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const tagNames = tagPairs.map(([t]) => t)
     .filter(t => SCOPE !== "product" || !GENERIC_TAGS.has(t));
@@ -721,9 +726,12 @@ function homeView() {
     <div class="section-div">통계 결과</div>
     <div class="grid2">
       <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
-      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2><a class="h2link" href="#/vendors">공급 기업</a><span class="note">막대를 눌러 그 회사가 판 것 보기</span></h2>${barChart(topVendors, {drillFn: k => `/vendor/${encodeURIComponent(k)}`, labelFn: k => esc((VENDORS.get(k) || {}).name || k)})}</div>
     </div>
-    <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
+    <div class="grid2">
+      <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
+    </div>`;
 }
 // 학교 화면의 칩은 그 학교 기록을 걸러 준다 — 누를 때마다 켜고 끈다
 // (전국 제품 화면으로 넘어가면 지금 보던 학교를 잃는다)

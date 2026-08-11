@@ -320,7 +320,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     <div class="navlinks">
       <a href="#/about">데이터 안내</a>
       <a href="#/products">제품 전체 보기</a>
-      <a href="#/vendors">공급 기업</a>
       <a href="#/contact">정정 요청</a>
     </div>
   </div>
@@ -359,7 +358,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data_summary.js?b=20260811i"></script>
+<script src="data_summary.js?b=20260811j"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -393,9 +392,12 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
       '<div class="section-div">통계 결과</div>' +
       '<div class="grid2">' +
         '<div class="card"><h2>제품별 도입 학교 수<span class="note">막대를 눌러 학교 목록 보기</span></h2>' + bars(h.tags) + "</div>" +
-        '<div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.types) + "</div>" +
+        '<div class="card"><h2>공급 기업<span class="note">막대를 눌러 그 회사가 판 것 보기</span></h2>' + bars(h.vendors || []) + "</div>" +
       "</div>" +
-      '<div class="card"><h2>지역별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.sidos) + "</div>";
+      '<div class="grid2">' +
+        '<div class="card"><h2>지역별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.sidos) + "</div>" +
+        '<div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.types) + "</div>" +
+      "</div>";
   }
   // 그림이 한 번 나온 다음에 원자료 → 화면 코드 순서로 읽는다
   var load = function (src, cb) {
@@ -408,7 +410,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260811i", function () { load("app.js?b=20260811i"); });
+    load("data.js?b=20260811i", function () { load("app.js?b=20260811j"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

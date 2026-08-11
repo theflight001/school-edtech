@@ -107,7 +107,25 @@ function homeOf(scope) {
   const names = tagPairs.map(([t]) => t).filter(t => scope !== "product" || !isGeneric(t));
   const schoolsOf = t => new Set(RF.filter(r => r.tags.includes(t)).map(r => r.school)).size;
   const tags = names.slice(0, 12).map(t => [t, schoolsOf(t)]).sort((a, b) => b[1] - a[1]);
-  return {tags, types, sidos, total: RF.length};
+  // 공급 기업 상위 12곳 — 온라인몰·조달 대행·제조사는 만든 곳이 아니라 사는 창구라 뺀다
+  // (app.js의 CHANNEL/MAKER와 같은 기준. 여기서 다르면 자료가 온 뒤 막대가 바뀌어 보인다)
+  const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|이웃닷컴|다나와|하이마트/;
+  const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
+  const vnorm = n => (n || "")
+    .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")
+    .replace(/[（(][^)）]*[)）]/g, "").replace(/[\s.,·\-_*/&'"]+/g, "").toLowerCase().trim();
+  const vm = new Map();
+  for (const r of RF) {
+    const raw = r.vendor || "";
+    const k = vnorm(raw);
+    if (!k || CHANNEL.test(k) || MAKER.test(k)) continue;
+    let e = vm.get(k);
+    if (!e) { e = {name: raw, sch: new Set()}; vm.set(k, e); }
+    e.sch.add(r.school);
+  }
+  const vendors = [...vm.values()].map(e => [e.name, e.sch.size])
+    .sort((a, b) => b[1] - a[1]).slice(0, 12);
+  return {tags, types, sidos, vendors, total: RF.length};
 }
 
 const out = {
