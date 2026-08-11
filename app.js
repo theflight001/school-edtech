@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260811c";
+  s.src = "data_detail.js?b=20260811d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -256,7 +256,7 @@ function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   return `<div class="tablewrap"><table><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
-      ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}</div></td>` : ""}
+      ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
@@ -714,10 +714,17 @@ function sim(a, b) {
 }
 
 function schoolView(name) {
-  const all = R.filter(r => r.school === name);
-  if (!all.length) return notFound("학교", name, schools, c => `#/school/${encodeURIComponent(c)}`);
+  let all = R.filter(r => r.school === name);
+  if (!all.length) {
+    // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
+    const old = R.find(r => r.origSchool === name);
+    if (old) return schoolView(old.school);
+    return notFound("학교", name, schools, c => `#/school/${encodeURIComponent(c)}`);
+  }
   const info = fillDetail([all[0]])[0];
   const schoolTags = uniq(all.flatMap(r => r.tags));
+  // 개명 전 이름으로 계약된 기록 — 어느 이름으로 몇 건인지 밝힌다
+  const oldNames = count(all.filter(r => r.origSchool), r => r.origSchool);
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
   const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
@@ -725,6 +732,7 @@ function schoolView(name) {
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
         ${info.schoolCode ? `<div class="conf">${[info.hsType, info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
+        ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
           onclick="setSchoolTag('${t.replace(/'/g, "\\'")}')"
           title="${SCHOOL_TAG === t ? "누르면 전체 기록으로 돌아갑니다" : "이 학교의 해당 기록만 봅니다"}">${tagLabel(t)}</button>`).join("")}</div>
@@ -959,7 +967,9 @@ function searchHits(q) {
   for (const r of R) for (const t of r.tags) allTags.add(t.toLowerCase());
   const isProductTerm = t => [...allTags].some(g => g.includes(t));
   const match = (r, group) => {
-    const body = hayOf(r), school = r.school.toLowerCase();
+    const body = hayOf(r);
+    // 개명 전 이름으로 찾아도 걸리게 한다 (계약서에 적힌 이름은 옛 이름이다)
+    const school = (r.school + (r.origSchool || "")).toLowerCase();
     return group.some(t => body.includes(t) || (school.includes(t) && !isProductTerm(t)));
   };
   const terms = queryTerms(q);
