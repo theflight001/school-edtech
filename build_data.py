@@ -233,7 +233,10 @@ SPECIFIC_RULES = [
     ("Replit",             r"\bReplit\b"),   # 한글 '리플릿'은 인쇄물을 뜻해 오탐
     ("카피킬러",            r"카피킬러|무하유"),
     ("GPT킬러",            r"GPT ?킬러"),
-    ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|프리미어"),
+    # '프리미어'만으로는 안 된다 — 프리미어 야구대회·프리미어 물티슈·아이엠스쿨 프리미어(요금제)·
+    # 카훗 프리미어 포 티처스가 걸린다. Premiere Pro를 가리킬 때만 인정한다.
+    ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|일러스트레이터|Illustrator|"
+                            r"\bPremiere\b|프리미어 ?프로"),
     ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:]? ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
     ("구름EDU",            r"구름 ?EDU|goorm|구름에듀"),

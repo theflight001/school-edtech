@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260812a";
+  s.src = "data_detail.js?b=20260813a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -306,31 +306,37 @@ function recordTable(recs, {showSchool = true} = {}) {
 }
 
 // ---- 기간 필터 ----
-let PF = "", PT = "";  // "YYYY-MM"
+// 자료는 2020년까지 있지만 기본으로는 2023년부터 본다.
+// 2020~2022년은 계약명에 제품 이름이 잘 안 적히던 시기라(제품군만 붙는 비율 76%)
+// 기본에 섞으면 지금 그림이 희석된다. 넓혀 보고 싶은 사람만 당겨 오게 한다.
+const BASE_FROM = "2023-01";
+let PF = BASE_FROM, PT = "";  // "YYYY-MM"
 window.setPF = v => { PF = v; render(); };
 window.setPT = v => { PT = v; render(); };
-window.clearPeriod = () => { PF = ""; PT = ""; render(); };
+window.clearPeriod = () => { PF = BASE_FROM; PT = ""; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
-const YM_MIN = 202301, YM_MAX = 202607;
+const YM_MIN = 202001, YM_MAX = 202607;
 let pkS = null, pkE = null, pkBase = 2025;
+// 기본(2023년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
+const periodOn = () => (PF !== BASE_FROM) || !!PT;
 const ymStr = ym => `${Math.floor(ym / 100)}-${String(ym % 100).padStart(2, "0")}`;
 const ymKo = ym => `${Math.floor(ym / 100)}.${String(ym % 100).padStart(2, "0")}`;
 window.openPicker = () => {
   pkS = ymInt(PF); pkE = ymInt(PT);
-  pkBase = pkS ? Math.min(Math.max(Math.floor(pkS / 100), 2023), 2025) : 2025;
+  pkBase = pkS ? Math.min(Math.max(Math.floor(pkS / 100), 2020), 2025) : 2025;
   drawPicker();
 };
 window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = ""; };
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("pickerRoot").innerHTML) closePicker();
 });
-window.pkShift = d => { pkBase = Math.min(2025, Math.max(2023, pkBase + d)); drawPicker(); };
+window.pkShift = d => { pkBase = Math.min(2025, Math.max(2020, pkBase + d)); drawPicker(); };
 window.pkPick = ym => {
   if (pkS !== null && pkE === null && ym >= pkS) pkE = ym;
   else { pkS = ym; pkE = null; }
   drawPicker();
 };
-window.pkAll = () => { PF = ""; PT = ""; closePicker(); render(); };
+window.pkAll = () => { PF = ""; PT = ""; closePicker(); render(); };   // 2020년까지 통째로
 window.pkApply = () => {
   if (pkS === null) return;
   PF = ymStr(pkS); PT = ymStr(pkE !== null ? pkE : pkS);
@@ -611,9 +617,11 @@ function drawPicker() {
         </div>
         <div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
         <div class="pk-foot">
-          <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2023.01 ~ 2026.07)</span>
+          <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2020.01 ~ 2026.07) ·
+            2022년 이전은 계약명에 제품 이름이 잘 적히지 않아 제품군으로만 남은 기록이 많습니다</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="pkAll()">전체 기간</button>
+            <button class="pk-btn" onclick="pkAll()" title="2020년 1월부터 모두 봅니다">2020년까지 전체</button>
+            <button class="pk-btn" onclick="clearPeriod();closePicker()">기본(2023년~)</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
           </span>
@@ -670,12 +678,12 @@ function setScope(v) {
 
 // 조사 기간·지역·계열 조건은 홈뿐 아니라 전체 목록 화면에서도 그대로 이어져야 한다
 function baseRecs() {
-  const anyF = PF || PT || SF.size || RG.size || ES.size;
+  const anyF = (PF && PF !== BASE_FROM) || PT || SF.size || RG.size || ES.size || PF === "";
   return anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r)) : R;
 }
 function filterNote() {
   const bits = [];
-  if (PF || PT) bits.push(`조사 기간 ${(PF || "2023-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
+  if (periodOn()) bits.push(`조사 기간 ${(PF || "2020-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
@@ -684,7 +692,7 @@ function filterNote() {
 }
 
 function homeView() {
-  const active = PF || PT;
+  const active = periodOn();
   const scActive = SF.size > 0 || ES.size > 0;
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
@@ -712,13 +720,13 @@ function homeView() {
         <div class="l">검색 가능 학교 (${ES.size ? `${sfLabel()}·${esLabel()}` : sfLabel()}) <span class="hint">변경 ▾</span></div>
       </div>
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
-        <div class="v">${active ? `${PF || "2023-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
+        <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
     ${anyF ? `<div class="fnote">
       <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${SF.size ? ` · 계열: ${sfLabel()}` : ""}${ES.size ? ` · 설립 주체: ${esLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
-      ${active ? `<button onclick="clearPeriod()">전체 기간</button>` : ""}
+      ${active ? `<button onclick="clearPeriod()">기본 기간(2023년~)</button>` : ""}
       ${scActive ? `<button onclick="scAll()">전체 학교</button>` : ""}
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
@@ -1002,7 +1010,7 @@ function drillView(kind, value) {
   const nd = recs.filter(r => !r.dup);
   const nSchools = uniq(nd.map(r => r.school)).length;
   const conds = [];
-  if (PF || PT) conds.push(`기간 ${(PF || "2023-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
+  if (periodOn()) conds.push(`기간 ${(PF || "2020-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
   if (SF.size) conds.push(`계열 ${sfLabel()}`);
   if (ES.size) conds.push(`설립 주체 ${esLabel()}`);
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
