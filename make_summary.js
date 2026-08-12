@@ -98,9 +98,13 @@ function homeOf(scope) {
   ];
   const types = count(RF, r => {
     const g = recLeaf(r);
-    if (!g) return "기타·미분류";
-    const lv = LEVELS.find(x => x[1].includes(g));
-    return lv ? lv[0] : "기타·미분류";
+    if (g) { const lv = LEVELS.find(x => x[1].includes(g)); if (lv) return lv[0]; }
+    // 고교 유형을 모를 뿐 학교급은 교명이 말해 준다 (app.js의 levelLabelOf와 같은 기준)
+    const t = r.type || "", sc = r.school || "";
+    if (/고등학교|고$/.test(t) || /고등학교$/.test(sc)) return "고등학교";
+    if (/중학교/.test(t) || /중학교$/.test(sc)) return "중학교";
+    if (/초등학교/.test(t) || /초등학교$/.test(sc)) return "초등학교";
+    return "기타·미분류";
   });
   const sidos = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);

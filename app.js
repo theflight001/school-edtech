@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260811i";
+  s.src = "data_detail.js?b=20260812a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -362,9 +362,13 @@ const leavesOf = p => LEAVES.filter(l => l.parent === p).map(l => l.k);
 // 기록이 어느 학교급인지 — 초·중·고·특수기타 (고교 유형은 한 층 아래다)
 function levelLabelOf(r) {
   const g = recLeaf(r);
-  if (!g) return "기타·미분류";
-  const lv = LEVELS.find(x => x.leaves.includes(g));
-  return lv ? lv.label : "기타·미분류";
+  if (g) { const lv = LEVELS.find(x => x.leaves.includes(g)); if (lv) return lv.label; }
+  // 고교 유형을 모를 뿐 학교급은 교명이 말해 준다 — '○○고등학교'를 기타로 두지 않는다
+  const t = r.type || "", s = r.school || "";
+  if (/고등학교|고$/.test(t) || /고등학교$/.test(s)) return "고등학교";
+  if (/중학교/.test(t) || /중학교$/.test(s)) return "중학교";
+  if (/초등학교/.test(t) || /초등학교$/.test(s)) return "초등학교";
+  return "기타·미분류";     // 남는 것은 '전 학교급'·'다수 학교' 같은 집합 항목뿐이다
 }
 
 function spcLeaf(name, detail) {

@@ -242,7 +242,6 @@ SPECIFIC_RULES = [
     ("Google Workspace",   r"구글 ?워크스페이스|Google Workspace|구글 ?클래스룸|Google Classroom"),
     ("Notion",             r"노션|Notion"),
     ("Zoom",               r"\bZoom\b|줌 ?프로"),
-    ("Canva",              r"Canva|캔바"),
     ("미리캔버스",          r"미리캔버스"),
     ("Padlet",             r"Padlet|패들렛"),
     ("하이러닝",            r"하이러닝|Hi-?Learning"),
@@ -257,6 +256,10 @@ SPECIFIC_RULES = [
                             r"마인드스톰|Mindstorm|\bEV3\b|WeDo|위두 ?2|레고 ?[Ww]e[Dd]o|"
                             r"레고(?=[^가-힣]{0,8}(?:코딩|로봇|프로그래밍|교육용|SW|AI|인공지능))|"
                             r"(?:코딩|로봇|프로그래밍)[^가-힣]{0,8}레고"),
+    # 낱말 '한글'만으로는 안 된다 — 한글날·토도한글·그림한글 받아쓰기가 걸린다.
+    # 회사·제품 이름이거나 MS와 나란히 적힌 소프트웨어 계약일 때만 인정한다.
+    ("한컴오피스",          r"한컴 ?오피스|한글과 ?컴퓨터|아래아 ?한글|\bHWP\b|한/글|"
+                            r"한글\s*[,·/]\s*MS|MS\s*[,·/]\s*한글|한글\s*[,·/]\s*마이크로소프트"),
     ("듀오링고",            r"듀오 ?링고|듀얼 ?링고|\bDuolingo\b"),
     ("코디마스터",          r"코디마스터"),
     # 아이스크림 계열은 제품이 여럿이라 이름이 적힌 것만 각각 잡는다.
@@ -335,7 +338,7 @@ SPECIFIC_RULES = [
     ("엠타이니",           r"엠타이니"),
     ("로보마스터",          r"로보마스터|RoboMaster"),
     ("메타퀘스트",          r"메타 ?퀘스트|Meta ?Quest"),
-    ("Canva",              r"\bCanva\b|캔바"),
+    ("Canva",              r"\bCanva\b|캔바(?!스)"),   # '캔바스'(화판)·'Miri Canvas'에 걸리던 것을 막는다
     # 한글 '피그마'는 사쿠라 피그마 드로잉펜이다(73건 전부). 진짜 Figma 계약은 영문을 함께 적는다
     ("Figma",              r"\bFigma\b"),
     ("Miro",               r"\bMiro\b(?! ?사|타)|미로 ?보드"),
@@ -537,7 +540,8 @@ def tags_of(name, content):
         if ctx and not plain:
             aux = True
             continue
-        tags.append(t)
+        if t not in tags:
+            tags.append(t)
     # 특정 제품명이 확인되면 범주 태그는 생략 (제품명 속 단어에 범주 규칙이 오반응하는 것도 방지)
     # "영어 튜터로봇 활용 수업에 필요한 영어 전자책 도서관 앱 구입" —
     # '활용·위한·필요한' 앞은 무엇에 쓰려는지(목적)이고, 뒤가 실제로 산 것이다.
