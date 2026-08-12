@@ -392,12 +392,9 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
       '<div class="section-div">통계 결과</div>' +
       '<div class="grid2">' +
         '<div class="card"><h2>제품별 도입 학교 수<span class="note">막대를 눌러 학교 목록 보기</span></h2>' + bars(h.tags) + "</div>" +
-        '<div class="card"><h2>공급 기업<span class="note">막대를 눌러 그 회사가 판 것 보기</span></h2>' + bars(h.vendors || []) + "</div>" +
-      "</div>" +
-      '<div class="grid2">' +
-        '<div class="card"><h2>지역별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.sidos) + "</div>" +
         '<div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.types) + "</div>" +
-      "</div>";
+      "</div>" +
+      '<div class="card"><h2>지역별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>' + bars(h.sidos) + "</div>";
   }
   // 그림이 한 번 나온 다음에 원자료 → 화면 코드 순서로 읽는다
   var load = function (src, cb) {
@@ -410,7 +407,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260811i", function () { load("app.js?b=20260811j"); });
+    load("data.js?b=20260811i", function () { load("app.js?b=20260811k"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
