@@ -886,6 +886,33 @@ function noProcListView() {
     </tbody></table></div></div>`;
 }
 
+// 제품별 검색수 순위 — 한 제품의 숫자만 보면 많은지 적은지 알 수 없다.
+// 조달 기록이 있는 제품과 없는 제품을 한 표에 놓아 견줄 수 있게 한다.
+function bySearchView() {
+  const schoolsOf = t => uniq(R.filter(r => !r.dup && r.tags.includes(t)).map(r => r.school)).length;
+  const rows = Object.keys(OUTSIDE).map(n => {
+    const o = OUTSIDE[n];
+    return {n, q: (o.q && o.q.n) || 0, inst: (o.app && o.app.inst) || "",
+            sch: NOPROC[n] ? -1 : schoolsOf(n), on: (o.q && o.q.on) || (o.app && o.app.on) || ""};
+  }).filter(r => r.q > 0).sort((a, b) => b.q - a.q);
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 제품별 검색수</div>
+    <div class="pagehead"><h2>제품별 검색수</h2>
+      <div class="sub2">네이버 검색광고 키워드도구의 <b>최근 한 달 검색수</b>(PC+모바일)입니다 · ${rows.length.toLocaleString()}종<br>
+        조달 기록과는 다른 잣대라 도입 학교 수와 견주면 안 됩니다.
+        이름이 흔한 제품은 다른 검색이 섞입니다${rows[0] && rows[0].on ? ` · ${esc(rows[0].on)} 확인` : ""}</div></div>
+    <div class="card"><div class="tablewrap"><table><thead><tr>
+      <th>제품</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(tagName(r.n))}</a></td>
+        <td style="white-space:nowrap"><b>${r.q.toLocaleString()}</b></td>
+        <td style="white-space:nowrap">${esc(r.inst || "—")}</td>
+        <td style="white-space:nowrap">${r.sch < 0
+          ? `<span class="conf">조달 기록 없음</span>`
+          : r.sch.toLocaleString() + "개교"}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
   if (!recs.length && NOPROC[tag]) return noProcView(tag);
@@ -917,17 +944,19 @@ function outsideCard(tag) {
   const o = OUTSIDE[tag];
   if (!o) return "";
   const bits = [];
-  if (o.q) bits.push(`<b>월 검색 ${o.q.n.toLocaleString()}회</b><span class="conf"> · 네이버 ‘${esc(o.q.word)}’ 기준</span>`);
+  if (o.q) bits.push(`<a href="#/by-search"><b>월 검색 ${o.q.n.toLocaleString()}회</b></a>`
+    + `<span class="conf"> · 네이버 검색광고 최근 한 달 · 검색어 ‘${esc(o.q.word)}’ · 누르면 제품별 순위</span>`);
   if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b><span class="conf"> · ${esc(o.app.n)}`
     + `${o.app.rate ? ` · 평점 ${esc(o.app.rate)}` : ""}${o.app.rev ? ` · 리뷰 ${Number(o.app.rev).toLocaleString()}` : ""}`
     + `${o.app.by ? ` · ${esc(o.app.by)}` : ""}</span>`);
   if (!bits.length) return "";
   const on = (o.q && o.q.on) || (o.app && o.app.on) || "";
-  return `<div class="card"><h2>학교 밖 쓰임새<span class="note">조달 기록과 다른 잣대입니다</span></h2>
+  return `<div class="card"><h2>검색·앱 지표<span class="note">조달 기록과 다른 잣대입니다</span></h2>
     <div class="outside">${bits.map(b => `<div>${b}</div>`).join("")}</div>
-    <p class="cv">개인이 내려받거나 학교 밖에서 쓰는 것은 조달 기록에 남지 않습니다.
-      위 숫자는 그 쓰임새를 가늠하려고 따로 모은 것이라 <b>도입 학교 수와 견주면 안 됩니다</b>.
-      학생·교사 이용인지 가릴 수 없고, 이름이 흔하면 다른 검색이 섞입니다${on ? ` · ${esc(on)} 확인` : ""}.</p></div>`;
+    <p class="cv">조달 기록이 담지 못하는 쓰임새를 가늠하려고 따로 모은 값입니다.
+      학교 안팎을 가리지 않고, 누가 썼는지도 알 수 없어
+      <b style="display:inline;color:inherit">도입 학교 수와 견주면 안 됩니다</b>.
+      이름이 흔한 제품은 다른 검색이 섞입니다${on ? ` · ${esc(on)} 확인` : ""}.</p></div>`;
 }
 
 function vendorsOfTag(recs) {
@@ -1478,6 +1507,7 @@ function render() {
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "products") view.innerHTML = productsView();
   else if (kind === "no-record") view.innerHTML = noProcListView();
+  else if (kind === "by-search") view.innerHTML = bySearchView();
   else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "vendor") view.innerHTML = vendorView(arg);
   else if (kind === "vendors") view.innerHTML = vendorsView();
