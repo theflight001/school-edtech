@@ -1356,12 +1356,31 @@ if os.path.exists("product_origin.csv"):
     for _r in csv.DictReader(open("product_origin.csv", encoding="utf-8-sig")):
         _origin[_r["제품"]] = _r["구분"]
 
+# 학교 밖 지표 — 조달 기록으로는 안 보이는 쓰임새를 옆에 놓는다.
+# 앱 설치 수(구글플레이)와 월간 검색수(네이버 검색광고)는 성격이 다른 숫자라
+# 도입 학교 수와 같은 칸에 두지 않는다. 확인한 날짜를 함께 싣는다.
+_outside = {}
+if os.path.exists("app_metrics.csv"):
+    for _r in csv.DictReader(open("app_metrics.csv", encoding="utf-8-sig")):
+        if not (_r.get("앱이름") or "").strip():
+            continue
+        _outside.setdefault(_r["제품"], {})["app"] = {
+            "n": _r["앱이름"], "inst": _r.get("설치수", ""), "rev": _r.get("리뷰수", ""),
+            "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", "")}
+if os.path.exists("search_volume.csv"):
+    for _r in csv.DictReader(open("search_volume.csv", encoding="utf-8-sig")):
+        if not str(_r.get("합계") or "").strip():
+            continue
+        _outside.setdefault(_r["제품"], {})["q"] = {
+            "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", "")}
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB_RAW = JSON.parse(")
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-                         "tagList": _tag_list, "origin": _origin, "sparse": _sparse, "rows": _core_rows,
+                         "tagList": _tag_list, "origin": _origin, "outside": _outside,
+                         "sparse": _sparse, "rows": _core_rows,
                          "schoolIndex": school_index}))
     f.write(");\n")
 with open("data_detail.js", "w", encoding="utf-8") as f:

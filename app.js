@@ -29,7 +29,7 @@ const DB = (() => {
         + (r.vendor ? " · 계약업체: " + r.vendor : "");
     }
   }
-  return { meta: d.meta, records, schoolIndex: d.schoolIndex };
+  return { meta: d.meta, records, schoolIndex: d.schoolIndex, outside: d.outside || {} };
 })();
 const R = DB.records;
 // ?perf=1 로 열면 단계별 시간을 콘솔에 찍는다 (첫 화면이 느릴 때 어디가 오래 걸리는지 보기 위함)
@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260813b";
+  s.src = "data_detail.js?b=20260813c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -855,12 +855,33 @@ function tagView(tag) {
       <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
+    ${outsideCard(tag)}
     ${vendorsOfTag(recs)}
     <div class="card"><h2>도입 학교 목록</h2>${pagedTable(recs)}</div>`;
 }
 
 // 이 제품을 학교에 넣은 회사 — 계약 상대자를 그대로 세어 보여 준다(추론이 아니다).
 // 온라인몰·조달 대행은 만든 곳이 아니므로 따로 적는다.
+// 조달 밖의 쓰임새 — 앱 설치 수와 검색량. 도입 학교 수와 성격이 다른 숫자라 따로 놓는다.
+// '조달에 없다 = 안 쓴다'는 오해를 막는 것이 이 칸의 목적이다.
+const OUTSIDE = DB.outside || {};
+function outsideCard(tag) {
+  const o = OUTSIDE[tag];
+  if (!o) return "";
+  const bits = [];
+  if (o.q) bits.push(`<b>월 검색 ${o.q.n.toLocaleString()}회</b><span class="conf"> · 네이버 ‘${esc(o.q.word)}’ 기준</span>`);
+  if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b><span class="conf"> · ${esc(o.app.n)}`
+    + `${o.app.rate ? ` · 평점 ${esc(o.app.rate)}` : ""}${o.app.rev ? ` · 리뷰 ${Number(o.app.rev).toLocaleString()}` : ""}`
+    + `${o.app.by ? ` · ${esc(o.app.by)}` : ""}</span>`);
+  if (!bits.length) return "";
+  const on = (o.q && o.q.on) || (o.app && o.app.on) || "";
+  return `<div class="card"><h2>학교 밖 쓰임새<span class="note">조달 기록과 다른 잣대입니다</span></h2>
+    <div class="outside">${bits.map(b => `<div>${b}</div>`).join("")}</div>
+    <p class="cv">개인이 내려받거나 학교 밖에서 쓰는 것은 조달 기록에 남지 않습니다.
+      위 숫자는 그 쓰임새를 가늠하려고 따로 모은 것이라 <b>도입 학교 수와 견주면 안 됩니다</b>.
+      학생·교사 이용인지 가릴 수 없고, 이름이 흔하면 다른 검색이 섞입니다${on ? ` · ${esc(on)} 확인` : ""}.</p></div>`;
+}
+
 function vendorsOfTag(recs) {
   const cnt = new Map();
   for (const r of recs.filter(x => !x.dup)) {
