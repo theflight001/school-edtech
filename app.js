@@ -84,7 +84,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260813a";
+  s.src = "data_detail.js?b=20260813b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -915,7 +915,9 @@ function vendorView(key) {
         여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
     </div>
     <div class="grid2">
-      <div class="card"><h2>제품·제품군<span class="note">막대를 눌러 이 회사가 판 기록 보기</span></h2>
+      <div class="card"><h2>계약에 나온 제품<span class="note">막대를 눌러 그 기록 보기</span></h2>
+        <div class="conf" style="margin:-6px 0 10px">이 회사와 맺은 계약에 적힌 제품입니다 —
+          한 계약에 여러 제품이 함께 적히기도 해서, 이 회사가 만든 제품이라는 뜻은 아닙니다</div>
         ${barChart(byTag, {drillFn: t => `/drill2/vt/${encodeURIComponent(key)}/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
       <div class="card"><h2>계열별<span class="note">이 업체와 거래한 학교</span></h2>
         ${barChart(byType, {drillFn: t => `/drill2/vy/${encodeURIComponent(key)}/${encodeURIComponent(t)}`})}</div>

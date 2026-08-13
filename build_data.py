@@ -263,6 +263,13 @@ SPECIFIC_RULES = [
     # 회사·제품 이름이거나 MS와 나란히 적힌 소프트웨어 계약일 때만 인정한다.
     ("한컴오피스",          r"한컴 ?오피스|한글과 ?컴퓨터|아래아 ?한글|\bHWP\b|한/글|"
                             r"한글\s*[,·/]\s*MS|MS\s*[,·/]\s*한글|한글\s*[,·/]\s*마이크로소프트"),
+    # '햄스터'만으로는 사육용 햄스터가 걸린다 — 로봇·봇·모델명이 함께 있을 때만
+    ("햄스터로봇",          r"햄스터 ?로봇|햄스터봇|햄스터[-\s]?S(?![0-9A-Za-z가-힣])"),
+    # '핑퐁'만으로는 탁구다
+    ("핑퐁로봇",            r"핑퐁 ?로봇|핑퐁모노|핑퐁 ?큐브|\bPing ?Pong ?(?:robot|로봇)"),
+    # 한글 '브루'는 브루마블·브루어리와 겹친다 — 영문이나 영상 문맥일 때만
+    ("Vrew",                r"\bVrew\b|브루 ?(?:AI|영상|자막|편집)"),
+    ("CapCut",              r"\bCap ?Cut\b|캡컷"),   # 한글 표기가 188건인데 규칙이 없었다
     ("듀오링고",            r"듀오 ?링고|듀얼 ?링고|\bDuolingo\b"),
     ("코디마스터",          r"코디마스터"),
     # 아이스크림 계열은 제품이 여럿이라 이름이 적힌 것만 각각 잡는다.
@@ -893,6 +900,45 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         })
         office_count += 1
     print(f"{_label} 병합: {office_count}건 (중복 제외 {office_dup}건)")
+
+# ── 계약명에 여러 제품이 나열됐을 때, 그 업체가 만드는 제품만 남긴다 ──────────
+# 용현여중은 같은 사업으로 두 번 결제했는데 계약명은 둘 다 '(퀴즈앤, Vrew, 자작자작)'이었다.
+#   2024-04-15 팀플백 47.2만   ← 자작자작 값 (에듀집: 자작자작 = (주)팀플백)
+#   2024-04-12 Vrew-정기결재 38.5만  ← Vrew 값 (업체명이 곧 제품명)
+# 사업에 딸린 제품을 계약명에 모두 적어 놓은 것이라, 그대로 두면 한 번 산 제품이
+# 여러 학교 여러 제품으로 부풀려진다. 추정이 아니라 에듀집 제품-회사 대조가 근거다.
+# 판매대행 업체는 에듀집에 제조사로 없으므로 여러 태그가 그대로 남는다.
+_EDZIP_MAKER = {}
+for _p in ("edzip_company.csv",):
+    if os.path.exists(_p):
+        for _r in csv.DictReader(open(_p, encoding="utf-8-sig")):
+            _n, _c = (_r.get("제품명") or "").strip(), (_r.get("회사명") or "").strip()
+            if _n and _c:
+                _EDZIP_MAKER.setdefault(_n, _c)
+def _vnorm(x):
+    x = re.sub(r"\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사", "", x or "")
+    return re.sub(r"[\s.,·\-_*/&'\"()]+", "", x).lower()
+_narrowed = 0
+for r in records:
+    _spec = [t for t in r["tags"] if t not in GENERIC_SET]
+    if len(_spec) < 2:
+        continue
+    m = re.search(r"계약업체: (.+?)$", r.get("content") or "")
+    vend = m.group(1).strip() if m else ""
+    if not vend:
+        continue
+    vn = _vnorm(vend)
+    # 지울 근거가 있는 것만 지운다 — 에듀집에 회사가 적혀 있는데 그 회사가 아닌 제품.
+    # 회사를 모르는 제품(리딩앤·오르조 …)은 건드리지 않는다. 같은 회사의 형제 제품일 수 있다.
+    def _mine(t):
+        return (_EDZIP_MAKER.get(t) and _vnorm(_EDZIP_MAKER[t]) == vn) or (_vnorm(t) and _vnorm(t) in vn)
+    def _theirs(t):
+        return bool(_EDZIP_MAKER.get(t)) and not _mine(t)
+    keep = [t for t in _spec if not _theirs(t)]
+    if any(_mine(t) for t in _spec) and len(keep) < len(_spec):
+        r["tags"] = sorted(set(keep) | (set(r["tags"]) - set(_spec)))
+        _narrowed += 1
+print(f"업체가 만드는 제품으로 좁힘: {_narrowed:,}건")
 
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
