@@ -296,7 +296,7 @@ function pagedTable(recs, opts) {
 }
 function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
-  return `<div class="tablewrap"><table><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
+  return `<div class="tablewrap"><table${showSchool ? "" : ' class="noschool"'}><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
@@ -792,7 +792,14 @@ function schoolView(name) {
     return notFound("학교", name, schools, c => `#/school/${encodeURIComponent(c)}`);
   }
   const info = fillDetail([all[0]])[0];
-  const schoolTags = uniq(all.flatMap(r => r.tags));
+  // 기록에 나온 순서대로 두면 기준이 없다 — 제품을 앞에, 제품군을 뒤에 두고
+  // 그 안에서는 이 학교의 기록이 많은 것부터 보인다.
+  const tagN = new Map();
+  for (const r of all) for (const t of r.tags) tagN.set(t, (tagN.get(t) || 0) + 1);
+  const schoolTags = [...tagN.keys()].sort((a, b) => {
+    const ga = GENERIC_TAGS.has(a) ? 1 : 0, gb = GENERIC_TAGS.has(b) ? 1 : 0;
+    return ga - gb || tagN.get(b) - tagN.get(a) || tagName(a).localeCompare(tagName(b), "ko");
+  });
   // 개명 전 이름으로 계약된 기록 — 어느 이름으로 몇 건인지 밝힌다
   const oldNames = count(all.filter(r => r.origSchool), r => r.origSchool);
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";

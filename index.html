@@ -259,7 +259,20 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
 .brow.rowlink:hover .val { color: var(--accent); }
 .brow .val { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .tablewrap { overflow-x: auto; }
-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 13.5px; }
+table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 13.5px;
+  table-layout: fixed; }
+/* 칸 넓이를 못 박는다 — 내용에 따라 브라우저가 나누면 화면마다 표가 달라 보인다 */
+.tablewrap th:nth-child(1) { width: 22%; }
+.tablewrap th:nth-child(2) { width: 30%; }
+.tablewrap th:nth-child(3) { width: 11%; }
+.tablewrap th:nth-child(4) { width: 26%; }
+.tablewrap th:nth-child(5) { width: 11%; }
+/* 학교 칸을 감춘 표(학교 상세)는 한 칸이 적다 */
+.tablewrap table.noschool th:nth-child(1) { width: 32%; }
+.tablewrap table.noschool th:nth-child(2) { width: 12%; }
+.tablewrap table.noschool th:nth-child(3) { width: 44%; }
+.tablewrap table.noschool th:nth-child(4) { width: 12%; }
+td, th { overflow-wrap: anywhere; }
 th { text-align: left; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--baseline); padding: 6px 8px; }
 td { border-bottom: 1px solid var(--grid); padding: 8px; vertical-align: top; word-break: keep-all; }
 td:first-child { min-width: 130px; }
@@ -414,7 +427,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260813d", function () { load("app.js?b=20260813i"); });
+    load("data.js?b=20260813d", function () { load("app.js?b=20260813j"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
