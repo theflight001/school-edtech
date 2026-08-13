@@ -967,18 +967,14 @@ function outsideCard(tag) {
   if (!o) return "";
   const bits = [];
   if (o.q) bits.push(`<a href="#/by-search"><b>월 검색 ${o.q.n.toLocaleString()}회</b></a>`
-    + `<span class="conf"> · 네이버 검색광고 최근 한 달 · 검색어 ‘${esc(o.q.word)}’ · 누르면 제품별 순위</span>`);
+    + `<span class="conf"> · 네이버 최근 한 달 · 검색어 ‘${esc(o.q.word)}’</span>`);
   if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b><span class="conf"> · ${esc(o.app.n)}`
     + `${o.app.rate ? ` · 평점 ${esc(o.app.rate)}` : ""}${o.app.rev ? ` · 리뷰 ${Number(o.app.rev).toLocaleString()}` : ""}`
     + `${o.app.by ? ` · ${esc(o.app.by)}` : ""}</span>`);
   if (!bits.length) return "";
-  const on = (o.q && o.q.on) || (o.app && o.app.on) || "";
-  return `<div class="card"><h2>검색·앱 지표<span class="note">조달 기록과 다른 잣대입니다</span></h2>
-    <div class="outside">${bits.map(b => `<div>${b}</div>`).join("")}</div>
-    <p class="cv">조달 기록이 담지 못하는 쓰임새를 가늠하려고 따로 모은 값입니다.
-      학교 안팎을 가리지 않고, 누가 썼는지도 알 수 없어
-      <b style="display:inline;color:inherit">도입 학교 수와 견주면 안 됩니다</b>.
-      이름이 흔한 제품은 다른 검색이 섞입니다${on ? ` · ${esc(on)} 확인` : ""}.</p></div>`;
+  return `<div class="card"><h2>검색·앱 지표<span class="note">에듀테크 제품의 활용도를 간접적으로 추정하기 위한 자료입니다 ·
+      <a href="#/about">수집 방법</a></span></h2>
+    <div class="outside">${bits.map(b => `<div>${b}</div>`).join("")}</div></div>`;
 }
 
 function vendorsOfTag(recs) {
@@ -1342,6 +1338,26 @@ function aboutView() {
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
         <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 잡히지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
       </ul>
+
+      <h3 id="outside">검색·앱 지표는 어떻게 모았나</h3>
+      <p>조달 기록만으로는 무료로 쓰거나 개인이 결제하는 제품이 보이지 않습니다.
+        활용도를 <b>간접적으로 가늠하려고</b> 두 가지를 따로 모았습니다.
+        조달 기록과 성격이 다른 숫자라 도입 학교 수와 나란히 두지 않았습니다.</p>
+      <ul>
+        <li><b>월 검색수</b> — 네이버 <a href="https://searchad.naver.com" target="_blank" rel="noopener">검색광고</a>가
+          공개하는 키워드 도구(<code>/keywordstool</code>)에서 받습니다. 네이버 통합검색에서 그 낱말을 찾은
+          <b>최근 한 달 횟수</b>이고, PC와 모바일을 더한 값입니다. 광고 성과가 아니라 검색 횟수입니다.
+          제품 이름을 그대로 검색어로 넣되 괄호 안 설명은 뺍니다(<code>젭(ZEP)</code> → <code>젭</code>).
+          네이버가 <code>&lt; 10</code>으로 돌려주면 열 번 미만이라는 뜻이라 0으로 적습니다.</li>
+        <li><b>앱 설치·평점·리뷰</b> — 구글플레이 공개 페이지에서 받습니다. 제품 이름으로 검색해
+          <b>제품 이름이 앱 이름 안에 그대로 들어 있는</b> 앱만 짝지었습니다.
+          설치 수는 구글이 구간으로만 공개해 <code>10만+</code> 형태입니다.
+          조달 기록이 없는 제품은 앱 하나가 유일한 근거라 이름이 거의 같을 때만 인정했습니다.</li>
+      </ul>
+      <p class="cv">한계가 분명합니다. <b>학교에서 쓴 것인지 가릴 수 없고</b>, 이름이 흔한 제품은
+        다른 검색이 섞입니다(사람 이름과 겹치는 제품이 실제로 있습니다).
+        앱이 없는 웹 서비스는 설치 수가 잡히지 않습니다.
+        두 숫자 모두 <b>확인한 날짜의 값</b>이라 시간이 지나면 달라집니다.</p>
 
       <h3>수록 범위</h3>
       <ul>

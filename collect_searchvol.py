@@ -27,7 +27,7 @@ if not (K and S and C):
 
 
 def call(path, params):
-    for wait in [5, 20, 60, None]:
+    for wait in [10, 60, 180, 600, None]:
         try:
             ts = str(int(time.time() * 1000))
             sig = base64.b64encode(hmac.new(S.encode(), f"{ts}.GET.{path}".encode(),
@@ -58,23 +58,35 @@ def product_names(path):
 
 
 def main():
+    global SPACING
     ap = argparse.ArgumentParser()
     ap.add_argument("--names", default="data.js")
     ap.add_argument("--extra", help="줄 단위 이름 목록 (조달 기록이 없는 제품 등)")
     ap.add_argument("--only-extra", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--fill", action="store_true",
+                    help="이미 만든 파일에서 값이 비어 있는 것만 다시 묻는다 (호출 제한에 걸려 건너뛴 것)")
+    ap.add_argument("--spacing", type=float, default=SPACING)
     a = ap.parse_args()
 
-    names = [] if a.only_extra else product_names(a.names)
-    if a.extra and os.path.exists(a.extra):
+    if a.fill:
+        # 앞서 만든 결과를 그대로 두고, 값이 비어 있는 것만 다시 묻는다
+        _old = list(csv.DictReader(open(a.out or OUT, encoding="utf-8-sig")))
+        names = [r["제품"] for r in _old if str(r.get("합계") or "") == ""]
+        _keep = [r for r in _old if str(r.get("합계") or "") != ""]
+        print(f"이미 값이 있는 {len(_keep):,}종은 그대로 두고 {len(names):,}종만 다시 묻는다", flush=True)
+    else:
+        names = [] if a.only_extra else product_names(a.names)
+    if a.extra and os.path.exists(a.extra) and not a.fill:
         names += [l.strip() for l in open(a.extra, encoding="utf-8") if l.strip()]
     names = list(dict.fromkeys(names))
     if a.limit:
         names = names[:a.limit]
     today = time.strftime("%Y-%m-%d")
 
-    rows, got = [], 0
+    SPACING = a.spacing
+    rows, got = (list(_keep) if a.fill else []), 0
     print(f"제품 {len(names)}종 · 다섯씩 묶어 {-(-len(names)//5)}번 부른다", flush=True)
     for i in range(0, len(names), 5):
         chunk = names[i:i + 5]
