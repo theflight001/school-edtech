@@ -878,13 +878,34 @@ function noProcListView() {
         <b>안 쓴다는 뜻이 아닙니다</b></div></div>
     <div class="card"><div class="tablewrap"><table><thead><tr>
       <th>제품</th><th>회사</th><th>월 검색수</th><th>앱 설치</th></tr></thead><tbody>
-      ${rows.map(r => `<tr>
+      ${rowSlice(rows).map(r => `<tr>
         <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(r.n)}</a></td>
         <td class="conf">${esc(r.co)}</td>
         <td style="white-space:nowrap">${r.q ? r.q.toLocaleString() : "—"}</td>
         <td style="white-space:nowrap">${esc(r.inst || "—")}</td></tr>`).join("")}
-    </tbody></table></div></div>`;
+    </tbody></table></div>${rowPager(rows.length)}</div>`;
 }
+
+// 순위·목록 표의 페이지 넘김 — 계약 기록 표와 같은 20개씩으로 맞춘다
+let ROWPAGE = 1;
+window.setRowPage = n => { ROWPAGE = n; const y = window.scrollY; render(); window.scrollTo(0, y); };
+function rowPager(total) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) return "";
+  const cur = Math.min(ROWPAGE, pages);
+  const nums = [];
+  for (let i = 1; i <= pages; i++)
+    if (i === 1 || i === pages || Math.abs(i - cur) <= 2) nums.push(i);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  return `<div class="pager">
+    <button onclick="setRowPage(${cur - 1})" ${cur <= 1 ? "disabled" : ""}>‹</button>
+    ${nums.map(i => i === "…" ? `<span class="pgdots">…</span>`
+      : `<button class="${i === cur ? "cur" : ""}" onclick="setRowPage(${i})">${i}</button>`).join("")}
+    <button onclick="setRowPage(${cur + 1})" ${cur >= pages ? "disabled" : ""}>›</button></div>
+    <div class="pginfo">전체 ${total.toLocaleString()}종 중 ${((cur - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(cur * PAGE_SIZE, total).toLocaleString()}종 표시</div>`;
+}
+const rowSlice = rows => rows.slice((Math.min(ROWPAGE, Math.max(1, Math.ceil(rows.length / PAGE_SIZE))) - 1) * PAGE_SIZE,
+                                    Math.min(ROWPAGE, Math.max(1, Math.ceil(rows.length / PAGE_SIZE))) * PAGE_SIZE);
 
 // 제품별 검색수 순위 — 한 제품의 숫자만 보면 많은지 적은지 알 수 없다.
 // 조달 기록이 있는 제품과 없는 제품을 한 표에 놓아 견줄 수 있게 한다.
@@ -902,15 +923,16 @@ function bySearchView() {
         조달 기록과는 다른 잣대라 도입 학교 수와 견주면 안 됩니다.
         이름이 흔한 제품은 다른 검색이 섞입니다${rows[0] && rows[0].on ? ` · ${esc(rows[0].on)} 확인` : ""}</div></div>
     <div class="card"><div class="tablewrap"><table><thead><tr>
-      <th>제품</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th></tr></thead><tbody>
-      ${rows.map(r => `<tr>
+      <th>순위</th><th>제품</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th></tr></thead><tbody>
+      ${rowSlice(rows).map((r, i) => `<tr>
+        <td class="conf" style="min-width:44px">${((Math.min(ROWPAGE, Math.ceil(rows.length / PAGE_SIZE)) - 1) * PAGE_SIZE + i + 1).toLocaleString()}위</td>
         <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(tagName(r.n))}</a></td>
         <td style="white-space:nowrap"><b>${r.q.toLocaleString()}</b></td>
         <td style="white-space:nowrap">${esc(r.inst || "—")}</td>
         <td style="white-space:nowrap">${r.sch < 0
           ? `<span class="conf">조달 기록 없음</span>`
           : r.sch.toLocaleString() + "개교"}</td></tr>`).join("")}
-    </tbody></table></div></div>`;
+    </tbody></table></div>${rowPager(rows.length)}</div>`;
 }
 
 function tagView(tag) {
@@ -1528,7 +1550,7 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; render(); });
+window.addEventListener("hashchange", () => { PAGE = 1; ROWPAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; render(); });
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");
