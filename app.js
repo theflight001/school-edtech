@@ -849,12 +849,14 @@ function noProcView(tag) {
     <div class="crumb"><a href="#/">홈</a> › <a href="#/no-record">조달 기록이 없는 제품</a> › 제품 상세</div>
     <div class="pagehead"><h2>${esc(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
       <div class="meta">조달 기록 <b>0건</b>${co ? ` · ${esc(co)}` : ""}</div></div>
-    <div class="notice"><b>학교가 예산으로 산 기록이 없습니다</b>
-      <p>무료로 쓰거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아
-        조달 기록에 남지 않습니다. 교육청이 일괄로 사서 나눠 주는 것도 학교별 계약이 없습니다.</p>
-      <p class="cv">에듀테크 정보마당(에듀집)에 등록된 제품인데 우리가 모은 계약
+    <div class="notice"><b>학교 예산으로 구매한 기록이 검색되지 않습니다</b>
+      <p>무료로 사용하거나 교사·학생이 개인으로 결제하는 제품 등 학교 회계와 무관한 제품은
+        조달 기록에 등재되지 않습니다. 교육청이 일괄로 구매하여 보급하는 경우도
+        학교별 계약에서 탐색되지 않습니다.</p>
+      <p class="cv">에듀테크 정보·체험 플랫폼(에듀집)에 등록된 제품인데, 저희가 수집한 계약
         ${R.length.toLocaleString()}건 어디에도 이름이 나오지 않습니다.
-        <b>안 쓴다는 뜻이 아닙니다</b> — 이 자료가 볼 수 없는 자리에 있는 것입니다.</p></div>
+        <b>이것은 사용하지 않는다는 뜻이 아닙니다</b> —
+        본 서비스가 제공하지 않는 활용 현황이 있을 수 있습니다.</p></div>
     ${outsideCard(tag)}
     <div class="page"><p>비슷한 제품을 <a href="#/products">제품 전체 보기</a>에서 찾아보실 수 있습니다.
       조달 기록이 있는데 안 보인다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
