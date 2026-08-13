@@ -60,10 +60,16 @@ def product_names(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--names", default="data.js")
+    ap.add_argument("--extra", help="줄 단위 이름 목록 (조달 기록이 없는 제품 등)")
+    ap.add_argument("--only-extra", action="store_true")
+    ap.add_argument("--out")
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
 
-    names = product_names(a.names)
+    names = [] if a.only_extra else product_names(a.names)
+    if a.extra and os.path.exists(a.extra):
+        names += [l.strip() for l in open(a.extra, encoding="utf-8") if l.strip()]
+    names = list(dict.fromkeys(names))
     if a.limit:
         names = names[:a.limit]
     today = time.strftime("%Y-%m-%d")
@@ -92,11 +98,11 @@ def main():
             print(f"  {i + len(chunk)}종 · 값 있음 {got}", flush=True)
         time.sleep(SPACING)
 
-    with open(OUT, "w", encoding="utf-8-sig", newline="") as f:
+    with open(a.out or OUT, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(rows)
-    print(f"\n완료 — {len(rows)}종 중 값 있음 {got}종 → {OUT}")
+    print(f"\n완료 — {len(rows)}종 중 값 있음 {got}종 → {a.out or OUT}")
     top = sorted([r for r in rows if r["합계"] != ""], key=lambda r: -r["합계"])[:15]
     print("\n검색수 상위 15:")
     for r in top:

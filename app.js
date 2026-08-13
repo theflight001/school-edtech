@@ -29,7 +29,8 @@ const DB = (() => {
         + (r.vendor ? " · 계약업체: " + r.vendor : "");
     }
   }
-  return { meta: d.meta, records, schoolIndex: d.schoolIndex, outside: d.outside || {} };
+  return { meta: d.meta, records, schoolIndex: d.schoolIndex,
+           outside: d.outside || {}, noProc: d.noProc || {} };
 })();
 const R = DB.records;
 // ?perf=1 로 열면 단계별 시간을 콘솔에 찍는다 (첫 화면이 느릴 때 어디가 오래 걸리는지 보기 위함)
@@ -84,7 +85,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260813c";
+  s.src = "data_detail.js?b=20260813d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -840,8 +841,52 @@ function noteSchoolList(note) {
       `<a href="#/school/${encodeURIComponent(n)}">${esc(n)}</a>`).join("")}</div>
     <p class="cv">${esc(note.schoolNote || "")}</p></details>`;
 }
+// 조달 기록이 한 건도 없는 제품 — 무료이거나 개인이 사는 것이라 계약이 남지 않는다.
+// 빈 화면을 보여 주면 '아무도 안 쓴다'로 읽히므로, 왜 없는지와 학교 밖 쓰임새를 함께 적는다.
+function noProcView(tag) {
+  const co = (NOPROC[tag] || {}).co || "";
+  return `
+    <div class="crumb"><a href="#/">홈</a> › <a href="#/no-record">조달 기록이 없는 제품</a> › 제품 상세</div>
+    <div class="pagehead"><h2>${esc(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
+      <div class="meta">조달 기록 <b>0건</b>${co ? ` · ${esc(co)}` : ""}</div></div>
+    <div class="notice"><b>학교가 예산으로 산 기록이 없습니다</b>
+      <p>무료로 쓰거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아
+        조달 기록에 남지 않습니다. 교육청이 일괄로 사서 나눠 주는 것도 학교별 계약이 없습니다.</p>
+      <p class="cv">에듀테크 정보마당(에듀집)에 등록된 제품인데 우리가 모은 계약
+        ${R.length.toLocaleString()}건 어디에도 이름이 나오지 않습니다.
+        <b>안 쓴다는 뜻이 아닙니다</b> — 이 자료가 볼 수 없는 자리에 있는 것입니다.</p></div>
+    ${outsideCard(tag)}
+    <div class="page"><p>비슷한 제품을 <a href="#/products">제품 전체 보기</a>에서 찾아보실 수 있습니다.
+      조달 기록이 있는데 안 보인다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
+}
+
+// 조달 기록은 없지만 학교 밖에서 쓰이는 제품 목록
+function noProcListView() {
+  const rows = Object.keys(NOPROC).map(n => {
+    const o = OUTSIDE[n] || {};
+    return {n, co: NOPROC[n].co || "", q: (o.q && o.q.n) || 0, inst: (o.app && o.app.inst) || ""};
+  }).sort((a, b) => b.q - a.q || (b.inst ? 1 : 0) - (a.inst ? 1 : 0));
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 조달 기록이 없는 제품</div>
+    <div class="pagehead"><h2>조달 기록이 없는 제품</h2>
+      <div class="sub2">에듀집에 등록돼 있지만 우리가 모은 계약 ${R.length.toLocaleString()}건에
+        이름이 나오지 않는 제품입니다 · ${rows.length.toLocaleString()}종
+        (그중 학교 밖 지표가 잡힌 것 ${rows.filter(r => r.q || r.inst).length.toLocaleString()}종)<br>
+        무료이거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아 조달 기록이 없습니다 —
+        <b>안 쓴다는 뜻이 아닙니다</b></div></div>
+    <div class="card"><div class="tablewrap"><table><thead><tr>
+      <th>제품</th><th>회사</th><th>월 검색수</th><th>앱 설치</th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(r.n)}</a></td>
+        <td class="conf">${esc(r.co)}</td>
+        <td style="white-space:nowrap">${r.q ? r.q.toLocaleString() : "—"}</td>
+        <td style="white-space:nowrap">${esc(r.inst || "—")}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
+  if (!recs.length && NOPROC[tag]) return noProcView(tag);
   if (!recs.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `#/tag/${encodeURIComponent(c)}`);
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
@@ -865,6 +910,7 @@ function tagView(tag) {
 // 조달 밖의 쓰임새 — 앱 설치 수와 검색량. 도입 학교 수와 성격이 다른 숫자라 따로 놓는다.
 // '조달에 없다 = 안 쓴다'는 오해를 막는 것이 이 칸의 목적이다.
 const OUTSIDE = DB.outside || {};
+const NOPROC = DB.noProc || {};
 function outsideCard(tag) {
   const o = OUTSIDE[tag];
   if (!o) return "";
@@ -1115,6 +1161,10 @@ function searchHits(q) {
     if (hit.length) return {hit, terms, words, fixed: null};
   }
   if (hit.length) return {hit, terms, words: null, fixed: null};
+  // 조달 기록이 없는 제품은 계약이 없으니 여기서 걸릴 수가 없다 — 이름이 맞으면 그 화면으로 보낸다
+  const flat = x => (x || "").replace(/\s+/g, "").toLowerCase();
+  const exact = Object.keys(NOPROC).find(n => flat(n) === flat(q));
+  if (exact) return {hit: [], terms, words: null, fixed: null, goNoProc: exact};
   // 오타로 한 건도 못 찾았으면 가장 가까운 이름으로 고쳐서 다시 찾는다 (권하고 끝내지 않는다)
   // 어지간히 닮지 않으면 고치지 않는다 — '러닝스파크'를 '젠스파크'로 고쳐 놓으면
   // 없는 기록을 있는 것처럼 보여 주게 된다. 그런 것은 아래에서 후보로만 권한다.
@@ -1154,7 +1204,8 @@ function nearMisses(q) {
 }
 
 function searchView(q) {
-  const {hit, terms, words, fixed} = searchHits(q.toLowerCase());
+  const {hit, terms, words, fixed, goNoProc} = searchHits(q.toLowerCase());
+  if (goNoProc) return noProcView(goNoProc);
   const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
   const hidden = hit.length - recs.length;
   // 무상 보급·공동 운영 플랫폼은 검색으로 들어와도 한계 고지가 보여야 한다
@@ -1302,7 +1353,9 @@ function productsView() {
     <div class="crumb"><a href="#/">홈</a> › 제품 전체 보기</div>
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
-        이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
+        이름을 누르면 도입 학교를 볼 수 있습니다${Object.keys(NOPROC).length
+          ? `<br><a href="#/no-record">조달 기록이 없는 제품 ${Object.keys(NOPROC).length.toLocaleString()}종도 따로 보실 수 있습니다 ›</a>` : ""}
+        </div>${filterNote()}</div>
     <div class="alpha">
       <span class="alab">정렬</span>
       <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
@@ -1422,6 +1475,7 @@ function render() {
   else if (kind === "search") view.innerHTML = searchView(arg);
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "products") view.innerHTML = productsView();
+  else if (kind === "no-record") view.innerHTML = noProcListView();
   else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "vendor") view.innerHTML = vendorView(arg);
   else if (kind === "vendors") view.innerHTML = vendorsView();
