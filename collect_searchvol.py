@@ -26,8 +26,12 @@ if not (K and S and C):
     sys.exit("NAVER_AD_KEY / NAVER_AD_SECRET / NAVER_AD_CUSTOMER 환경변수가 필요하다 (코드에 넣지 말 것)")
 
 
+class BadRequest(Exception):
+    """검색어가 규칙에 안 맞는다 — 다시 물어도 같은 답이라 기다리지 않는다"""
+
+
 def call(path, params):
-    for wait in [10, 60, 180, 600, None]:
+    for wait in [5, 20, 60, None]:
         try:
             ts = str(int(time.time() * 1000))
             sig = base64.b64encode(hmac.new(S.encode(), f"{ts}.GET.{path}".encode(),
@@ -35,6 +39,13 @@ def call(path, params):
             req = urllib.request.Request(BASE + path + "?" + urllib.parse.urlencode(params),
                 headers={"X-Timestamp": ts, "X-API-KEY": K, "X-Customer": C, "X-Signature": sig})
             return json.loads(urllib.request.urlopen(req, timeout=40).read().decode())
+        except urllib.error.HTTPError as e:
+            if 400 <= e.code < 500 and e.code != 429:
+                raise BadRequest(f"{e.code}")
+            if wait is None:
+                raise
+            print(f"  재시도(HTTP {e.code}) → {wait}초", flush=True)
+            time.sleep(wait)
         except Exception as e:
             if wait is None:
                 raise
@@ -55,6 +66,13 @@ def product_names(path):
     s = open(path, encoding="utf-8").read()
     d = json.loads(s[s.index("'") + 1:s.rindex("'")].replace("\\'", "'").replace("\\\\", "\\"))
     return [t for t in d["tagList"] if t not in GENERIC]
+
+
+def save(path, rows):
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
 
 
 def main():
@@ -90,10 +108,21 @@ def main():
     print(f"제품 {len(names)}종 · 다섯씩 묶어 {-(-len(names)//5)}번 부른다", flush=True)
     for i in range(0, len(names), 5):
         chunk = names[i:i + 5]
-        # 괄호 안 설명은 검색어가 아니다 — '젭(ZEP)'은 '젭'으로 묻는다
-        asks = [re.sub(r"\s*[\(（][^)）]*[)）]", "", n).strip() or n for n in chunk]
+        # 괄호 안 설명은 검색어가 아니다 — '젭(ZEP)'은 '젭'으로 묻는다.
+        # 그리고 네이버는 공백이 든 검색어를 400으로 거부한다 — 붙여서 묻는다
+        # ('AI 펭톡' → 'AI펭톡'). 어차피 답도 공백 없는 대문자로 돌아온다.
+        asks = [re.sub(r"\s+", "", re.sub(r"\s*[\(（][^)）]*[)）]", "", n)) or n for n in chunk]
         try:
             r = call("/keywordstool", {"hintKeywords": ",".join(asks), "showDetail": "1"})
+        except BadRequest:
+            # 다섯 중 하나가 규칙에 안 맞으면 묶음 전체가 거부된다 — 하나씩 다시 묻는다
+            r = {"keywordList": []}
+            for one in asks:
+                try:
+                    r["keywordList"] += call("/keywordstool", {"hintKeywords": one, "showDetail": "1"}).get("keywordList", [])
+                except Exception:
+                    pass
+                time.sleep(SPACING / 2)
         except Exception as e:
             print(f"  [{i}] 통째로 건너뜀 ({type(e).__name__})", flush=True)
             r = {}
@@ -106,16 +135,15 @@ def main():
             rows.append({"제품": n, "조회어": ask, "PC": pc, "모바일": mo,
                          "합계": (num(pc) + num(mo)) if x else "",
                          "글자수": len(re.sub(r"\s", "", ask)), "확인일": today})
+        # 묶음마다 저장한다 — 네이버가 호출을 조이면 몇 시간을 돌고도 한 줄도 못 건질 수 있다
+        save(a.out or OUT, rows)
         if (i // 5 + 1) % 10 == 0:
             print(f"  {i + len(chunk)}종 · 값 있음 {got}", flush=True)
         time.sleep(SPACING)
 
-    with open(a.out or OUT, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
-        w.writeheader()
-        w.writerows(rows)
+    save(a.out or OUT, rows)
     print(f"\n완료 — {len(rows)}종 중 값 있음 {got}종 → {a.out or OUT}")
-    top = sorted([r for r in rows if r["합계"] != ""], key=lambda r: -r["합계"])[:15]
+    top = sorted([r for r in rows if str(r["합계"]) != ""], key=lambda r: -int(r["합계"]))[:15]
     print("\n검색수 상위 15:")
     for r in top:
         print(f"   {r['제품'][:22]:<24} {r['합계']:>10,}")

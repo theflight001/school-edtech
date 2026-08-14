@@ -1379,7 +1379,9 @@ if os.path.exists("search_volume.csv"):
         if not str(_r.get("합계") or "").strip():
             continue
         _outside.setdefault(_r["제품"], {})["q"] = {
-            "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", "")}
+            "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", ""),
+            # 네이버가 '< 10'으로 답한 것은 0이 아니라 '열 번 미만'이다
+            "lt": 1 if int(_r["합계"]) == 0 else 0}
 
 # 조달 기록이 한 건도 없는 제품 — 무료이거나 개인이 사는 것이라 계약이 남지 않는다.
 # 에듀집에는 있는데 우리 기록에는 없는 2,147종 가운데, 학교 밖 지표라도 잡힌 것만 싣는다.
@@ -1403,7 +1405,8 @@ for _p, _kind in (("app_metrics.csv", "app"), ("search_volume_blind.csv", "q"),
                 "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", "")}
         if _kind == "q" and str(_r.get("합계") or "").strip():
             _outside.setdefault(_n, {})["q"] = {
-                "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", "")}
+                "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", ""),
+                "lt": 1 if int(_r["합계"]) == 0 else 0}
 # 지표가 없어도 싣는다 — 이 화면의 값어치는 숫자가 아니라 "왜 기록이 없는지"를 밝히는 데 있다.
 # 이대로티처스처럼 검색수도 앱도 안 잡히는 제품이야말로 빈 화면을 보여 주면 안 된다.
 _noproc = {n: {"co": _blind[n]} for n in sorted(_blind)}

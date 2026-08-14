@@ -85,7 +85,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260813d";
+  s.src = "data_detail.js?b=20260814a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -973,7 +973,7 @@ function outsideCard(tag) {
   const o = OUTSIDE[tag];
   if (!o) return "";
   const bits = [];
-  if (o.q) bits.push(`<a href="#/by-search"><b>월 검색 ${o.q.n.toLocaleString()}회</b></a>`
+  if (o.q) bits.push(`<a href="#/by-search"><b>월 검색 ${o.q.lt ? "10회 미만" : o.q.n.toLocaleString() + "회"}</b></a>`
     + `<span class="conf"> · 네이버 최근 한 달 · 검색어 ‘${esc(o.q.word)}’</span>`);
   if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b><span class="conf"> · ${esc(o.app.n)}`
     + `${o.app.rate ? ` · 평점 ${esc(o.app.rate)}` : ""}${o.app.rev ? ` · 리뷰 ${Number(o.app.rev).toLocaleString()}` : ""}`
