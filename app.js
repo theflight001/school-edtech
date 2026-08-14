@@ -882,7 +882,8 @@ function noProcListView() {
         이름이 나오지 않는 제품입니다 · ${rows.length.toLocaleString()}종
         (그중 학교 밖 지표가 잡힌 것 ${rows.filter(r => r.q || r.inst).length.toLocaleString()}종)<br>
         무료이거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아 조달 기록이 없습니다 —
-        <b>안 쓴다는 뜻이 아닙니다</b></div></div>
+        <b>안 쓴다는 뜻이 아닙니다</b><br>
+        <a href="#/by-search">조달 기록이 있는 제품까지 함께 검색수로 견주기 ›</a></div></div>
     <div class="card"><div class="tablewrap"><table><thead><tr>
       <th>제품</th><th>회사</th><th>월 검색수</th><th>앱 설치</th></tr></thead><tbody>
       ${rowSlice(rows).map(r => `<tr>
@@ -928,7 +929,9 @@ function bySearchView() {
     <div class="pagehead"><h2>제품별 검색수</h2>
       <div class="sub2">네이버 검색광고 키워드도구의 <b>최근 한 달 검색수</b>(PC+모바일)입니다 · ${rows.length.toLocaleString()}종<br>
         조달 기록과는 다른 잣대라 도입 학교 수와 견주면 안 됩니다.
-        이름이 흔한 제품은 다른 검색이 섞입니다${rows[0] && rows[0].on ? ` · ${esc(rows[0].on)} 확인` : ""}</div></div>
+        이름이 흔한 제품은 다른 검색이 섞입니다${rows[0] && rows[0].on ? ` · ${esc(rows[0].on)} 확인` : ""}<br>
+        <a href="#/products">제품 전체 보기 ›</a>
+        &nbsp;·&nbsp; <a href="#/no-record">조달 기록이 없는 제품 ›</a></div></div>
     <div class="card"><div class="tablewrap"><table><thead><tr>
       <th>순위</th><th>제품</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th></tr></thead><tbody>
       ${rowSlice(rows).map((r, i) => `<tr>
@@ -1430,7 +1433,8 @@ function productsView() {
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
         이름을 누르면 도입 학교를 볼 수 있습니다${Object.keys(NOPROC).length
-          ? `<br><a href="#/no-record">조달 기록이 없는 제품 ${Object.keys(NOPROC).length.toLocaleString()}종도 따로 보실 수 있습니다 ›</a>` : ""}
+          ? `<br><a href="#/no-record">조달 기록이 없는 제품 ${Object.keys(NOPROC).length.toLocaleString()}종 ›</a>
+             &nbsp;·&nbsp; <a href="#/by-search">제품별 검색수 ›</a>` : ""}
         </div>${filterNote()}</div>
     <div class="alpha">
       <span class="alab">정렬</span>
