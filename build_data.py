@@ -1373,7 +1373,10 @@ if os.path.exists("app_metrics.csv"):
             continue
         _outside.setdefault(_r["제품"], {})["app"] = {
             "n": _r["앱이름"], "inst": _r.get("설치수", ""), "rev": _r.get("리뷰수", ""),
-            "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", "")}
+            "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", ""),
+            # 개발사가 적어 둔 홈페이지가 있으면 그쪽, 없으면 구글플레이 화면
+            "site": (_r.get("홈페이지") or "").strip()
+                    or (f"https://play.google.com/store/apps/details?id={_r['패키지']}" if _r.get("패키지") else "")}
 if os.path.exists("search_volume.csv"):
     for _r in csv.DictReader(open("search_volume.csv", encoding="utf-8-sig")):
         if not str(_r.get("합계") or "").strip():
@@ -1402,7 +1405,9 @@ for _p, _kind in (("app_metrics.csv", "app"), ("search_volume_blind.csv", "q"),
                 and float(_r.get("일치도") or 0) >= _SIM_NONE:
             _outside.setdefault(_n, {})["app"] = {
                 "n": _r["앱이름"], "inst": _r.get("설치수", ""), "rev": _r.get("리뷰수", ""),
-                "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", "")}
+                "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", ""),
+                "site": (_r.get("홈페이지") or "").strip()
+                        or (f"https://play.google.com/store/apps/details?id={_r['패키지']}" if _r.get("패키지") else "")}
         if _kind == "q" and str(_r.get("합계") or "").strip():
             _outside.setdefault(_n, {})["q"] = {
                 "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", ""),

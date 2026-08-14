@@ -85,7 +85,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260814c";
+  s.src = "data_detail.js?b=20260814e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -870,35 +870,18 @@ function noProcView(tag) {
 }
 
 // 조달 기록은 없지만 학교 밖에서 쓰이는 제품 목록
-function noProcListView() {
-  const rows = Object.keys(NOPROC).map(n => {
-    const o = OUTSIDE[n] || {};
-    return {n, co: NOPROC[n].co || "", q: (o.q && o.q.n) || 0, inst: (o.app && o.app.inst) || ""};
-  }).sort((a, b) => b.q - a.q || (b.inst ? 1 : 0) - (a.inst ? 1 : 0));
-  return `
-    <div class="crumb"><a href="#/">홈</a> › 조달 기록이 없는 제품</div>
-    <div class="pagehead"><h2>조달 기록이 없는 제품</h2>
-      <div class="sub2">에듀집에 등록돼 있지만 우리가 모은 계약 ${R.length.toLocaleString()}건에
-        이름이 나오지 않는 제품입니다 · ${rows.length.toLocaleString()}종
-        (그중 학교 밖 지표가 잡힌 것 ${rows.filter(r => r.q || r.inst).length.toLocaleString()}종)<br>
-        무료이거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아 조달 기록이 없습니다 —
-        <b>안 쓴다는 뜻이 아닙니다</b><br>
-        <a href="#/by-search">조달 기록이 있는 제품까지 함께 검색수로 견주기 ›</a></div></div>
-    <div class="card"><div class="tablewrap"><table><thead><tr>
-      <th>제품</th><th>회사</th><th>월 검색수</th><th>앱 설치</th></tr></thead><tbody>
-      ${rowSlice(rows).map(r => `<tr>
-        <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(r.n)}</a></td>
-        <td class="conf">${esc(r.co)}</td>
-        <td style="white-space:nowrap">${r.q ? r.q.toLocaleString() : "—"}</td>
-        <td style="white-space:nowrap">${esc(r.inst || "—")}</td></tr>`).join("")}
-    </tbody></table></div>${rowPager(rows.length)}</div>`;
-}
-
-// 순위·목록 표의 페이지 넘김 — 계약 기록 표와 같은 20개씩으로 맞춘다
-let ROWPAGE = 1;
+// 순위·목록 표의 페이지 넘김 — 기본 20개씩, 한 화면에 몇 줄 볼지 고를 수 있다
+let ROWPAGE = 1, ROWPER = 20;
 window.setRowPage = n => { ROWPAGE = n; const y = window.scrollY; render(); window.scrollTo(0, y); };
+window.setRowPer = n => { ROWPER = +n; ROWPAGE = 1; render(); };
+const perPicker = () => `<div class="listtool"><span class="listq-n">한 화면에</span>
+  <select class="sortsel" onchange="setRowPer(this.value)">
+    ${[20, 30, 50, 100].map(n => `<option value="${n}"${n === ROWPER ? " selected" : ""}>${n}개씩</option>`).join("")}
+  </select></div>`;
+const rowPageOf = rows => Math.min(ROWPAGE, Math.max(1, Math.ceil(rows.length / ROWPER)));
+const rowSlice = rows => rows.slice((rowPageOf(rows) - 1) * ROWPER, rowPageOf(rows) * ROWPER);
 function rowPager(total) {
-  const pages = Math.ceil(total / PAGE_SIZE);
+  const pages = Math.ceil(total / ROWPER);
   if (pages <= 1) return "";
   const cur = Math.min(ROWPAGE, pages);
   const nums = [];
@@ -910,20 +893,55 @@ function rowPager(total) {
     ${nums.map(i => i === "…" ? `<span class="pgdots">…</span>`
       : `<button class="${i === cur ? "cur" : ""}" onclick="setRowPage(${i})">${i}</button>`).join("")}
     <button onclick="setRowPage(${cur + 1})" ${cur >= pages ? "disabled" : ""}>›</button></div>
-    <div class="pginfo">전체 ${total.toLocaleString()}종 중 ${((cur - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(cur * PAGE_SIZE, total).toLocaleString()}종 표시</div>`;
+    <div class="pginfo">전체 ${total.toLocaleString()}종 중 ${((cur - 1) * ROWPER + 1).toLocaleString()}–${Math.min(cur * ROWPER, total).toLocaleString()}종 표시</div>`;
 }
-const rowSlice = rows => rows.slice((Math.min(ROWPAGE, Math.max(1, Math.ceil(rows.length / PAGE_SIZE))) - 1) * PAGE_SIZE,
-                                    Math.min(ROWPAGE, Math.max(1, Math.ceil(rows.length / PAGE_SIZE))) * PAGE_SIZE);
 
-// 제품별 검색수 순위 — 한 제품의 숫자만 보면 많은지 적은지 알 수 없다.
-// 조달 기록이 있는 제품과 없는 제품을 한 표에 놓아 견줄 수 있게 한다.
+// 두 목록이 같은 칸을 쓴다 — 같은 것을 다른 모양으로 보이면 견주기 어렵다.
+// 제품 이름을 누르면 우리 화면으로, 홈페이지가 있으면 그 회사 쪽으로도 갈 수 있게 한다.
+function outRow(n, schoolsOf) {
+  const o = OUTSIDE[n] || {};
+  return {n, co: (NOPROC[n] || {}).co || "",
+          q: (o.q && o.q.n) || 0, lt: !!(o.q && o.q.lt),
+          inst: (o.app && o.app.inst) || "", site: (o.app && o.app.site) || "",
+          sch: NOPROC[n] ? -1 : (schoolsOf ? schoolsOf(n) : -1),
+          on: (o.q && o.q.on) || (o.app && o.app.on) || ""};
+}
+function outTable(rows) {
+  const base = (rowPageOf(rows) - 1) * ROWPER;
+  return `<div class="card">${perPicker()}<div class="tablewrap"><table class="outlist"><thead><tr>
+      <th>순위</th><th>제품</th><th>회사</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th>
+    </tr></thead><tbody>
+      ${rowSlice(rows).map((r, i) => `<tr>
+        <td class="conf">${(base + i + 1).toLocaleString()}</td>
+        <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(tagName(r.n))}</a>${r.site
+          ? ` <a href="${esc(r.site)}" target="_blank" rel="noopener nofollow" title="제품 홈페이지 (외부)">↗</a>` : ""}</td>
+        <td class="conf">${esc(r.co)}</td>
+        <td style="white-space:nowrap">${r.q ? `<b>${r.q.toLocaleString()}</b>` : r.lt ? "10회 미만" : "—"}</td>
+        <td style="white-space:nowrap">${esc(r.inst || "—")}</td>
+        <td style="white-space:nowrap">${r.sch < 0 ? `<span class="conf">기록 없음</span>` : r.sch.toLocaleString() + "개교"}</td>
+      </tr>`).join("")}
+    </tbody></table></div>${rowPager(rows.length)}</div>`;
+}
+
+function noProcListView() {
+  const rows = Object.keys(NOPROC).map(n => outRow(n, null))
+    .sort((a, b) => b.q - a.q || (b.inst ? 1 : 0) - (a.inst ? 1 : 0));
+  return `
+    <div class="crumb"><a href="#/">홈</a> › 조달 기록이 없는 제품</div>
+    <div class="pagehead"><h2>조달 기록이 없는 제품</h2>
+      <div class="sub2">에듀집에 등록돼 있지만 본 서비스에서 수집한 계약에
+        이름이 나오지 않는 제품입니다 · ${rows.length.toLocaleString()}종
+        (그중 검색·앱 지표가 잡힌 것 ${rows.filter(r => r.q || r.inst).length.toLocaleString()}종)<br>
+        무료이거나 교사·학생이 개인으로 결제하는 제품은 학교 회계를 거치지 않아 조달 기록이 없습니다 —
+        <b>안 쓴다는 뜻이 아닙니다</b><br>
+        <a href="#/by-search">조달 기록이 있는 제품까지 함께 검색수로 견주기 ›</a></div></div>
+    ${outTable(rows)}`;
+}
+
 function bySearchView() {
   const schoolsOf = t => uniq(R.filter(r => !r.dup && r.tags.includes(t)).map(r => r.school)).length;
-  const rows = Object.keys(OUTSIDE).map(n => {
-    const o = OUTSIDE[n];
-    return {n, q: (o.q && o.q.n) || 0, inst: (o.app && o.app.inst) || "",
-            sch: NOPROC[n] ? -1 : schoolsOf(n), on: (o.q && o.q.on) || (o.app && o.app.on) || ""};
-  }).filter(r => r.q > 0).sort((a, b) => b.q - a.q);
+  const rows = Object.keys(OUTSIDE).map(n => outRow(n, schoolsOf))
+    .filter(r => r.q > 0).sort((a, b) => b.q - a.q);
   return `
     <div class="crumb"><a href="#/">홈</a> › 제품별 검색수</div>
     <div class="pagehead"><h2>제품별 검색수</h2>
@@ -932,17 +950,7 @@ function bySearchView() {
         이름이 흔한 제품은 다른 검색이 섞입니다${rows[0] && rows[0].on ? ` · ${esc(rows[0].on)} 확인` : ""}<br>
         <a href="#/products">제품 전체 보기 ›</a>
         &nbsp;·&nbsp; <a href="#/no-record">조달 기록이 없는 제품 ›</a></div></div>
-    <div class="card"><div class="tablewrap"><table><thead><tr>
-      <th>순위</th><th>제품</th><th>월 검색수</th><th>앱 설치</th><th>도입 학교</th></tr></thead><tbody>
-      ${rowSlice(rows).map((r, i) => `<tr>
-        <td class="conf" style="min-width:44px">${((Math.min(ROWPAGE, Math.ceil(rows.length / PAGE_SIZE)) - 1) * PAGE_SIZE + i + 1).toLocaleString()}위</td>
-        <td><a href="#/tag/${encodeURIComponent(r.n)}">${esc(tagName(r.n))}</a></td>
-        <td style="white-space:nowrap"><b>${r.q.toLocaleString()}</b></td>
-        <td style="white-space:nowrap">${esc(r.inst || "—")}</td>
-        <td style="white-space:nowrap">${r.sch < 0
-          ? `<span class="conf">조달 기록 없음</span>`
-          : r.sch.toLocaleString() + "개교"}</td></tr>`).join("")}
-    </tbody></table></div>${rowPager(rows.length)}</div>`;
+    ${outTable(rows)}`;
 }
 
 function tagView(tag) {
@@ -978,7 +986,9 @@ function outsideCard(tag) {
   const bits = [];
   if (o.q) bits.push(`<a href="#/by-search"><b>월 검색 ${o.q.lt ? "10회 미만" : o.q.n.toLocaleString() + "회"}</b></a>`
     + `<span class="conf"> · 네이버 최근 한 달 · 검색어 ‘${esc(o.q.word)}’</span>`);
-  if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b><span class="conf"> · ${esc(o.app.n)}`
+  if (o.app) bits.push(`<b>앱 설치 ${esc(o.app.inst || "—")}</b>`
+    + `${o.app.site ? ` <a href="${esc(o.app.site)}" target="_blank" rel="noopener nofollow">제품 페이지 ↗</a>` : ""}`
+    + `<span class="conf"> · ${esc(o.app.n)}`
     + `${o.app.rate ? ` · 평점 ${esc(o.app.rate)}` : ""}${o.app.rev ? ` · 리뷰 ${Number(o.app.rev).toLocaleString()}` : ""}`
     + `${o.app.by ? ` · ${esc(o.app.by)}` : ""}</span>`);
   if (!bits.length) return "";

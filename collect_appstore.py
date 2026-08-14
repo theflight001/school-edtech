@@ -16,7 +16,7 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120 Safari/537.36")
 OUT = "app_metrics.csv"
 CKPT = ".ckpt_appstore.json"
-FIELDS = ["제품", "앱이름", "패키지", "개발사", "설치수", "평점", "리뷰수", "일치도", "확인일"]
+FIELDS = ["제품", "앱이름", "패키지", "개발사", "홈페이지", "설치수", "평점", "리뷰수", "일치도", "확인일"]
 SPACING = 1.2
 GENERIC = {"3D 프린팅/CAD", "AI 면접시스템", "AI·디지털 교육자료", "SW·플랫폼", "VR/XR 장비",
            "기기(PC·태블릿·전자칠판 등)", "드론", "로봇·교구·키트", "운영 부대구매",
@@ -58,7 +58,7 @@ def search(name):
 def detail(pkg):
     """앱 상세 — 이름·개발사·평점·리뷰수는 ld+json에, 설치 수는 '다운로드' 라벨 옆에 있다"""
     d = get(f"https://play.google.com/store/apps/details?id={pkg}&hl=ko&gl=KR")
-    out = {"패키지": pkg, "앱이름": "", "개발사": "", "평점": "", "리뷰수": "", "설치수": ""}
+    out = {"패키지": pkg, "앱이름": "", "개발사": "", "홈페이지": "", "평점": "", "리뷰수": "", "설치수": ""}
     for m in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', d, re.S):
         try:
             j = json.loads(m)
@@ -68,6 +68,7 @@ def detail(pkg):
             continue
         out["앱이름"] = j.get("name") or out["앱이름"]
         out["개발사"] = (j.get("author") or {}).get("name", "")
+        out["홈페이지"] = (j.get("author") or {}).get("url", "")   # 개발사가 적어 둔 제품 홈페이지
         ar = j.get("aggregateRating") or {}
         if ar.get("ratingValue"):
             out["평점"] = f'{float(ar["ratingValue"]):.2f}'
