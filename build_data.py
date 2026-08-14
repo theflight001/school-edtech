@@ -1409,7 +1409,15 @@ for _p, _kind in (("app_metrics.csv", "app"), ("search_volume_blind.csv", "q"),
                 "lt": 1 if int(_r["합계"]) == 0 else 0}
 # 지표가 없어도 싣는다 — 이 화면의 값어치는 숫자가 아니라 "왜 기록이 없는지"를 밝히는 데 있다.
 # 이대로티처스처럼 검색수도 앱도 안 잡히는 제품이야말로 빈 화면을 보여 주면 안 된다.
-_noproc = {n: {"co": _blind[n]} for n in sorted(_blind)}
+# 에듀집은 학교 수업 도구가 아닌 것도 담고 있다(고용24·모두싸인·시립도서관 …).
+# 우리 기준으로 뺀 목록은 noproc_exclude.csv에 사유와 함께 적어 둔다.
+_ex = set()
+if os.path.exists("noproc_exclude.csv"):
+    for _r in csv.DictReader(open("noproc_exclude.csv", encoding="utf-8-sig")):
+        _ex.add((_r.get("제품") or "").strip())
+_noproc = {n: {"co": _blind[n]} for n in sorted(_blind) if n not in _ex}
+if _ex:
+    print(f"학교 에듀테크가 아니라고 본 제품 {len(_ex)}종 제외")
 _with = sum(1 for n in _noproc if n in _outside)
 print(f"조달 기록 없는 제품: {len(_noproc):,}종 (그중 학교 밖 지표가 잡힌 것 {_with:,}종)")
 
