@@ -1356,82 +1356,12 @@ if os.path.exists("product_origin.csv"):
     for _r in csv.DictReader(open("product_origin.csv", encoding="utf-8-sig")):
         _origin[_r["제품"]] = _r["구분"]
 
-# 학교 밖 지표 — 조달 기록으로는 안 보이는 쓰임새를 옆에 놓는다.
-# 앱 설치 수(구글플레이)와 월간 검색수(네이버 검색광고)는 성격이 다른 숫자라
-# 도입 학교 수와 같은 칸에 두지 않는다. 확인한 날짜를 함께 싣는다.
-# 이름이 얼마나 맞아야 그 제품의 앱으로 볼 것인가.
-#   조달 기록이 있는 제품은 실재한다는 증거가 이미 있으니 0.5로 둔다('미리캔버스' ↔
-#   '미리캔버스: 디자인을 간편하게'처럼 정식 앱 이름이 길어 낮게 나오는 경우가 많다).
-#   조달 기록이 없는 제품은 앱 하나가 유일한 근거라 이름이 거의 그대로일 때만 인정한다(0.9).
-_SIM_HAVE, _SIM_NONE = 0.5, 0.9
-_outside = {}
-if os.path.exists("app_metrics.csv"):
-    for _r in csv.DictReader(open("app_metrics.csv", encoding="utf-8-sig")):
-        if not (_r.get("앱이름") or "").strip():
-            continue
-        if float(_r.get("일치도") or 0) < _SIM_HAVE:
-            continue
-        _outside.setdefault(_r["제품"], {})["app"] = {
-            "n": _r["앱이름"], "inst": _r.get("설치수", ""), "rev": _r.get("리뷰수", ""),
-            "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", ""),
-            # 개발사가 적어 둔 홈페이지가 있으면 그쪽, 없으면 구글플레이 화면
-            "site": (_r.get("홈페이지") or "").strip()
-                    or (f"https://play.google.com/store/apps/details?id={_r['패키지']}" if _r.get("패키지") else "")}
-if os.path.exists("search_volume.csv"):
-    for _r in csv.DictReader(open("search_volume.csv", encoding="utf-8-sig")):
-        if not str(_r.get("합계") or "").strip():
-            continue
-        _outside.setdefault(_r["제품"], {})["q"] = {
-            "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", ""),
-            # 네이버가 '< 10'으로 답한 것은 0이 아니라 '열 번 미만'이다
-            "lt": 1 if int(_r["합계"]) == 0 else 0}
-
-# 조달 기록이 한 건도 없는 제품 — 무료이거나 개인이 사는 것이라 계약이 남지 않는다.
-# 에듀집에는 있는데 우리 기록에는 없는 2,147종 가운데, 학교 밖 지표라도 잡힌 것만 싣는다.
-# 이 제품들은 태그가 없어 화면이 만들어지지 않으므로 따로 목록을 넘긴다.
-_blind = {}
-if os.path.exists("edzip_blind_company.csv"):
-    for _r in csv.DictReader(open("edzip_blind_company.csv", encoding="utf-8-sig")):
-        _blind[_r["제품"]] = _r.get("회사", "")
-for _p, _kind in (("app_metrics.csv", "app"), ("search_volume_blind.csv", "q"),
-                  ("app_metrics_blind.csv", "app"), ("search_volume.csv", "q")):
-    if not os.path.exists(_p):
-        continue
-    for _r in csv.DictReader(open(_p, encoding="utf-8-sig")):
-        _n = _r["제품"]
-        if _n not in _blind or _n in _tag_list:
-            continue
-        if _kind == "app" and (_r.get("앱이름") or "").strip() \
-                and float(_r.get("일치도") or 0) >= _SIM_NONE:
-            _outside.setdefault(_n, {})["app"] = {
-                "n": _r["앱이름"], "inst": _r.get("설치수", ""), "rev": _r.get("리뷰수", ""),
-                "rate": _r.get("평점", ""), "by": _r.get("개발사", ""), "on": _r.get("확인일", ""),
-                "site": (_r.get("홈페이지") or "").strip()
-                        or (f"https://play.google.com/store/apps/details?id={_r['패키지']}" if _r.get("패키지") else "")}
-        if _kind == "q" and str(_r.get("합계") or "").strip():
-            _outside.setdefault(_n, {})["q"] = {
-                "n": int(_r["합계"]), "word": _r.get("조회어", ""), "on": _r.get("확인일", ""),
-                "lt": 1 if int(_r["합계"]) == 0 else 0}
-# 지표가 없어도 싣는다 — 이 화면의 값어치는 숫자가 아니라 "왜 기록이 없는지"를 밝히는 데 있다.
-# 이대로티처스처럼 검색수도 앱도 안 잡히는 제품이야말로 빈 화면을 보여 주면 안 된다.
-# 에듀집은 학교 수업 도구가 아닌 것도 담고 있다(고용24·모두싸인·시립도서관 …).
-# 우리 기준으로 뺀 목록은 noproc_exclude.csv에 사유와 함께 적어 둔다.
-_ex = set()
-if os.path.exists("noproc_exclude.csv"):
-    for _r in csv.DictReader(open("noproc_exclude.csv", encoding="utf-8-sig")):
-        _ex.add((_r.get("제품") or "").strip())
-_noproc = {n: {"co": _blind[n]} for n in sorted(_blind) if n not in _ex}
-if _ex:
-    print(f"학교 에듀테크가 아니라고 본 제품 {len(_ex)}종 제외")
-_with = sum(1 for n in _noproc if n in _outside)
-print(f"조달 기록 없는 제품: {len(_noproc):,}종 (그중 학교 밖 지표가 잡힌 것 {_with:,}종)")
-
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB_RAW = JSON.parse(")
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-                         "tagList": _tag_list, "origin": _origin, "outside": _outside, "noProc": _noproc,
+                         "tagList": _tag_list, "origin": _origin,
                          "sparse": _sparse, "rows": _core_rows,
                          "schoolIndex": school_index}))
     f.write(");\n")
