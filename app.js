@@ -85,7 +85,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260817a";
+  s.src = "data_detail.js?b=20260817b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -1140,6 +1140,31 @@ function nearMisses(q) {
       `<a href="${href}">${esc(nm)}<span class="n">${kind}</span></a>`).join("")}</div></div>`;
 }
 
+// 회사 이름으로 찾아도 회사 화면이 나와야 한다. 회사 화면은 진작 있었는데 검색이
+// 그리로 보내 주지 않았다 — 오타로 못 찾았을 때만 '혹시 이것을' 목록에 끼워 넣고 있었다.
+// 계약 상대자에 회사명이 적혀 있어 기록 자체는 걸리지만, 그 기록의 태그가 제품군뿐이면
+// '제품 확인 기록만' 범위에서 통째로 걸러져 0건으로 보인다(전자칠판 납품이 그렇다).
+const vcore = x => (x || "").replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|유한책임회사|\(재\)|재단법인|\(사\)|사단법인/g, "")
+  .replace(/\s+/g, "").toLowerCase();
+function vendorHits(q) {
+  const k = vcore(q);
+  if (k.length < 2) return [];
+  const out = [];
+  for (const v of VENDORS.values()) {
+    const n = vcore(v.name);
+    // 찾는 말이 회사 이름 안에 들어 있을 때만 본다. 거꾸로도 보면 'ChatGPT'에 회사 'GPT'가
+    // 딸려 나온다 — 이름이 짧을수록 아무 데나 걸린다.
+    if (n === k || (k.length >= 3 && n.includes(k))) out.push(v);
+  }
+  return out.sort((a, b) => b.n - a.n).slice(0, 8);
+}
+function vendorHitCard(q) {
+  const vs = vendorHits(q);
+  if (!vs.length) return "";
+  return `<div class="card"><h2>이 이름의 공급 기업<span class="note">누르면 그 회사의 납품 기록을 볼 수 있습니다</span></h2>
+    <div class="plist">${vs.map(v => `<a href="#/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}<span class="n">${vendorKind(v.key)} · 기록 ${v.n.toLocaleString()}건</span></a>`).join("")}</div></div>`;
+}
+
 function searchView(q) {
   const {hit, terms, words, fixed} = searchHits(q.toLowerCase());
   const recs = SCOPE === "product" ? hit.filter(hasProduct) : hit;
@@ -1153,8 +1178,12 @@ function searchView(q) {
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
+    ${vendorHitCard(q)}
     ${hit.length ? "" : nearMisses(q)}
-    <div class="card">${pagedTable(recs)}</div>`;
+    ${recs.length || !hidden ? `<div class="card">${pagedTable(recs)}</div>`
+      : `<div class="card"><div class="empty">제품 이름이 확인된 기록은 없습니다 —
+          제품군으로만 분류된 기록이 ${hidden.toLocaleString()}건 있습니다.<br>
+          <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 포함</a>을 켜면 볼 수 있습니다.</div></div>`}`;
 }
 
 // ---- 숫자 카운트업 ----
