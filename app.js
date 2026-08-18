@@ -85,7 +85,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260817b";
+  s.src = "data_detail.js?b=20260818a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -678,9 +678,19 @@ function setScope(v) {
 }
 
 // 조사 기간·지역·계열 조건은 홈뿐 아니라 전체 목록 화면에서도 그대로 이어져야 한다
+// 기록에 2020~2022년이 들어온 뒤로는 기본 기간도 실제로 걸러야 한다.
+// 전에는 자료가 2023년부터라 '손대지 않았으면 R을 그대로' 돌려줘도 결과가 같았는데,
+// 이제 그러면 기본 화면에 2020~2022년이 소리 없이 섞인다.
+// 다만 첫 화면마다 28만 건을 훑으면 느려지므로 마지막 결과를 조건째로 기억해 둔다.
+let _brKey = null, _brVal = null;
 function baseRecs() {
-  const anyF = (PF && PF !== BASE_FROM) || PT || SF.size || RG.size || ES.size || PF === "";
-  return anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r)) : R;
+  const key = `${PF}|${PT}|${[...SF].join(",")}|${[...RG].join(",")}|${[...ES].join(",")}`;
+  if (key === _brKey) return _brVal;
+  // PF가 빈 값이면 '2020년까지 통째로'라는 뜻이라 아래 기간 조건이 없다
+  const anyF = PF !== "" || PT || SF.size || RG.size || ES.size;
+  _brKey = key;
+  _brVal = anyF ? R.filter(r => inPeriod(r) && sfMatch(r) && rgMatch(r) && esMatch(r)) : R;
+  return _brVal;
 }
 function filterNote() {
   const bits = [];
@@ -721,7 +731,10 @@ function homeView() {
         <div class="l">검색 가능 학교 (${ES.size ? `${sfLabel()}·${esLabel()}` : sfLabel()}) <span class="hint">변경 ▾</span></div>
       </div>
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
-        <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".") : DB.meta.coveragePeriod}</div>
+        <!-- 칸에 적는 것은 지금 보고 있는 기간이다. 자료는 2020년까지 닿지만 기본은 2023년부터
+             보여 주므로, 손대지 않았을 때 전체 범위를 적으면 없는 것을 보고 있다고 착각하게 된다. -->
+        <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".")
+          : (DB.meta.basePeriod || DB.meta.coveragePeriod)}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
@@ -1257,7 +1270,9 @@ function aboutView() {
 
       <h3>수록 범위</h3>
       <ul>
-        <li>조사 기간: <b>${esc(m.coveragePeriod || "2023.1 ~ 2026.7")}</b></li>
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>
+          ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 보여 줍니다.
+          위쪽 <b>조사 기간</b>에서 2020년까지 넓힐 수 있습니다.` : ""}</li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
         <li>검색 가능 학교: <b>12,543개교</b> — 국내 공교육 전체</li>
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 12,078개교에 더해

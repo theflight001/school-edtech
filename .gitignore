@@ -14,3 +14,10 @@ s2b_refined_nationwide.csv
 서울_candidates.csv
 
 logs/
+
+# 체크포인트 백업 — .ckpt_*.json 규칙에 안 걸리는 꼬리표가 붙은 것들
+.ckpt_*
+ckpt_bak_*/
+
+# 나라장터 입찰 원자료(86MB) — 정제 결과(nara_bid_refined.csv)만 커밋한다
+nara_bid.csv

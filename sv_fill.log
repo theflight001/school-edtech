@@ -1,0 +1,53 @@
+이미 값이 있는 95종은 그대로 두고 2,052종만 다시 묻는다
+제품 2052종 · 다섯씩 묶어 411번 부른다
+  50종 · 값 있음 49
+  100종 · 값 있음 92
+  150종 · 값 있음 122
+  200종 · 값 있음 157
+  250종 · 값 있음 196
+  300종 · 값 있음 241
+  350종 · 값 있음 285
+  400종 · 값 있음 330
+  450종 · 값 있음 380
+  500종 · 값 있음 430
+  550종 · 값 있음 475
+  600종 · 값 있음 518
+  650종 · 값 있음 556
+  700종 · 값 있음 600
+  750종 · 값 있음 647
+  800종 · 값 있음 688
+  850종 · 값 있음 735
+  900종 · 값 있음 780
+  950종 · 값 있음 825
+  1000종 · 값 있음 875
+  1050종 · 값 있음 900
+  1100종 · 값 있음 950
+  1150종 · 값 있음 990
+  1200종 · 값 있음 1040
+  1250종 · 값 있음 1088
+  1300종 · 값 있음 1133
+  1350종 · 값 있음 1178
+  1400종 · 값 있음 1223
+  1450종 · 값 있음 1261
+  1500종 · 값 있음 1311
+  1550종 · 값 있음 1355
+  1600종 · 값 있음 1403
+  1650종 · 값 있음 1451
+  1700종 · 값 있음 1491
+  1750종 · 값 있음 1541
+  1800종 · 값 있음 1586
+  1850종 · 값 있음 1631
+  1900종 · 값 있음 1676
+  1950종 · 값 있음 1721
+  2000종 · 값 있음 1771
+  2050종 · 값 있음 1811
+
+완료 — 2147종 중 값 있음 1813종 → search_volume_blind.csv
+Traceback (most recent call last):
+  File "/Users/keollim/Claude/Projects/edtech/collect_searchvol.py", line 153, in <module>
+    main()
+  File "/Users/keollim/Claude/Projects/edtech/collect_searchvol.py", line 146, in main
+    top = sorted([r for r in rows if r["합계"] != ""], key=lambda r: -r["합계"])[:15]
+  File "/Users/keollim/Claude/Projects/edtech/collect_searchvol.py", line 146, in <lambda>
+    top = sorted([r for r in rows if r["합계"] != ""], key=lambda r: -r["합계"])[:15]
+TypeError: bad operand type for unary -: 'str'

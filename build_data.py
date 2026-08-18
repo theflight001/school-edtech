@@ -1226,7 +1226,10 @@ meta = {
     "asOf": "2026-07-20",
     "total": len(records),
     "schools": len({rec["school"] for rec in records}),
-    "coveragePeriod": "2023.1 ~ 2026.7",
+    # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
+    # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
+    "coveragePeriod": "2020.1 ~ 2026.7",
+    "basePeriod": "2023.1 ~ 2026.7",
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------

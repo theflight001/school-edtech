@@ -74,7 +74,9 @@ def posts_of(page_html):
         out.append({"sc": sc, "neis": neis, "name": html.unescape(name).strip(), "month": month})
     return out
 
-PERIOD_FROM, PERIOD_TO = "20230101", "20261231"   # 화면이 받아 주는 작성일자 범위
+# 화면이 받아 주는 작성일자 범위. 2020년까지 넓힐 수 있는지 시험해 보고 정했다 —
+# 화면 자체는 기간 제한을 두지 않고, 그 학교에 남아 있는 만큼 돌려준다.
+PERIOD_FROM, PERIOD_TO = "20200101", "20261231"
 
 def detail(school, page=1, per=1000):
     """학교 하나의 전 기간 계약 — 기준월을 비우고 작성일자 범위를 준다"""
@@ -102,16 +104,26 @@ def detail(school, page=1, per=1000):
     return total, rows
 
 def main():
+    global PERIOD_FROM
     ap = argparse.ArgumentParser()
-    ap.add_argument("--years", default="2023,2024,2025,2026")
+    ap.add_argument("--years", default="2020,2021,2022,2023,2024,2025,2026")
+    ap.add_argument("--begin", default="", help="작성일자 시작 (기본 %s)" % PERIOD_FROM)
+    ap.add_argument("--redo", action="store_true",
+                    help="이미 받은 학교도 다시 받는다 (기간을 넓혔을 때). 중복은 seen이 막는다")
     ap.add_argument("--months", default="", help="기준월을 직접 지정 (예: 202601,202602)")
     ap.add_argument("--max-list-pages", type=int, default=400)
     ap.add_argument("--relist", action="store_true", help="게시물 목록을 다시 훑는다(새 달이 올라온 뒤)")
     ap.add_argument("--ora", default="", help="관할 교육지원청 코드 (기본: 11곳 전부)")
     a = ap.parse_args()
 
+    if a.begin:
+        PERIOD_FROM = a.begin
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"posts": [], "done": [], "seen": []}
     done, seen = set(ckpt["done"]), set(tuple(k) for k in ckpt["seen"])
+    if a.redo:
+        # 기간을 넓혔으니 받은 학교도 다시 받아야 한다. 이미 있는 계약은 seen이 걸러 낸다.
+        print(f"기간을 넓혀 다시 받는다 ({PERIOD_FROM}~) — 학교 {len(done):,}곳 초기화", flush=True)
+        done = set()
     years = set(a.years.split(","))
     months = set(m.strip() for m in a.months.split(",") if m.strip())
 
