@@ -88,9 +88,9 @@ const count = (arr, key) => {
 
 const BASE = records.filter(r => !r.dup);
 function homeOf(scope) {
-  // 첫 화면은 기본 기간(2023년~)으로 센다 — app.js의 BASE_FROM과 같은 기준이라야
+  // 첫 화면은 기본 기간(2026년~)으로 센다 — app.js의 BASE_FROM과 같은 기준이라야
   // 자료가 다 온 뒤 숫자가 바뀌어 보이지 않는다
-  const IN = BASE.filter(r => !r.year || r.year >= 2023);
+  const IN = BASE.filter(r => !r.year || r.year >= 2026);
   const RF = scope === "product" ? IN.filter(hasProduct) : IN;
   // 첫 화면 막대도 학교 선택 창과 같은 층으로 — 초·중·고·특수기타
   // (app.js의 LEVELS와 같은 묶음이다. 여기서 다르게 묶으면 자료가 다 온 뒤 막대가 바뀌어 보인다)

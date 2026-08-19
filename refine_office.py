@@ -25,6 +25,9 @@ OFFICES = {
     "충남": ("충남_candidates.csv", "cne_refined.csv", "", r"충청남도"),
     "경남": ("경남_candidates.csv", "gne_refined.csv", "", r"경상남도"),
     "서울": ("서울_candidates.csv", "sen_refined.csv", "서울", r"서울"),
+    # 서울 '계약현황 › 에듀파인연계' — 수의계약공개가 갖고 있지 않은 2020~2021년분.
+    # 입찰 계약도 함께 실린다(수의계약공개에는 없다).
+    "서울에듀파인": ("서울에듀파인_full.csv", "sen_edufine_refined.csv", "서울", r"서울"),
 }
 # 수요기관에 적을 교육청 이름 (광역시가 아닌 곳이 있다)
 OFFICE_NAME = {"인천": "인천광역시교육청", "부산": "부산광역시교육청", "대구": "대구광역시교육청",

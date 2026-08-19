@@ -2,6 +2,35 @@
 // (전역 이름과 inline onclick 핸들러가 그대로 동작하도록 일반 스크립트로 둔다)
 // data.js는 열 이름을 한 번만 적고 되풀이되는 문자열을 사전으로 치환한 압축 형식이다.
 // 화면 코드는 예전과 같은 객체 배열을 기대하므로 여기서 원래 모양으로 되돌린다.
+// 행을 원래 모양으로 되돌리는 일은 2020~2022년 자료에도 그대로 쓰이므로 떼어 둔다.
+// 열 이름·사전·태그표는 data.js 것 하나뿐이다 — data_old.js는 행만 싣는다.
+function decodeRows(rows, sparse, base) {
+  const d = DB_RAW, cols = d.cols, dict = d.dict || {}, pre = d.urlPrefix || "";
+  const out = new Array(rows.length);
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i], o = {};
+    for (let c = 0; c < cols.length; c++) {
+      const k = cols[c];
+      let v = row[c];
+      if (k === "tags") v = v.map(n => d.tagList[n]);
+      else if (dict[k] && typeof v === "number") v = dict[k][v];
+      else if (k === "url" && typeof v === "string" && v[0] === "~") v = pre + v.slice(1);
+      o[k] = v;
+    }
+    o._i = base + i;
+    out[i] = o;
+  }
+  for (const k in (sparse || {})) for (const i of sparse[k]) out[i][k] = 1;
+  const won = a => !a ? "" : (a >= 10000
+    ? `(${Math.round(a / 10000).toLocaleString()}만원)` : `(${a.toLocaleString()}원)`);
+  for (const r of out) {
+    if (r.content == null && r.ctpl) {
+      r.content = r.ctpl + (r.amt ? " " + won(r.amt) : "")
+        + (r.vendor ? " · 계약업체: " + r.vendor : "");
+    }
+  }
+  return out;
+}
 const DB = (() => {
   const d = DB_RAW, cols = d.cols, dict = d.dict || {}, pre = d.urlPrefix || "";
   const records = new Array(d.rows.length);
@@ -47,11 +76,16 @@ perfMark("자료 해석·객체화");
 let DETAIL = null, DETAIL_DONE = null;
 function mergeDetail(d) {
   DETAIL = d;
-  DETAIL_DONE = new Uint8Array(d.rows.length);
+  DETAIL_DONE = new Uint8Array(R.length);      // 옛 자료를 붙여도 자리가 모자라지 않게
   if (typeof perfMark === "function") perfMark("상세 자료 받기");
   if (typeof render === "function") render();                  // 받아온 내용으로 다시 그린다
   if (typeof perfMark === "function") perfMark("상세 반영 후 재그리기");
 }
+// 2020~2022년 상세는 뒤이어 따로 온다 — 행 번호가 offset만큼 밀려 있다
+let DETAIL_OLD = null;
+const detRow = i => (i < (DETAIL_OLD ? DETAIL_OLD.offset : Infinity))
+  ? (DETAIL ? DETAIL.rows[i] : null)
+  : (DETAIL_OLD.rows[i - DETAIL_OLD.offset] || null);
 function fillDetail(recs) {                                    // 보이는 기록만 채운다
   if (!DETAIL || !recs || !recs.length) return recs;
   const cols = DETAIL.cols, dict = DETAIL.dict || {}, pre = DETAIL.urlPrefix || "";
@@ -59,7 +93,7 @@ function fillDetail(recs) {                                    // 보이는 기�
     const i = o && o._i;
     if (i == null || DETAIL_DONE[i]) continue;
     DETAIL_DONE[i] = 1;
-    const row = DETAIL.rows[i];
+    const row = detRow(i);
     if (!row) continue;
     for (let c = 0; c < cols.length; c++) {
       const k = cols[c];
@@ -78,14 +112,15 @@ function detailVal(i, k) {
   if (!DETAIL) return "";
   const c = _detIdx(k);
   if (c < 0) return "";
-  const v = DETAIL.rows[i] ? DETAIL.rows[i][c] : null;
+  const r0 = detRow(i);
+  const v = r0 ? r0[c] : null;
   const dict = DETAIL.dict || {};
   return (dict[k] && typeof v === "number") ? dict[k][v] : (v == null ? "" : v);
 }
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260818a";
+  s.src = "data_detail.js?b=20260820a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -310,7 +345,9 @@ function recordTable(recs, {showSchool = true} = {}) {
 // 자료는 2020년까지 있지만 기본으로는 2023년부터 본다.
 // 2020~2022년은 계약명에 제품 이름이 잘 안 적히던 시기라(제품군만 붙는 비율 76%)
 // 기본에 섞으면 지금 그림이 희석된다. 넓혀 보고 싶은 사람만 당겨 오게 한다.
-const BASE_FROM = "2023-01";
+// 첫 화면은 올해(2026년)만 보여 준다. 자료는 2020년까지 닿지만 그 앞을 늘 받아 오면
+// 첫 화면이 그만큼 늦다 — 기간을 넓힐 때 따로 받는다(withOld).
+const BASE_FROM = "2026-01";
 let PF = BASE_FROM, PT = "";  // "YYYY-MM"
 window.setPF = v => { PF = v; render(); };
 window.setPT = v => { PT = v; render(); };
@@ -318,13 +355,15 @@ window.clearPeriod = () => { PF = BASE_FROM; PT = ""; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
 const YM_MIN = 202001, YM_MAX = 202607;
 let pkS = null, pkE = null, pkBase = 2025;
-// 기본(2023년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
+// 기본(2026년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
 const periodOn = () => (PF !== BASE_FROM) || !!PT;
 const ymStr = ym => `${Math.floor(ym / 100)}-${String(ym % 100).padStart(2, "0")}`;
 const ymKo = ym => `${Math.floor(ym / 100)}.${String(ym % 100).padStart(2, "0")}`;
 window.openPicker = () => {
   pkS = ymInt(PF); pkE = ymInt(PT);
-  pkBase = pkS ? Math.min(Math.max(Math.floor(pkS / 100), 2020), 2025) : 2025;
+  // 고르개는 늘 2020년에서 편다 — 넓히려고 여는 것이므로 옛 해가 먼저 보여야 한다.
+  // 고른 기간에서 되짚어 열면 기본이 2026년이라 2025년이 나와 넓힐 길이 안 보인다.
+  pkBase = 2020;
   drawPicker();
 };
 window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = ""; };
@@ -337,11 +376,50 @@ window.pkPick = ym => {
   else { pkS = ym; pkE = null; }
   drawPicker();
 };
-window.pkAll = () => { PF = ""; PT = ""; closePicker(); render(); };   // 2020년까지 통째로
+// 기본 기간(2026년~) 앞의 기록은 첫 화면에 필요 없어 따로 두었다 — data.js가 그만큼 가볍다.
+// 기간을 그 앞으로 넓힐 때 한 번만 받아 붙인다.
+let OLD_STATE = "none";                       // none → loading → done
+// 기본 기간보다 앞으로 넓히면 따로 둔 옛 기록이 필요하다 (data.js는 기본 기간만 싣는다)
+function needOld(from) { return from === "" || from < BASE_FROM; }
+function withOld(from, then) {
+  if (!needOld(from) || OLD_STATE === "done") return then();
+  if (OLD_STATE === "loading") return;
+  OLD_STATE = "loading";
+  const view = $("#view");
+  if (view) view.insertAdjacentHTML("afterbegin",
+    `<div class="notice" id="oldload"><b>지난 기록을 불러오는 중입니다…</b></div>`);
+  const add = () => {
+    if (typeof DB_OLD !== "undefined") {
+      const more = decodeRows(DB_OLD.rows, DB_OLD.sparse, DB_OLD.offset);
+      for (const r of more) R.push(r);
+      _brKey = null;                          // 걸러 둔 것을 버린다
+      NAME_POOL = null;
+    }
+    OLD_STATE = "done";
+    const s2 = document.createElement("script");
+    s2.src = "data_detail_old.js?b=20260820a";
+    s2.onload = () => {
+      if (typeof DB_DETAIL_OLD !== "undefined") {
+        DETAIL_OLD = DB_DETAIL_OLD;
+        DETAIL_DONE = new Uint8Array(R.length);
+        render();
+      }
+    };
+    document.body.appendChild(s2);
+    then();
+  };
+  const s = document.createElement("script");
+  s.src = "data_old.js?b=20260820a";
+  s.onload = add;
+  s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
+  document.body.appendChild(s);
+}
+window.pkAll = () => { closePicker(); withOld("", () => { PF = ""; PT = ""; render(); }); };
 window.pkApply = () => {
   if (pkS === null) return;
-  PF = ymStr(pkS); PT = ymStr(pkE !== null ? pkE : pkS);
-  closePicker(); render();
+  const from = ymStr(pkS), to = ymStr(pkE !== null ? pkE : pkS);
+  closePicker();
+  withOld(from, () => { PF = from; PT = to; render(); });
 };
 // ---- 학교 계열 필터 (부모 6칸 + 세부 잎사귀) ----
 const LEAVES = [
@@ -612,17 +690,18 @@ function drawPicker() {
       <div class="pk-panel" role="dialog" aria-label="조사 기간 선택">
         <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top">
-          <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2023 ? "disabled" : ""} aria-label="이전 해">‹</button>
+          <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2020 ? "disabled" : ""} aria-label="이전 해">‹</button>
           <div style="text-align:center"><div class="pk-title">조사 기간 선택</div><div class="pk-range">${rangeTxt}</div></div>
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
         <div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
         <div class="pk-foot">
           <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2020.01 ~ 2026.07) ·
-            2022년 이전은 계약명에 제품 이름이 잘 적히지 않아 제품군으로만 남은 기록이 많습니다</span>
+            계약명에 제품 이름이 적히는 정도는 시도마다 크게 다르고(2026년 기준 제주 13% · 나라장터 73%),
+            옛 기록일수록 제품군으로만 남은 것이 많습니다</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="pkAll()" title="2020년 1월부터 모두 봅니다">2020년까지 전체</button>
-            <button class="pk-btn" onclick="clearPeriod();closePicker()">기본(2023년~)</button>
+            <button class="pk-btn" onclick="clearPeriod();closePicker()">기본(2026년~)</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
           </span>

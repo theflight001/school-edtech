@@ -840,6 +840,7 @@ OFFICE_SOURCES = [
     ("cne_refined.csv", "충남", "충남교육청 계약공개", 1600000),
     ("gne_refined.csv", "경남", "경남교육청 계약공개", 1700000),
     ("sen_refined.csv", "서울", "서울교육청 계약공개", 1800000),
+    ("sen_edufine_refined.csv", "서울", "서울교육청 계약공개", 1850000),
     ("nara_bid_refined.csv", "", "나라장터 입찰공고", 1900000),   # 전국 — 시도는 행마다 다르다
 ]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
@@ -1229,7 +1230,7 @@ meta = {
     # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
     # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
     "coveragePeriod": "2020.1 ~ 2026.7",
-    "basePeriod": "2023.1 ~ 2026.7",
+    "basePeriod": "2026.1 ~ 2026.7",
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------
@@ -1343,6 +1344,21 @@ _det_rows = [[r[i] for i in _di] for r in _rows]
 _core_dict = {c: v for c, v in _dicts.items() if c in _core_cols}
 _det_dict = {c: v for c, v in _dicts.items() if c in _det_cols}
 
+# 첫 화면은 올해(2026년)만 보여 준다(app.js의 BASE_FROM). 그 앞은 기간을 넓힐 때만
+# 쓰이는데 전체의 86%를 차지한다 — 첫 화면에서 기다릴 까닭이 없다. 그래서 따로 낸다.
+# 행 번호(_i)로 상세를 찾아오므로 옛 기록을 뒤로 몰아 번호가 어긋나지 않게 한다.
+_BASE_YEAR = 2026                                   # app.js의 BASE_FROM과 같은 해라야 한다
+_base_ix = [i for i, r in enumerate(records) if not r.get("year") or r["year"] >= _BASE_YEAR]
+_old_ix = [i for i, r in enumerate(records) if r.get("year") and r["year"] < _BASE_YEAR]
+_order = _base_ix + _old_ix
+_core_rows = [_core_rows[i] for i in _order]
+_det_rows = [_det_rows[i] for i in _order]
+_pos = {o: n for n, o in enumerate(_order)}
+_sparse = {c: sorted(_pos[i] for i in ix) for c, ix in _sparse.items()}
+_NB = len(_base_ix)
+_sparse_base = {c: [i for i in ix if i < _NB] for c, ix in _sparse.items()}
+_sparse_old = {c: [i for i in ix if i >= _NB] for c, ix in _sparse.items()}
+
 # 자료를 자바스크립트 문법으로 적으면 브라우저가 19MB짜리 소스를 통째로 해석하느라
 # 첫 화면이 3초 넘게 늦어진다. 같은 내용을 문자열에 담아 JSON.parse로 넘기면
 # 전용 파서가 처리해 10배 가까이 빠르다(측정: 2.9초 → 0.26초).
@@ -1365,20 +1381,35 @@ with open(OUT, "w", encoding="utf-8") as f:
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
                          "tagList": _tag_list, "origin": _origin,
-                         "sparse": _sparse, "rows": _core_rows,
+                         "sparse": _sparse_base, "rows": _core_rows[:_NB],
                          "schoolIndex": school_index}))
+    f.write(");\n")
+# 2020~2022년 — 조사 기간을 넓힐 때만 읽는다. 열 이름·사전·태그표는 data.js 것을 그대로 쓴다.
+with open("data_old.js", "w", encoding="utf-8") as f:
+    f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (기간을 넓힐 때만 읽는다)\n")
+    f.write("const DB_OLD = JSON.parse(")
+    f.write(_js_literal({"offset": _NB, "rows": _core_rows[_NB:],
+                         "sparse": {c: [i - _NB for i in ix] for c, ix in _sparse_old.items()}}))
     f.write(");\n")
 with open("data_detail.js", "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (첫 화면 뒤에 따로 읽는다)\n")
     f.write("const DB_DETAIL = JSON.parse(")
     f.write(_js_literal({"cols": _det_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _det_dict.items()},
-                         "urlPrefix": _URL_PRE, "rows": _det_rows}))
+                         "urlPrefix": _URL_PRE, "rows": _det_rows[:_NB]}))
+    f.write(");\n")
+with open("data_detail_old.js", "w", encoding="utf-8") as f:
+    f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (기간을 넓힌 뒤에 읽는다)\n")
+    f.write("const DB_DETAIL_OLD = JSON.parse(")
+    f.write(_js_literal({"offset": _NB, "rows": _det_rows[_NB:]}))
     f.write(");\n")
 _a = os.path.getsize(OUT) / 1024 / 1024
 _b = os.path.getsize("data_detail.js") / 1024 / 1024
-print(f"\n{OUT} {_a:.1f}MB (첫 화면·검색용 {len(_core_cols)}열) + "
-      f"data_detail.js {_b:.1f}MB (상세 {len(_det_cols)}열)")
+_c = os.path.getsize("data_old.js") / 1024 / 1024
+_d = os.path.getsize("data_detail_old.js") / 1024 / 1024
+print(f"\n{OUT} {_a:.1f}MB + data_detail.js {_b:.1f}MB  — {_BASE_YEAR}년~ {_NB:,}건 (첫 화면)")
+print(f"data_old.js {_c:.1f}MB + data_detail_old.js {_d:.1f}MB — {_BASE_YEAR}년 이전 "
+      f"{len(_core_rows) - _NB:,}건 (기간을 넓힐 때만)")
 
 # 첫 화면용 요약 파일 — 홈 화면 수치만 미리 계산해 두면 원자료를 기다리지 않고 그릴 수 있다
 import shutil as _sh, subprocess as _sp
