@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260820a";
+  s.src = "data_detail.js?b=20260820b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -397,7 +397,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260820a";
+    s2.src = "data_detail_old.js?b=20260820b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -409,12 +409,11 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260820a";
+  s.src = "data_old.js?b=20260820b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
 }
-window.pkAll = () => { closePicker(); withOld("", () => { PF = ""; PT = ""; render(); }); };
 window.pkApply = () => {
   if (pkS === null) return;
   const from = ymStr(pkS), to = ymStr(pkE !== null ? pkE : pkS);
@@ -697,11 +696,9 @@ function drawPicker() {
         <div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
         <div class="pk-foot">
           <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2020.01 ~ 2026.07) ·
-            계약명에 제품 이름이 적히는 정도는 시도마다 크게 다르고(2026년 기준 제주 13% · 나라장터 73%),
+            계약명에 제품 이름이 적히는 정도는 시도마다 상이하고(2026년 기준 제주 13% · 나라장터 73%),
             옛 기록일수록 제품군으로만 남은 것이 많습니다</span>
           <span style="display:flex;gap:8px">
-            <button class="pk-btn" onclick="pkAll()" title="2020년 1월부터 모두 봅니다">2020년까지 전체</button>
-            <button class="pk-btn" onclick="clearPeriod();closePicker()">기본(2026년~)</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
           </span>
@@ -819,7 +816,7 @@ function homeView() {
     </div>
     ${anyF ? `<div class="fnote">
       <span>선택 조건 사례 ${RF.length.toLocaleString()}건${active ? " · 월 미상 기록은 연 단위로 포함" : ""}${SF.size ? ` · 계열: ${sfLabel()}` : ""}${ES.size ? ` · 설립 주체: ${esLabel()}` : ""}${rgActive ? ` · 지역: ${rgLabel()}` : ""}</span>
-      ${active ? `<button onclick="clearPeriod()">기본 기간(2023년~)</button>` : ""}
+      ${active ? `<button onclick="clearPeriod()">기본 기간(2026년~)</button>` : ""}
       ${scActive ? `<button onclick="scAll()">전체 학교</button>` : ""}
       ${rgActive ? `<button onclick="rgAll()">전국</button>` : ""}
     </div>` : ""}
