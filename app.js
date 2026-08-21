@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821b";
+  s.src = "data_detail.js?b=20260821c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -373,11 +373,14 @@ window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = "
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("pickerRoot").innerHTML) closePicker();
 });
+let pkDir = 0;                     // 방금 어느 쪽으로 넘겼나 — 밀려 들어오는 방향을 정한다
 window.pkShift = d => {
   const b = Math.min(2025, Math.max(2020, pkBase + d));
   if (b === pkBase) return;
   pkBase = b;
+  pkDir = d;
   drawPicker();
+  pkDir = 0;                       // 달을 누를 때마다 다시 밀려 들어오면 어지럽다
 };
 // 달력을 옆으로 밀거나 휠을 굴려도 해가 넘어간다. drawPicker가 안쪽을 통째로 다시 그리므로
 // 판마다 붙이지 않고 바깥 상자에 한 번만 걸어 둔다.
@@ -439,7 +442,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821b";
+    s2.src = "data_detail_old.js?b=20260821c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -451,7 +454,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821b";
+  s.src = "data_old.js?b=20260821c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -745,11 +748,15 @@ function drawPicker() {
       <div class="pk-panel" role="dialog" aria-label="조사 기간 선택">
         <button class="pk-x" onclick="closePicker()" aria-label="닫기">✕</button>
         <div class="pk-top">
+          <div style="text-align:center;width:100%"><div class="pk-title">조사 기간 선택</div><div class="pk-range">${rangeTxt}</div></div>
+        </div>
+        <!-- 화살표를 달력 양옆에 둔다. 머리말 줄에 두면 닫기(✕)와 겹친다.
+             해가 넘어갈 때 달력 전체가 옆에서 밀려 들어와야 '넘어갔다'고 느낀다. -->
+        <div class="pk-carousel">
           <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2020 ? "disabled" : ""} aria-label="이전 해">‹</button>
-          <div style="text-align:center"><div class="pk-title">조사 기간 선택</div><div class="pk-range">${rangeTxt}</div></div>
+          <div class="pk-years${pkDir ? (pkDir > 0 ? " in-next" : " in-prev") : ""}">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
-        <div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
         <div class="pk-foot">
           <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2020.01 ~ 2026.07) ·
             계약명에 제품 이름이 적히는 정도는 시도마다 상이하고(2026년 기준 제주 13% · 나라장터 73%),

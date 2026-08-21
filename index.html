@@ -218,9 +218,19 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
   display: flex; align-items: center; justify-content: center; flex: 0 0 auto; transition: .12s; }
 .pk-nav:hover:not(:disabled) { border-color: var(--bar); color: var(--accent); background: var(--bg); }
 .pk-nav:disabled { opacity: .25; cursor: default; }
+/* 화살표는 달력 양옆에 둔다 — 머리말 줄에 두면 닫기(✕)와 겹친다 */
+.pk-carousel { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; }
+.pk-carousel .pk-years { flex: 1 1 auto; min-width: 0; margin: 0; }
+@media (max-width: 620px) { .pk-carousel { gap: 4px; } .pk-nav { width: 38px; height: 38px; font-size: 22px; } }
 /* 달력을 옆으로 밀거나 휠을 굴려도 해가 넘어간다 */
 .pk-years { touch-action: pan-y; user-select: none; }
 .pk-years.drag { cursor: grabbing; }
+/* 해가 바뀌면 달력 전체가 옆에서 밀려 들어온다 — 숫자만 바뀌면 넘어간 줄 모른다 */
+.pk-years.in-next { animation: pkNext .2s ease-out; }
+.pk-years.in-prev { animation: pkPrev .2s ease-out; }
+@keyframes pkNext { from { transform: translateX(34px); opacity: .2 } to { transform: none; opacity: 1 } }
+@keyframes pkPrev { from { transform: translateX(-34px); opacity: .2 } to { transform: none; opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .pk-years.in-next, .pk-years.in-prev { animation: none } }
 .pk-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 10px; flex-wrap: wrap; }
 .pk-foot > span:last-of-type { margin-left: auto; }
 .pk-btn { font: inherit; font-size: 14px; border-radius: 999px; padding: 8px 18px; cursor: pointer; border: 1px solid var(--grid); background: var(--plane); color: var(--ink-2); }
@@ -382,7 +392,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data_summary.js?b=20260821b"></script>
+<script src="data_summary.js?b=20260821c"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -431,7 +441,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260821b", function () { load("app.js?b=20260821b"); });
+    load("data.js?b=20260821c", function () { load("app.js?b=20260821c"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
