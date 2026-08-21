@@ -930,6 +930,12 @@ for _t, _p in SPECIFIC_RULES:
         _RULE_PAT.setdefault(_t, re.compile(_p))
     except re.error:
         pass
+_RULE_PAT_I = {}                    # 업체 이름에 대 볼 때는 대소문자를 가리지 않는다
+for _t, _p in SPECIFIC_RULES:
+    try:
+        _RULE_PAT_I.setdefault(_t, re.compile(_p, re.I))
+    except re.error:
+        pass
 _ntag = lambda x: re.sub(r"[\s·\-_()]+", "", x).lower()
 _parents = {}                       # 하위 태그 → 이름이 그 안에 든 상위 태그들
 for _b in _RULE_PAT:
@@ -985,7 +991,12 @@ for r in records:
     # 지울 근거가 있는 것만 지운다 — 에듀집에 회사가 적혀 있는데 그 회사가 아닌 제품.
     # 회사를 모르는 제품(리딩앤·오르조 …)은 건드리지 않는다. 같은 회사의 형제 제품일 수 있다.
     def _mine(t):
-        return (_EDZIP_MAKER.get(t) and _vnorm(_EDZIP_MAKER[t]) == vn) or (_vnorm(t) and _vnorm(t) in vn)
+        # 업체 이름이 그 제품 이름과 글자가 겹치면 그 회사 것으로 본다.
+        # 다만 표기가 갈리면 겹치지 않는다 — 태그는 'Padlet'인데 업체는 '패들렛'으로
+        # 적히는 식이다. 그 제품의 판정 규칙(Padlet|패들렛)을 업체 이름에 대 보면 걸린다.
+        return ((_EDZIP_MAKER.get(t) and _vnorm(_EDZIP_MAKER[t]) == vn)
+                or (_vnorm(t) and _vnorm(t) in vn)
+                or (t in _RULE_PAT_I and _RULE_PAT_I[t].search(vend)))
     def _theirs(t):
         return bool(_EDZIP_MAKER.get(t)) and not _mine(t)
     keep = [t for t in _spec if not _theirs(t)]

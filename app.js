@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821f";
+  s.src = "data_detail.js?b=20260822a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821f";
+    s2.src = "data_detail_old.js?b=20260822a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821f";
+  s.src = "data_old.js?b=20260822a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1387,7 +1387,9 @@ function searchView(q) {
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
     <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
-    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
+    <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${
+      OLD_STATE === "done" ? ` · <span class="conf">전 기간(2020.1~2026.7)에서 찾았습니다</span>`
+      : ` · <span class="conf">지난 기록을 불러오는 중입니다…</span>`}${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
     ${vendorHitCard(q)}
@@ -1649,7 +1651,12 @@ function render() {
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
   else if (kind === "drill2") view.innerHTML = drillTagView(seg[2], decodeURIComponent(seg[3] || ""), decodeURIComponent(seg[4] || ""));
-  else if (kind === "search") view.innerHTML = searchView(arg);
+  else if (kind === "search") {
+    // 검색은 늘 전 기간을 본다. 통계는 최근만 봐도 뜻이 통하지만, 검색은 기간에 걸려
+    // 0건이 나오면 '그런 기록이 없다'는 잘못된 답을 주게 된다(호랑에듀가 그랬다).
+    view.innerHTML = searchView(arg);
+    if (OLD_STATE !== "done") withOld("", () => render());
+  }
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "products") view.innerHTML = productsView();
   else if (kind === "regions") view.innerHTML = regionsView();
