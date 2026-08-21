@@ -21,3 +21,9 @@ ckpt_bak_*/
 
 # 나라장터 입찰 원자료(86MB) — 정제 결과(nara_bid_refined.csv)만 커밋한다
 nara_bid.csv
+
+# 서울 에듀파인연계·나라장터 교육청 원자료 — 정제 결과만 커밋한다
+nara_office.csv
+서울에듀파인_full.csv
+서울에듀파인_candidates.csv
+*.log

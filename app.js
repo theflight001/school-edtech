@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821e";
+  s.src = "data_detail.js?b=20260821f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -338,7 +338,7 @@ function recordTable(recs, {showSchool = true} = {}) {
       ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
-      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}<div class="conf">신뢰도 ${esc(r.confidence)}${r.dup ? " · 조달 기록과 동일 건(1건 집계)" : ""}${r.feeOnly ? " · 결제 수수료(제품 구매액 아님)" : ""}</div>${noteLine(r)}</td>
+      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821e";
+    s2.src = "data_detail_old.js?b=20260821f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821e";
+  s.src = "data_old.js?b=20260821f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1256,6 +1256,17 @@ function queryTerms(q) {
 }
 // 비고 표시 — 자동수집 상투 문구는 감추고 사람이 남긴 설명만 보여준다
 const NOTE_BOILER = /^(파일럿 자동수집분|S2B 자동수집분|교육청 계약정보공개 자동수집분|결제 수수료)/;
+// 신뢰도는 줄마다 '중'이라고만 적혀 아무것도 가르지 못했다(99.7%가 중). 조달 기록
+// 그대로라는 뜻인데 그건 출처 칸이 이미 말한다. 조심해서 볼 것만 적는다 —
+// '하'는 학교를 특정하지 못한 기록이다(전국 다수·커뮤니티 위키 출처).
+function confNote(r) {
+  const bits = [];
+  if (r.confidence === "하") bits.push("학교를 특정하지 못한 기록");
+  if (r.dup) bits.push("조달 기록과 동일 건(1건 집계)");
+  if (r.feeOnly) bits.push("결제 수수료(제품 구매액 아님)");
+  return bits.length ? `<div class="conf">${bits.map(esc).join(" · ")}</div>` : "";
+}
+
 function noteLine(r) {
   if (!r.note) return "";
   const parts = r.note.split(" · ").filter(s => s && !NOTE_BOILER.test(s.trim()));
