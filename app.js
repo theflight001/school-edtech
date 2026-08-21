@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821a";
+  s.src = "data_detail.js?b=20260821b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -373,7 +373,46 @@ window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = "
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("pickerRoot").innerHTML) closePicker();
 });
-window.pkShift = d => { pkBase = Math.min(2025, Math.max(2020, pkBase + d)); drawPicker(); };
+window.pkShift = d => {
+  const b = Math.min(2025, Math.max(2020, pkBase + d));
+  if (b === pkBase) return;
+  pkBase = b;
+  drawPicker();
+};
+// 달력을 옆으로 밀거나 휠을 굴려도 해가 넘어간다. drawPicker가 안쪽을 통째로 다시 그리므로
+// 판마다 붙이지 않고 바깥 상자에 한 번만 걸어 둔다.
+(function pkSwipe() {
+  const root = document.getElementById("pickerRoot");
+  if (!root) return;
+  const inYears = e => e.target.closest && e.target.closest(".pk-years");
+  let wheelAt = 0;
+  root.addEventListener("wheel", e => {
+    if (!inYears(e)) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(d) < 8) return;
+    const now = performance.now();
+    if (now - wheelAt < 260) return;             // 한 번 굴릴 때 한 해씩만 넘긴다
+    wheelAt = now;
+    e.preventDefault();
+    pkShift(d > 0 ? 1 : -1);
+  }, {passive: false});
+  let x0 = null, el = null;
+  root.addEventListener("pointerdown", e => {
+    el = inYears(e);
+    if (!el) return;
+    x0 = e.clientX;
+    el.classList.add("drag");
+  });
+  const end = e => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0;
+    if (el) el.classList.remove("drag");
+    x0 = null; el = null;
+    if (Math.abs(dx) >= 60) pkShift(dx < 0 ? 1 : -1);   // 왼쪽으로 밀면 다음 해
+  };
+  root.addEventListener("pointerup", end);
+  root.addEventListener("pointercancel", () => { if (el) el.classList.remove("drag"); x0 = null; el = null; });
+})();
 window.pkPick = ym => {
   if (pkS !== null && pkE === null && ym >= pkS) pkE = ym;
   else { pkS = ym; pkE = null; }
@@ -400,7 +439,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821a";
+    s2.src = "data_detail_old.js?b=20260821b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -412,7 +451,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821a";
+  s.src = "data_old.js?b=20260821b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
