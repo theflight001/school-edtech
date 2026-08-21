@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821c";
+  s.src = "data_detail.js?b=20260821d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -373,14 +373,33 @@ window.closePicker = () => { document.getElementById("pickerRoot").innerHTML = "
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && document.getElementById("pickerRoot").innerHTML) closePicker();
 });
-let pkDir = 0;                     // 방금 어느 쪽으로 넘겼나 — 밀려 들어오는 방향을 정한다
+let pkSliding = false;
 window.pkShift = d => {
   const b = Math.min(2025, Math.max(2020, pkBase + d));
-  if (b === pkBase) return;
+  if (b === pkBase || pkSliding) return;          // 넘기는 중에 또 넘기면 겹쳐 보인다
+  // 옛 달력을 그대로 복사해 두었다가, 새 것이 들어오는 동안 반대쪽으로 내보낸다.
+  // 복사해 두지 않고 새 것만 밀어 넣으면 빈 자리가 비쳐 방정맞아 보인다.
+  const old = document.querySelector(".pk-viewport .pk-years");
+  const ghost = old ? old.cloneNode(true) : null;
   pkBase = b;
-  pkDir = d;
   drawPicker();
-  pkDir = 0;                       // 달을 누를 때마다 다시 밀려 들어오면 어지럽다
+  const vp = document.querySelector(".pk-viewport");
+  if (!ghost || !vp) return;
+  const cur = vp.querySelector(".pk-years");
+  const way = d > 0 ? "next" : "prev";
+  ghost.classList.add("ghost", "out-" + way);
+  cur.classList.add("in-" + way);
+  vp.appendChild(ghost);
+  pkSliding = true;
+  const done = () => {
+    ghost.remove();
+    cur.classList.remove("in-" + way);
+    pkSliding = false;
+  };
+  // 움직임을 끈 설정(prefers-reduced-motion)에서는 animationend가 오지 않는다
+  if (getComputedStyle(ghost).animationName === "none") { done(); return; }
+  ghost.addEventListener("animationend", done, {once: true});
+  setTimeout(done, 700);            // 애니메이션이 씹혔을 때를 위한 뒷문
 };
 // 달력을 옆으로 밀거나 휠을 굴려도 해가 넘어간다. drawPicker가 안쪽을 통째로 다시 그리므로
 // 판마다 붙이지 않고 바깥 상자에 한 번만 걸어 둔다.
@@ -442,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821c";
+    s2.src = "data_detail_old.js?b=20260821d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -454,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821c";
+  s.src = "data_old.js?b=20260821d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -754,7 +773,7 @@ function drawPicker() {
              해가 넘어갈 때 달력 전체가 옆에서 밀려 들어와야 '넘어갔다'고 느낀다. -->
         <div class="pk-carousel">
           <button class="pk-nav" onclick="pkShift(-1)" ${pkBase <= 2020 ? "disabled" : ""} aria-label="이전 해">‹</button>
-          <div class="pk-years${pkDir ? (pkDir > 0 ? " in-next" : " in-prev") : ""}">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div>
+          <div class="pk-viewport"><div class="pk-years">${pkYearHTML(pkBase)}${pkYearHTML(pkBase + 1)}</div></div>
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
         <div class="pk-foot">
