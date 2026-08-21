@@ -40,6 +40,9 @@ const PARENT_LABEL = {elem: "초등학교", mid: "중학교", gen: "일반고", 
 const PARENT_OF = {elem: "elem", mid: "mid", gen: "gen", voc_v: "voc", voc_m: "voc",
                    spc_sci: "spc", spc_lang: "spc", spc_art: "spc", aut: "aut", spe: "etc", alt: "etc"};
 const ETC_LV = /방송통신|각종학교|평생학교|고등기술|고등공민/;
+// NEIS 학교유형 값을 다섯 갈래로 가른다 ('각종학교(고)'·'평생학교(초)-4년12학기' 같은 꼴)
+const etcLeaf = lv => /방송통신/.test(lv) ? "alt_b" : /각종학교/.test(lv) ? "alt_v"
+  : /평생학교/.test(lv) ? "alt_l" : /고등기술|고등공민/.test(lv) ? "alt_t" : null;
 const idxByCode = new Map((d.schoolIndex || []).map(s => [s.c, s]));
 const spcLeaf = (name, detail) => {
   const dd = detail || "";
@@ -52,7 +55,7 @@ const spcLeaf = (name, detail) => {
   return "spc_sci";
 };
 const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
-  : s.l === "특수학교" ? "spe" : ETC_LV.test(s.l || "") ? "alt"
+  : s.l === "특수학교" ? "spe" : ETC_LV.test(s.l || "") ? etcLeaf(s.l)
   : s.m ? "voc_m" : s.h === "특성화고" ? "voc_v"
   : s.h === "특목고" ? spcLeaf(s.n, s.d) : s.h === "자율고" ? "aut" : "gen";
 function recLeaf(r) {
@@ -60,7 +63,7 @@ function recLeaf(r) {
   if (t === "초등학교") return "elem";
   if (t === "중학교") return "mid";
   if (t === "특수학교") return "spe";
-  if (ETC_LV.test(t || "")) return "alt";
+  if (ETC_LV.test(t || "")) return etcLeaf(t);
   if (t === "일반고") return "gen";
   if (t === "자율고") return "aut";
   if (t === "특성화고" || t === "특성화고·마이스터고") return "voc_v";
@@ -97,7 +100,7 @@ function homeOf(scope) {
   const LEVELS = [
     ["초등학교", ["elem"]], ["중학교", ["mid"]],
     ["고등학교", ["gen", "voc_v", "voc_m", "spc_sci", "spc_lang", "spc_art", "aut"]],
-    ["특수·기타학교", ["spe", "alt"]],
+    ["특수·기타학교", ["spe", "alt_v", "alt_l", "alt_b", "alt_t"]],
   ];
   const types = count(RF, r => {
     const g = recLeaf(r);
@@ -116,7 +119,7 @@ function homeOf(scope) {
   const tags = names.slice(0, 12).map(t => [t, schoolsOf(t)]).sort((a, b) => b[1] - a[1]);
   // 공급 기업 상위 12곳 — 온라인몰·조달 대행·제조사는 만든 곳이 아니라 사는 창구라 뺀다
   // (app.js의 CHANNEL/MAKER와 같은 기준. 여기서 다르면 자료가 온 뒤 막대가 바뀌어 보인다)
-  const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|이웃닷컴|다나와|하이마트/;
+  const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|다나와|하이마트/;
   const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
   const vnorm = n => (n || "")
     .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")

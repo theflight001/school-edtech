@@ -59,7 +59,7 @@ const DB = (() => {
     }
   }
   return { meta: d.meta, records, schoolIndex: d.schoolIndex,
-         };
+           officeBuy: d.officeBuy || {} };
 })();
 const R = DB.records;
 // ?perf=1 로 열면 단계별 시간을 콘솔에 찍는다 (첫 화면이 느릴 때 어디가 오래 걸리는지 보기 위함)
@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260820b";
+  s.src = "data_detail.js?b=20260821a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -242,7 +242,9 @@ const VMERGE = new Map();
 const vkey = n => { const k = vnorm(n); return VMERGE.get(k) || k; };
 const vendorRecs = key => R.filter(r => vkey(r.vendor) === key);
 // 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
-const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|이웃닷컴|다나와|하이마트/;
+// '이웃닷컴'은 온라인몰이 아니라 e알리미를 만드는 회사다(에듀집: e알리미 = 주식회사 이웃닷컴).
+// 이름이 닷컴으로 끝난다고 창구로 보면 만든 회사가 공급 기업에서 통째로 빠진다.
+const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|다나와|하이마트/;
 const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
 const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : "공급 기업";
 
@@ -360,9 +362,10 @@ const periodOn = () => (PF !== BASE_FROM) || !!PT;
 const ymStr = ym => `${Math.floor(ym / 100)}-${String(ym % 100).padStart(2, "0")}`;
 const ymKo = ym => `${Math.floor(ym / 100)}.${String(ym % 100).padStart(2, "0")}`;
 window.openPicker = () => {
-  pkS = ymInt(PF); pkE = ymInt(PT);
-  // 고르개는 늘 2020년에서 편다 — 넓히려고 여는 것이므로 옛 해가 먼저 보여야 한다.
-  // 고른 기간에서 되짚어 열면 기본이 2026년이라 2025년이 나와 넓힐 길이 안 보인다.
+  // 늘 빈 상태로 연다. 지금 기간을 물려받으면 달력은 2020년을 펴 놓고 위에는
+  // '2026.01 ~ 종료 월 선택'이라고 적혀 서로 어긋나 보인다.
+  pkS = pkE = null;
+  // 넓히려고 여는 것이므로 옛 해가 먼저 보여야 한다
   pkBase = 2020;
   drawPicker();
 };
@@ -397,7 +400,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260820b";
+    s2.src = "data_detail_old.js?b=20260821a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -409,7 +412,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260820b";
+  s.src = "data_old.js?b=20260821a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -432,7 +435,11 @@ const LEAVES = [
   {k: "spc_art", label: "예술고·체육고", parent: "spc"},
   {k: "aut", label: "자율고", parent: "aut"},
   {k: "spe", label: "특수학교", parent: "etc"},
-  {k: "alt", label: "방송통신·각종·평생학교", parent: "etc"},
+  // '기타학교'를 한 덩어리로 두면 성격이 아주 다른 학교가 섞인다 — 다섯으로 나눈다.
+  {k: "alt_v", label: "각종학교", parent: "etc"},
+  {k: "alt_l", label: "평생학교", parent: "etc"},
+  {k: "alt_b", label: "방송통신 중·고", parent: "etc"},
+  {k: "alt_t", label: "고등기술·고등공민학교", parent: "etc"},
 ];
 const PARENTS = [
   {k: "elem", label: "초등학교"}, {k: "mid", label: "중학교"}, {k: "gen", label: "일반고"},
@@ -466,8 +473,11 @@ function spcLeaf(name, detail) {
   return "spc_sci";
 }
 const ETC_LV = /방송통신|각종학교|평생학교|고등기술|고등공민/;
+// NEIS 학교유형 값을 다섯 갈래로 가른다 ('각종학교(고)'·'평생학교(초)-4년12학기' 같은 꼴)
+const etcLeaf = lv => /방송통신/.test(lv) ? "alt_b" : /각종학교/.test(lv) ? "alt_v"
+  : /평생학교/.test(lv) ? "alt_l" : /고등기술|고등공민/.test(lv) ? "alt_t" : null;
 const idxGroup = s => s.l === "초등학교" ? "elem" : s.l === "중학교" ? "mid"
-  : s.l === "특수학교" ? "spe" : ETC_LV.test(s.l || "") ? "alt"
+  : s.l === "특수학교" ? "spe" : ETC_LV.test(s.l || "") ? etcLeaf(s.l)
   : s.m ? "voc_m" : s.h === "특성화고" ? "voc_v"
   : s.h === "특목고" ? spcLeaf(s.n, s.d) : s.h === "자율고" ? "aut" : "gen";
 function recLeaf(r) {
@@ -475,7 +485,7 @@ function recLeaf(r) {
   if (t === "초등학교") return "elem";
   if (t === "중학교") return "mid";
   if (t === "특수학교") return "spe";
-  if (ETC_LV.test(t || "")) return "alt";
+  if (ETC_LV.test(t || "")) return etcLeaf(t);
   if (t === "일반고") return "gen";
   if (t === "자율고") return "aut";
   if (t === "특성화고" || t === "특성화고·마이스터고") return "voc_v";
@@ -589,7 +599,7 @@ const LEVELS = [
   {k: "elem", label: "초등학교", leaves: ["elem"]},
   {k: "mid", label: "중학교", leaves: ["mid"]},
   {k: "high", label: "고등학교", leaves: ["gen", "voc_v", "voc_m", "spc_sci", "spc_lang", "spc_art", "aut"]},
-  {k: "etc", label: "특수·기타학교", leaves: ["spe", "alt"]},
+  {k: "etc", label: "특수·기타학교", leaves: ["spe", "alt_v", "alt_l", "alt_b", "alt_t"]},
 ];
 const HIGH_PARENTS = ["gen", "voc", "spc", "aut"];          // 고등학교 안의 유형
 window.scLevel = k => {
@@ -630,6 +640,14 @@ function drawSchoolPicker() {
         `<button class="sc-chip${scSel.has(l.k) ? " on" : ""}" onclick="scToggle('${l.k}')">${l.label} <span>${(IDX_GROUP_COUNT[l.k] || 0).toLocaleString()}</span></button>`).join("") +
       `</div>`).join("") : "";
 
+  // 특수·기타학교도 고등학교처럼 유형 줄을 보여 준다 — 성격이 아주 다른 학교가 한 덩어리에
+  // 묶여 있어(특수학교·각종학교·평생학교·방송통신·고등기술) 나눠 보지 않으면 읽기 어렵다.
+  const etcOn = LEVELS[3].leaves.some(k => scSel.has(k));
+  const etcRow = etcOn ? `<div class="sc-subrow"><span class="sc-sublabel">특수·기타학교 유형</span>` +
+    LEVELS[3].leaves.map(k =>
+      `<button class="sc-chip${scSel.has(k) ? " on" : ""}" onclick="scToggle('${k}')">${leafLabel[k]} <span>${(IDX_GROUP_COUNT[k] || 0).toLocaleString()}</span></button>`).join("") +
+    `</div>` : "";
+
   // 설립 숫자는 지금 고른 학교급 기준으로 센다 (예: 중학교만 골랐으면 중학교의 공·사·국립)
   const inSel = s => !scSel.size || scSel.has(idxGroup(s));
   const fCount = {};
@@ -653,12 +671,11 @@ function drawSchoolPicker() {
         <span></span></div>
         <div class="sc-body">
           <div class="pk-grid sc-grid">${cells}</div>
-          ${typeRow}${subRows}${esRow}
+          ${typeRow}${subRows}${etcRow}${esRow}
         </div>
         <div class="pk-foot">
-          <span class="pk-hint">학교급을 먼저 고르면 그 안에서 설립 주체(국·공·사립)를 고를 수 있습니다.
-            고등학교는 유형까지 나눠 고를 수 있습니다<br>분류 기준: NEIS 학교유형·설립 구분 ·
-            마이스터고(산업수요맞춤형고)는 특성화고·마이스터고에 포함</span>
+          <span class="pk-hint">학교급을 누르면 그 안에서 설립 주체(국·공·사립)를 선택할 수 있습니다.
+            <br>* 분류 기준: NEIS 학교유형·설립 구분</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="scAll()">전체 학교</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
@@ -952,12 +969,44 @@ function tagView(tag) {
       <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
+    ${officeBuyCard(tag)}
     ${vendorsOfTag(recs)}
     <div class="card"><h2>도입 학교 목록</h2>${pagedTable(recs)}</div>`;
 }
 
 // 이 제품을 학교에 넣은 회사 — 계약 상대자를 그대로 세어 보여 준다(추론이 아니다).
 // 온라인몰·조달 대행은 만든 곳이 아니므로 따로 적는다.
+// 시도교육청이 직접 산 기록 — 학교 계약이 아니라 시도 단위다.
+// AI 디지털 교육자료·다채움처럼 시도 전체에 한꺼번에 보급하는 제품은 학교에 계약이
+// 남지 않아 이 서비스에서 통째로 안 보인다. 어느 학교가 쓰는지는 알 수 없으므로
+// 학교 수·막대에 섞지 않고 따로 놓는다.
+const OFFICE_BUY = DB.officeBuy || {};
+function officeBuyCard(tag) {
+  const rows = OFFICE_BUY[tag];
+  if (!rows || !rows.length) return "";
+  const sidos = uniq(rows.map(r => r.sido).filter(Boolean));
+  const won = a => { const n = +a; return !n ? "" : n >= 1e8
+    ? `${(n / 1e8).toFixed(1)}억원` : n >= 1e4 ? `${Math.round(n / 1e4).toLocaleString()}만원` : `${n.toLocaleString()}원`; };
+  return `<div class="card"><h2>시도교육청이 직접 산 기록
+      <span class="note">학교 계약이 아니라 시도 단위입니다 — 위 학교 수에는 들어 있지 않습니다</span></h2>
+    <p class="cv" style="margin:0 0 10px">교육청이 관내 학교에 한꺼번에 보급한 것으로 보이는 계약입니다.
+      계약명에 학교 이름이 없어 어느 학교가 쓰는지는 알 수 없습니다 ·
+      ${rows.length.toLocaleString()}건${sidos.length ? ` · ${sidos.length}개 시도(${sidos.slice(0, 6).map(esc).join(" · ")}${sidos.length > 6 ? " 외" : ""})` : ""}</p>
+    <div class="tablewrap"><table><thead><tr>
+        <th>시도</th><th>계약명</th><th>시기</th><th>금액</th><th>업체</th>
+      </tr></thead><tbody>
+      ${rows.slice(0, 12).map(r => `<tr>
+        <td style="white-space:nowrap">${esc(r.sido || "—")}</td>
+        <td>${esc(r.n)}</td>
+        <td class="conf" style="white-space:nowrap">${esc((r.d || "").replace("-", "."))}</td>
+        <td class="conf" style="white-space:nowrap">${esc(won(r.amt))}</td>
+        <td class="conf">${esc(r.by || "")}</td>
+      </tr>`).join("")}
+      </tbody></table></div>
+    ${rows.length > 12 ? `<p class="cv" style="margin:10px 0 0">가장 최근 12건만 보여 줍니다 (전체 ${rows.length.toLocaleString()}건)</p>` : ""}
+  </div>`;
+}
+
 function vendorsOfTag(recs) {
   const cnt = new Map();
   for (const r of recs.filter(x => !x.dup)) {
