@@ -241,7 +241,13 @@ SPECIFIC_RULES = [
     ("리로스쿨",            r"리로스쿨|riroschool"),
     ("구름EDU",            r"구름 ?EDU|goorm|구름에듀"),
     ("이음AI",             r"이음 ?AI|화이트소프트"),
-    ("MS Office",          r"\bMS\b|Microsoft|마이크로소프트|MS ?Office|오피스 ?365|M365"),
+    # 'MS'만으로 잡으면 '삼성 전자레인지 … MS 스마트쿡'처럼 모델명에 붙은 MS까지 걸린다.
+    # 뒤에 오피스·윈도우·라이선스 계열 낱말이 따라올 때만 인정한다.
+    # 반대로 'MS오피스'처럼 붙여 쓴 한글 표기는 예전 패턴이 놓치고 있었다.
+    ("MS Office",          r"Microsoft|마이크로소프트|오피스 ?365|\bM365\b|\bO365\b|"
+                           r"MS[\s\-]?(?:Office|오피스|365|Word|Excel|Power ?Point|워드|엑셀|"
+                           r"파워포인트|Windows|윈도우|OVS|EES|SPLA|제품군|라이선스|라이센스|"
+                           r"러닝|Learn|Teams|팀즈|Azure|애저)"),
     ("Google Workspace",   r"구글 ?워크스페이스|Google Workspace|구글 ?클래스룸|Google Classroom"),
     ("Notion",             r"노션|Notion"),
     ("Zoom",               r"\bZoom\b|줌 ?프로"),
@@ -358,7 +364,11 @@ SPECIFIC_RULES = [
     ("KAIST 공동 AP",       r"KAIST ?공동 ?AP|공동 ?AP ?학사관리|apscience|대학과목선이수"),
     ("캐츠잉글리시",          r"캐츠 ?잉글리시|캣츠 ?잉글리시|Cats ?English"),
     ("윌라",                r"윌라(?!드)|welaaa"),
-    ("알툴즈",               r"알툴즈|알PDF|알집(?! ?파일)|ALTools"),
+    # '알집'은 유아 매트·소파 브랜드이기도 하다(알집매트·알집 유아소파). 압축 프로그램
+    # 알집과 이름만 같다. 뒤에 가구 낱말이 따라오면 알툴즈로 보지 않는다.
+    # '알툴즈·알PDF·ALTools'는 겹치는 이름이 없어 그대로 둔다.
+    ("알툴즈",               r"알툴즈|알PDF|ALTools|"
+                            r"알집(?!.*(?:매트|소파|쿠션|침대|의자|가구|텐트|놀이방|유아))(?! ?파일)"),
     ("이지에듀",             r"이지에듀|EZ ?EDU"),
     ("반디캠",               r"반디캠|Bandicam"),
     ("곰믹스",               r"곰믹스|GOM ?Mix"),
@@ -387,11 +397,18 @@ if os.path.exists("mined_rules.csv"):
             SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
             _seen_m.add(_row["태그"])
 
+# 에듀집에는 제품 이름이 아니라 범주 낱말로 등록된 것이 섞여 있다.
+# '온라인 교육'(한국도박문제예방치유원)이 그렇다 — 규칙으로 두면 'AWS 온라인 교육 프로그램'
+# 같은 딴 계약까지 그 제품으로 잡힌다. 이런 이름은 규칙에서 빼고 여기에 사유를 남긴다.
+EDZIP_SKIP = {"온라인 교육"}
+
 # 문맥 조건부 태그: 제품명이 보통명사와 겹칠 수 있어 소프트웨어 문맥이 확인될 때만 인정한다
 CTX_REQUIRED = set()
 if os.path.exists("edzip_rules.csv"):
     _seen_tags = {t for t, _ in SPECIFIC_RULES}
     for _row in csv.DictReader(open("edzip_rules.csv", encoding="utf-8-sig")):
+        if _row["태그"] in EDZIP_SKIP:
+            continue
         if _row["태그"] not in _seen_tags and _row["패턴"]:
             SPECIFIC_RULES.append((_row["태그"], _row["패턴"]))
             _seen_tags.add(_row["태그"])
@@ -902,6 +919,42 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         office_count += 1
     print(f"{_label} 병합: {office_count}건 (중복 제외 {office_dup}건)")
 
+# ── 이름이 겹치는 상위·하위 제품 정리 ────────────────────────────────
+# '물품(실과로봇 네오봇에듀 스마트) 구입'은 '네오봇 에듀 스마트'와 '네오봇'이 함께 걸린다.
+# 하위 이름 안에 상위 이름이 통째로 들어 있어서 생기는 일이지 두 제품을 산 것이 아니다.
+# 다만 '리딩앤과 리딩앤스쿨 구입'처럼 진짜로 둘 다 적힌 계약도 있으므로,
+# 하위 이름을 지우고도 상위 규칙이 여전히 걸리면 그대로 둔다.
+_RULE_PAT = {}
+for _t, _p in SPECIFIC_RULES:
+    try:
+        _RULE_PAT.setdefault(_t, re.compile(_p))
+    except re.error:
+        pass
+_ntag = lambda x: re.sub(r"[\s·\-_()]+", "", x).lower()
+_parents = {}                       # 하위 태그 → 이름이 그 안에 든 상위 태그들
+for _b in _RULE_PAT:
+    nb = _ntag(_b)
+    ps = [a for a in _RULE_PAT if a != _b and len(_ntag(a)) >= 3 and _ntag(a) in nb]
+    if ps:
+        _parents[_b] = ps
+_subsumed = 0
+for r in records:
+    ts = set(r["tags"])
+    hit = [b for b in ts if b in _parents]
+    if not hit:
+        continue
+    for b in hit:
+        for a in _parents[b]:
+            if a not in ts:
+                continue
+            rest = _RULE_PAT[b].sub(" ", r["product"])
+            if not _RULE_PAT[a].search(rest):
+                ts.discard(a)
+                _subsumed += 1
+    if len(ts) != len(r["tags"]):
+        r["tags"] = sorted(ts)
+print(f"하위 제품에 묻힌 상위 태그 정리: {_subsumed:,}건")
+
 # ── 계약명에 여러 제품이 나열됐을 때, 그 업체가 만드는 제품만 남긴다 ──────────
 # 용현여중은 같은 사업으로 두 번 결제했는데 계약명은 둘 다 '(퀴즈앤, Vrew, 자작자작)'이었다.
 #   2024-04-15 팀플백 47.2만   ← 자작자작 값 (에듀집: 자작자작 = (주)팀플백)
@@ -1275,11 +1328,25 @@ def _amt_txt(a):
         return ""
     return f"({a/10000:,.0f}만원)" if a >= 10000 else f"({a:,}원)"
 
+# 계약상대자 칸에 학교가 제 이름을 적어 놓은 기록이 있다(서울만 6,644건).
+# 패들렛처럼 국내 사업자가 없어 카드로 직접 결제한 것, 상품권·교통비처럼 받는 곳이
+# 회사가 아닌 지출이 그렇다. 그대로 두면 '광희중학교의 다른 납품 보기'처럼
+# 학교가 제 학교에 납품한 꼴이 되므로 업체로 보지 않는다.
+def _same_org(a, b):
+    f = lambda x: re.sub(r"[\s()·\-_.]|\(주\)|주식회사|㈜", "", x or "")
+    return bool(f(a)) and f(a) == f(b)
+
+_self_vend = 0
 _ctpl_n = 0
 for r in records:
     c = r.get("content") or ""
     m = re.search(r"계약업체[:：]\s*(.+?)\s*$", c)
     vend = m.group(1).strip() if m else ""
+    if vend and _same_org(vend, r.get("school")):
+        c = c[:m.start()].rstrip(" ·")
+        r["content"] = c
+        vend, m = "", None
+        _self_vend += 1
     head = c[:m.start()].rstrip(" ·") if m else c
     # 머리말에서 금액 표기를 떼어 내면 '출처 + 구분'만 남는다
     head2 = re.sub(r"\s*\([\d,]+(?:만)?원\)\s*$", "", head).strip()
@@ -1291,6 +1358,7 @@ for r in records:
         r["ctpl"] = head2                 # 출처·구분 머리말 (사전으로 압축된다)
         r["content"] = None
         _ctpl_n += 1
+print(f"계약상대자가 그 학교 자신이라 비운 기록: {_self_vend:,}건")
 print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ctpl_n:,}건)")
 
 # --- 저장: 키 이름 반복과 되풀이되는 문자열을 걷어낸 압축 형식 ---
@@ -1375,12 +1443,31 @@ if os.path.exists("product_origin.csv"):
     for _r in csv.DictReader(open("product_origin.csv", encoding="utf-8-sig")):
         _origin[_r["제품"]] = _r["구분"]
 
+# 시도교육청이 직접 산 에듀테크 — 학교가 아니라 시도 단위라 학교 수에 섞지 않는다.
+# 계약명에 학교 이름이 없어 어느 학교가 쓰는지는 알 수 없다(표본 31건 중 0건).
+# 제품 화면에 따로 놓아 '조달에 안 보인다 = 안 쓴다'는 오해만 막는다.
+_office_buy = {}
+if os.path.exists("office_refined.csv"):
+    for _r in csv.DictReader(open("office_refined.csv", encoding="utf-8-sig")):
+        for _t in (_r.get("태그") or "").split("|"):
+            _t = _t.strip()
+            if not _t:
+                continue
+            _office_buy.setdefault(_t, []).append({
+                "sido": _r.get("시도", ""), "n": _r.get("계약명", "")[:120],
+                "d": (_r.get("계약일") or "")[:7], "amt": _r.get("금액", ""),
+                "by": _r.get("업체명", "")})
+    for _t in _office_buy:
+        _office_buy[_t].sort(key=lambda x: x["d"], reverse=True)
+    print(f"시도교육청 일괄 도입: 제품 {len(_office_buy):,}종 · "
+          f"기록 {sum(len(v) for v in _office_buy.values()):,}건")
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
     f.write("const DB_RAW = JSON.parse(")
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-                         "tagList": _tag_list, "origin": _origin,
+                         "tagList": _tag_list, "origin": _origin, "officeBuy": _office_buy,
                          "sparse": _sparse_base, "rows": _core_rows[:_NB],
                          "schoolIndex": school_index}))
     f.write(");\n")

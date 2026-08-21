@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260821d";
+  s.src = "data_detail.js?b=20260821e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260821d";
+    s2.src = "data_detail_old.js?b=20260821e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260821d";
+  s.src = "data_old.js?b=20260821e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -777,9 +777,7 @@ function drawPicker() {
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
         <div class="pk-foot">
-          <span class="pk-hint">시작 월과 종료 월을 차례로 누르세요 (2020.01 ~ 2026.07) ·
-            계약명에 제품 이름이 적히는 정도는 시도마다 상이하고(2026년 기준 제주 13% · 나라장터 73%),
-            옛 기록일수록 제품군으로만 남은 것이 많습니다</span>
+          <span class="pk-hint">시작 월과 종료 월을 차례로 선택하세요.</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
