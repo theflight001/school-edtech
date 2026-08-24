@@ -402,7 +402,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data_summary.js?b=20260824b"></script>
+<script src="data_summary.js?b=20260824c"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -431,7 +431,9 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
       '<div class="tiles">' +
         '<div class="tile"><div class="v">전국</div><div class="l" style="margin-top:6px">지역 (시도교육청) <span class="hint">변경 ▾</span></div></div>' +
         '<div class="tile"><div class="v">' + S.idxCount.toLocaleString() + '</div><div class="l">검색 가능 학교 (전국) <span class="hint">변경 ▾</span></div></div>' +
-        '<div class="tile"><div class="v">' + esc(S.meta.coveragePeriod) + '</div><div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div></div>' +
+        // 첫 그림에 적을 것은 '지금 보고 있는 기간'이다. 자료가 닿는 범위(coveragePeriod)를
+        // 적으면 원자료가 도착하는 순간 2020.1에서 2026.1로 바뀌어 깜빡인다.
+        '<div class="tile"><div class="v">' + esc(S.meta.basePeriod || S.meta.coveragePeriod) + '</div><div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div></div>' +
       "</div>" +
       '<div class="section-div">통계 결과</div>' +
       '<div class="grid2">' +
@@ -451,7 +453,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260824b", function () { load("app.js?b=20260824b"); });
+    load("data.js?b=20260824c", function () { load("app.js?b=20260824c"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

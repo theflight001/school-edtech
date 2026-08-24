@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260824b";
+  s.src = "data_detail.js?b=20260824c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260824b";
+    s2.src = "data_detail_old.js?b=20260824c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260824b";
+  s.src = "data_old.js?b=20260824c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1437,10 +1437,9 @@ function aboutView() {
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · <b>계약 업체는 공개되지 않습니다</b></span></div>
-        <div class="srccard"><b>에듀집</b><span>교육부·한국교육학술정보원 — 에듀테크 제품 목록 및 학습지원 소프트웨어 등록 목록</span></div>
-        <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 수만 원대 소액 구매까지 포함 (현재 인천·부산·대구·광주·대전·울산·충북·전남, 확대 예정)</span></div>
+        <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 수만 원대 소액 구매까지 포함 (17개 시도 전부)</span></div>
         <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 (12,666개교 등재)</span></div>
-        <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료</span></div>
+        <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — 75건(0.03%)</span></div>
       </div>
 
       <h3>어떻게 판정하나</h3>
@@ -1449,24 +1448,24 @@ function aboutView() {
         <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 봅니다.</li>
         <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
         <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외합니다.</li>
-        <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교로 합쳐 보여 줍니다. 계약명 원문은 그대로 보존합니다.</li>
+        <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
       </ul>
 
       <div class="example">
         <b>예를 들면</b>
-        <p class="ex-q">명진초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
+        <p class="ex-q">OO초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
         <ul>
-          <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 붙습니다. 계약명에 이름이 적힌 제품은 그것뿐이기 때문입니다.</li>
+          <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 붙습니다.</li>
           <li>같은 제품이라도 표기는 제각각입니다(챗GPT · ChatGPT · 챗지피티). 어느 쪽으로 적혀 있든 <b>ChatGPT</b>로 모아 두므로, <b>한글로 검색하든 영문으로 검색하든</b> 같은 결과가 나옵니다.</li>
           <li><b>“외 3종”은 기록하지 않습니다.</b> 무엇을 함께 샀는지 계약명에 없어 확인할 방법이 없습니다. 이런 계약이 많아 실제 도입 제품은 여기 실린 것보다 많습니다.</li>
         </ul>
       </div>
 
       <h3>무엇이 빠지나</h3>
-      <p>여기 실린 숫자는 <b>하한선</b>입니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
+      <p>여기 실린 숫자는 <b>최소값</b>으로 보시는 것이 타당합니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
-        <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 잡히지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
+        <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 포함되지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
         <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 11%</b>가 이런 형태이고, 그 안에 <b>1만 종이 넘는 제품</b>이 이름 없이 묻혀 있습니다.</li>
         <li>시도교육청이 관내 학교에 <b>한꺼번에 보급한 제품</b>(AI 디지털교과서 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 산 기록</b>으로 따로 실었습니다.</li>
       </ul>
@@ -1482,7 +1481,7 @@ function aboutView() {
       <ul>
         <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 보여 줍니다.
-          위쪽 <b>조사 기간</b>에서 2020년까지 넓힐 수 있습니다.` : ""}</li>
+          위쪽 <b>조사 기간</b>에서 2020년 1월부터 선택할 수 있습니다.` : ""}</li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
         <li>검색 가능 학교: <b>12,543개교</b> — 국내 공교육 전체</li>
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 12,078개교에 더해
