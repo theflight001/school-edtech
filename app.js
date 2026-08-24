@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260824a";
+  s.src = "data_detail.js?b=20260824b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260824a";
+    s2.src = "data_detail_old.js?b=20260824b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260824a";
+  s.src = "data_old.js?b=20260824b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1436,7 +1436,7 @@ function aboutView() {
       <h3>어디에서 모았나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
-        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함)</span></div>
+        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · <b>계약 업체는 공개되지 않습니다</b></span></div>
         <div class="srccard"><b>에듀집</b><span>교육부·한국교육학술정보원 — 에듀테크 제품 목록 및 학습지원 소프트웨어 등록 목록</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 수만 원대 소액 구매까지 포함 (현재 인천·부산·대구·광주·대전·울산·충북·전남, 확대 예정)</span></div>
         <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 (12,666개교 등재)</span></div>
@@ -1467,7 +1467,16 @@ function aboutView() {
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
         <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 잡히지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
+        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 11%</b>가 이런 형태이고, 그 안에 <b>1만 종이 넘는 제품</b>이 이름 없이 묻혀 있습니다.</li>
+        <li>시도교육청이 관내 학교에 <b>한꺼번에 보급한 제품</b>(AI 디지털교과서 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 산 기록</b>으로 따로 실었습니다.</li>
       </ul>
+
+      <h3>공급 기업을 알 수 없는 기록</h3>
+      <p><b>S2B 학교장터는 계약 업체를 공개하지 않습니다.</b> 목록에도 계약 상세에도 없습니다.
+        그래서 S2B로 이뤄진 계약 <b>약 16만 건</b>은 어느 회사가 납품했는지 알 수 없습니다.</p>
+      <p class="cv">공급 기업 화면에 보이는 회사는 나라장터와 시도교육청 계약공개를 거친 계약뿐입니다.
+        S2B를 주로 쓰는 회사는 계약명에 회사 이름이 적힌 경우에만 확인됩니다 —
+        <b>실제 거래 규모보다 작게 보일 수 있습니다.</b></p>
 
       <h3>수록 범위</h3>
       <ul>
