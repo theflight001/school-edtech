@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260824c";
+  s.src = "data_detail.js?b=20260825a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260824c";
+    s2.src = "data_detail_old.js?b=20260825a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260824c";
+  s.src = "data_old.js?b=20260825a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1476,6 +1476,25 @@ function aboutView() {
       <p class="cv">공급 기업 화면에 보이는 회사는 나라장터와 시도교육청 계약공개를 거친 계약뿐입니다.
         S2B를 주로 쓰는 회사는 계약명에 회사 이름이 적힌 경우에만 확인됩니다 —
         <b>실제 거래 규모보다 작게 보일 수 있습니다.</b></p>
+
+      <h3>자료는 어떻게 갱신되나</h3>
+      <p><b>매월 10일에 자동으로 갱신됩니다.</b> 시도교육청 계약공개는 그달이 끝나고
+        <b>평균 6일, 늦어도 10일</b> 안에 올라옵니다(서울 게시물 1,300건을 재 봤습니다).
+        1일에 받으면 지난달 자료가 아직 하나도 없습니다.</p>
+      <ul>
+        <li>갱신할 때마다 <b>최근 석 달</b>을 다시 훑습니다. 계약일과 공개일이 달라
+          지난달 목록에 그 앞 계약이 섞여 올라오기 때문입니다.</li>
+        <li>나라장터·S2B·시도교육청 계약공개를 모두 다시 받고, 판정 규칙을 새로 적용해
+          제품 태그를 다시 답니다.</li>
+      </ul>
+
+      <h3>자료원별 수집 현황</h3>
+      <p>어느 자료원에서 어느 달에 몇 건을 모았는지 표로 공개합니다.
+        비어 있는 달에는 <b>왜 비었는지</b> 함께 적었습니다 — 원천이 그 시기 자료를 갖고 있지
+        않은 경우, 자료는 받았으나 그달 에듀테크 계약이 없었던 경우, 저희가 더 확인해야 하는
+        경우를 갈라 두었습니다.</p>
+      <p><a href="수집현황.csv" download><b>수집 현황표 내려받기 (CSV)</b></a>
+        <span class="cv"> · 자료원 20종 × 2020.01부터 매월</span></p>
 
       <h3>수록 범위</h3>
       <ul>
