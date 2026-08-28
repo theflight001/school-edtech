@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260825a";
+  s.src = "data_detail.js?b=20260828a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260825a";
+    s2.src = "data_detail_old.js?b=20260828a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260825a";
+  s.src = "data_old.js?b=20260828a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1509,7 +1509,10 @@ function aboutView() {
           등재된 12,666개교 중 <b>재외한국학교 79개교, 외국인·국제학교 33개교</b>는 국내 공교육이 아니어서,
           <b>공동실습소 9곳</b>은 학교가 아니어서 제외했습니다.</li>
       </ul>
-      <p style="margin-top:18px">기록에 잘못된 내용이 있다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
+      <p style="margin-top:18px">정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
+        시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
+        <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
+        <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
     </div>`;
 }
 
@@ -1622,8 +1625,9 @@ function contactView() {
     <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
     <div class="page">
       <h2>정정 요청 · 문의</h2>
-      <p class="lead">이 서비스의 기록은 공개된 조달 자료를 자동으로 정리한 것이라 사실과 다른 부분이 있을 수 있습니다.
-      잘못된 내용을 알려 주시면 확인 후 바로잡겠습니다.</p>
+      <p class="lead">정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
+      시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
+      <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
       <p class="who">학교·교육청</p>
