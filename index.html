@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>공교육 에듀테크 활용 현황</title>
-<link rel="icon" type="image/png" href="favicon.png?v=1">
+<link rel="icon" type="image/png" href="/favicon.png?v=1">
 <meta name="description" content="전국 초·중·고가 실제로 사들인 조달 기록 306,931건으로 보는 공교육 에듀테크 도입 현황. 학교·지역·제품별로 무엇을 언제 얼마에 샀는지 찾아봅니다.">
 <link rel="canonical" href="https://school-edtech.kr/">
 <meta property="og:type" content="website">
@@ -376,11 +376,11 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
 <body>
 <nav class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="#/" aria-label="공교육 에듀테크 활용 현황 홈"><img src="logo_stack.png?v=1" width="154" height="62" alt="school edtech"></a>
+    <a class="brand" href="/" aria-label="공교육 에듀테크 활용 현황 홈"><img src="/logo_stack.png?v=1" width="154" height="62" alt="school edtech"></a>
     <div class="navlinks">
-      <a href="#/about">데이터 안내</a>
-      <a href="#/products">제품 전체 보기</a>
-      <a href="#/contact">정정 요청</a>
+      <a href="/about">데이터 안내</a>
+      <a href="/products">제품 전체 보기</a>
+      <a href="/contact">정정 요청</a>
     </div>
   </div>
 </nav>
@@ -391,7 +391,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
       <h1>공교육 에듀테크<br>활용 현황</h1>
       <p>전국 초·중·고등학교에서 어떤 에듀테크 제품을 활용하는지 확인해 보세요.</p>
     </div>
-    <div class="hero-img" aria-hidden="true"><img src="hero_person.png" width="269" height="210" alt=""></div>
+    <div class="hero-img" aria-hidden="true"><img src="/hero_person.png" width="269" height="210" alt=""></div>
   </section>
 
   <div class="searchwrap">
@@ -412,13 +412,13 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
     <b>데이터 한계 고지</b> — 공공 조달 기록(나라장터·S2B·시도교육청 계약공개)을 바탕으로 집계한 자료입니다.
     <ul style="margin:6px 0 0; padding-left:18px">
       <li>무상 보급 플랫폼, 해외 직접 결제, 교사 개인 결제는 조달 기록에 남지 않아 빠져 있습니다.</li>
-      <li>판정 기준과 자료원은 <a href="#/about">데이터 안내</a>에서 확인하실 수 있습니다. 잘못된 내용은 <a href="#/contact">정정 요청</a>으로 알려 주세요.</li>
+      <li>판정 기준과 자료원은 <a href="/about">데이터 안내</a>에서 확인하실 수 있습니다. 잘못된 내용은 <a href="/contact">정정 요청</a>으로 알려 주세요.</li>
     </ul>
   </div>
 </main>
 <footer>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="data_summary.js?b=20260909d"></script>
+<script src="/data_summary.js?b=20260909e"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -426,7 +426,12 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var view = document.getElementById("view");
   var q = document.getElementById("q");
   if (q) { q.dataset.ph = q.placeholder; q.placeholder = "자료를 불러오는 중입니다…"; }
-  if (S && view && !location.hash.replace(/^#\/?/, "")) {
+  // 옛 주소(school-edtech.kr/#/tag/ChatGPT)로 들어오면 진짜 경로로 바꿔 준다.
+  // 이미 나눠 쓰신 링크가 끊기지 않게 하려는 것 — 한 번 바꾸면 뒤로 가기에도 남지 않는다.
+  if (location.hash.indexOf("#/") === 0) {
+    history.replaceState(null, "", location.hash.slice(1) + location.search);
+  }
+  if (S && view && location.pathname === "/") {
     var esc = function (x) { return String(x == null ? "" : x).replace(/[&<>"]/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
     var FROM = [37, 99, 235], TO = [110, 231, 183];
@@ -469,7 +474,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
   var go = function () {
     if (started) return;
     started = true;
-    load("data.js?b=20260909d", function () { load("app.js?b=20260909d"); });
+    load("/data.js?b=20260909e", function () { load("/app.js?b=20260909e"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

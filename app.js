@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260909d";
+  s.src = "/data_detail.js?b=20260909e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -263,7 +263,7 @@ function barChart(pairs, {linkFn, max: mx, drillFn, labelFn = esc} = {}) {
   const max = mx || Math.max(...pairs.map(p => p[1]), 1);
   const n = pairs.length;
   return `<div class="bars">` + pairs.map(([k, v], i) => `
-    <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="location.hash='${drillFn(k)}'" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
+    <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="go('${drillFn(k)}')" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
       <span class="lbl" title="${esc(tagName(k))}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
     </div>`).join("") + `</div>`;
@@ -335,10 +335,10 @@ function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   return `<div class="tablewrap"><table${showSchool ? "" : ' class="noschool"'}><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
-      ${showSchool ? `<td><a href="#/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
-      <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="#/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
+      ${showSchool ? `<td><a href="/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
+      <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
-      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="#/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
+      <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
     </tr>`).join("") + `</tbody></table></div>`;
 }
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260909d";
+    s2.src = "/data_detail_old.js?b=20260909e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260909d";
+  s.src = "/data_old.js?b=20260909e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -894,7 +894,7 @@ function filterNote() {
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
   return bits.length
-    ? `<span class="fnote">${esc(bits.join(" · "))} <a href="#/">홈에서 변경</a></span>` : "";
+    ? `<span class="fnote">${esc(bits.join(" · "))} <a href="/">홈에서 변경</a></span>` : "";
 }
 
 function homeView() {
@@ -941,10 +941,10 @@ function homeView() {
     </div>` : ""}
     <div class="section-div">통계 결과</div>
     <div class="grid2">
-      <div class="card"><h2><a class="h2link" href="#/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
+      <div class="card"><h2><a class="h2link" href="/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
       <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2><a class="h2link" href="#/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
+    <div class="card"><h2><a class="h2link" href="/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
 // 학교 화면의 칩은 그 학교 기록을 걸러 준다 — 누를 때마다 켜고 끈다
 // (전국 제품 화면으로 넘어가면 지금 보던 학교를 잃는다)
@@ -963,10 +963,10 @@ function notFound(what, name, cands, hrefOf) {
     ${near.length ? `<div class="card"><h2>혹시 이것을 찾으셨나요</h2>
       <div class="plist">${near.map(c => `<a href="${hrefOf(c)}">${esc(tagName(c))}</a>`).join("")}</div></div>` : ""}
     <div class="page"><p>검색창에 학교명이나 제품명을 넣어 보시거나,
-      <a href="#/products">제품 전체 보기</a> ·
-      <a href="#/vendors">공급 기업</a> ·
-      <a href="#/regions">지역별</a>에서 찾아보실 수 있습니다.</p>
-      <p>있어야 할 기록이 없다면 <a href="#/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
+      <a href="/products">제품 전체 보기</a> ·
+      <a href="/vendors">공급 기업</a> ·
+      <a href="/regions">지역별</a>에서 찾아보실 수 있습니다.</p>
+      <p>있어야 할 기록이 없다면 <a href="/contact">정정 요청</a>으로 알려 주세요.</p></div>`;
 }
 // 받침이 있으면 '으로', 없거나 ㄹ이면 '로' (아이포트폴리오로 / 클래스카드로)
 function euRo(w) {
@@ -997,7 +997,7 @@ function schoolView(name) {
     // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
     const old = R.find(r => r.origSchool === name);
     if (old) return schoolView(old.school);
-    return notFound("학교", name, schools, c => `#/school/${encodeURIComponent(c)}`);
+    return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
   }
   const info = fillDetail([all[0]])[0];
   // 기록에 나온 순서대로 두면 기준이 없다 — 제품을 앞에, 제품군을 뒤에 두고
@@ -1013,7 +1013,7 @@ function schoolView(name) {
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
   const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
-    <div class="crumb"><a href="#/">홈</a> › 학교 상세</div>
+    <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
         ${info.schoolCode ? `<div class="conf">${[info.hsType, info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
@@ -1024,7 +1024,7 @@ function schoolView(name) {
       </div></div>
     ${SCHOOL_TAG ? `<div class="fnote"><span>${esc(tagName(SCHOOL_TAG))} 기록 ${recs.length}건만 보는 중</span>
       <a href="javascript:void(0)" onclick="setSchoolTag('${SCHOOL_TAG.replace(/'/g, "\\'")}')">전체 ${all.length}건 보기</a>
-      <a href="#/tag/${encodeURIComponent(SCHOOL_TAG)}">다른 학교의 도입 현황 ›</a></div>` : ""}
+      <a href="/tag/${encodeURIComponent(SCHOOL_TAG)}">다른 학교의 도입 현황 ›</a></div>` : ""}
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
 }
 // 교육청 등이 무상 보급하는 플랫폼 — 조달 기록에 나타나지 않아 공식 발표로 보완
@@ -1053,17 +1053,17 @@ function noteSchoolList(note) {
   if (!list.length) return "";
   return `<details class="nlist"><summary>대상 학교 ${list.length}개교 보기</summary>
     <div class="nlist-in">${list.map(n =>
-      `<a href="#/school/${encodeURIComponent(n)}">${esc(n)}</a>`).join("")}</div>
+      `<a href="/school/${encodeURIComponent(n)}">${esc(n)}</a>`).join("")}</div>
     <p class="cv">${esc(note.schoolNote || "")}</p></details>`;
 }
 function tagView(tag) {
   const recs = R.filter(r => r.tags.includes(tag));
-  if (!recs.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `#/tag/${encodeURIComponent(c)}`);
+  if (!recs.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `/tag/${encodeURIComponent(c)}`);
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
   return `
-    <div class="crumb"><a href="#/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
+    <div class="crumb"><a href="/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
       <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
@@ -1126,7 +1126,7 @@ function vendorsOfTag(recs) {
   if (!sup.length && !etc.length) return "";
   return `<div class="card"><h2>납품한 회사<span class="note">계약에 적힌 상대자 기준</span></h2>
     ${sup.length ? `<div class="plist">${sup.map(v =>
-      `<a href="#/vendor/${encodeURIComponent(v.k)}">${esc(nameOf(v.k))}
+      `<a href="/vendor/${encodeURIComponent(v.k)}">${esc(nameOf(v.k))}
         <span class="n">${v.n.toLocaleString()}건 · ${v.sch.toLocaleString()}개교</span></a>`).join("")}</div>` : ""}
     ${etc.length ? `<p class="sub2" style="margin-top:10px">구매 창구·제조사로 잡힌 곳:
       ${etc.map(v => `${esc(nameOf(v.k))} ${v.n.toLocaleString()}건`).join(" · ")}
@@ -1137,25 +1137,25 @@ function vendorView(key) {
   const e = VENDORS.get(key);
   const recs = vendorRecs(key);
   if (!recs.length) return notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
-                                    c => `#/vendor/${encodeURIComponent(vkey(c))}`);
+                                    c => `/vendor/${encodeURIComponent(vkey(c))}`);
   const nd = recs.filter(r => !r.dup);
   const kind = vendorKind(key);
   // 온라인몰·조달 대행·대형 제조사는 공급 기업이 아니다 — 화면을 만들지 않는다
   if (kind !== "공급 기업") return `
-    <div class="crumb"><a href="#/">홈</a> › <a href="#/vendors">공급 기업</a></div>
+    <div class="crumb"><a href="/">홈</a> › <a href="/vendors">공급 기업</a></div>
     <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
       <div class="meta">${kind}입니다 — 공급 기업으로 다루지 않습니다</div></div>
     <div class="page"><p class="lead">${kind === "구매 창구"
       ? "온라인몰·조달 대행처럼 여러 회사의 물건을 파는 창구입니다. 학교가 무엇을 샀는지는 기록에 남지만, 그 물건을 이 업체가 만든 것은 아니어서 공급 기업 통계에서 뺐습니다."
       : "여러 종류의 기기를 만드는 제조사입니다. 계약명에 제품이 적혀 있으면 그 제품으로 집계되므로, 제조사 단위로 묶어 보여 주지 않습니다."}</p>
-      <p>기록은 <a href="#/products">제품별</a>이나 학교 화면에서 그대로 보실 수 있습니다.</p></div>`;
+      <p>기록은 <a href="/products">제품별</a>이나 학교 화면에서 그대로 보실 수 있습니다.</p></div>`;
   const byTag = count(nd.flatMap(r => r.tags.map(t => [t])), x => x[0]).slice(0, 12);
   const bySido = count(nd, r => r.sido).slice(0, 10);
   const byType = count(nd, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
   const won = a => a >= 100000000 ? `${(a / 100000000).toFixed(1)}억원` : `${Math.round(a / 10000).toLocaleString()}만원`;
   const amt = nd.reduce((a, r) => a + (r.amt || 0), 0);
   return `
-    <div class="crumb"><a href="#/">홈</a> › 공급 기업</div>
+    <div class="crumb"><a href="/">홈</a> › 공급 기업</div>
     <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
       <div class="meta">${kind} · 거래 학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 ·
         기록 ${nd.length.toLocaleString()}건${amt ? ` · 계약금액 합계 ${won(amt)}` : ""}</div>
@@ -1182,7 +1182,7 @@ function vendorsView() {
   const dropped = all.length - rows.length;
   const shown = rows;
   return `
-    <div class="crumb"><a href="#/">홈</a> › 공급 기업 전체</div>
+    <div class="crumb"><a href="/">홈</a> › 공급 기업 전체</div>
     <div class="pagehead"><h2>공급 기업</h2>
       <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
         이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다<br>
@@ -1190,7 +1190,7 @@ function vendorsView() {
         사는 창구여서 뺐습니다</div></div>
 
     <div class="plist">
-      ${shown.slice(0, 400).map(v => `<a href="#/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
+      ${shown.slice(0, 400).map(v => `<a href="/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
         <span class="n">${v.n.toLocaleString()}건</span></a>`).join("")}
     </div>
     ${shown.length > 400 ? `<p class="sub2" style="margin-top:12px">기록이 많은 400곳만 보여 줍니다 — 나머지는 검색으로 찾을 수 있습니다</p>` : ""}`;
@@ -1209,13 +1209,13 @@ function drillTagView(kind, tag, value) {
     if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
     const nd = recs.filter(r => !r.dup);
     return `
-      <div class="crumb"><a href="#/">홈</a> › <a href="#/vendors">공급 기업</a> ›
-        <a href="#/vendor/${encodeURIComponent(tag)}">${esc(nm)}</a> ›
+      <div class="crumb"><a href="/">홈</a> › <a href="/vendors">공급 기업</a> ›
+        <a href="/vendor/${encodeURIComponent(tag)}">${esc(nm)}</a> ›
         ${kind === "vt" ? "제품" : kind === "vs" ? "지역" : "계열"} 상세</div>
       <div class="pagehead"><h2>${esc(nm)} · ${kind === "vt" ? tagLabel(value) : esc(value)}</h2>
         <div class="meta">이 회사가 납품한 기록만 봅니다 ·
           학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 기록 ${nd.length.toLocaleString()}건
-          ${kind === "vt" ? `<div class="conf"><a href="#/tag/${encodeURIComponent(value)}">${esc(tagName(value))} 전체 보기(다른 회사 포함) ›</a></div>` : ""}
+          ${kind === "vt" ? `<div class="conf"><a href="/tag/${encodeURIComponent(value)}">${esc(tagName(value))} 전체 보기(다른 회사 포함) ›</a></div>` : ""}
         </div></div>
       <div class="card">${pagedTable(recs)}</div>`;
   }
@@ -1223,7 +1223,7 @@ function drillTagView(kind, tag, value) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
   return `
-    <div class="crumb"><a href="#/">홈</a> › <a href="#/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
+    <div class="crumb"><a href="/">홈</a> › <a href="/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
       <div class="meta">학교 ${nSchools}개교 · 기록 ${recs.length}건</div></div>
     ${kind === "level" && value === "고등학교" ? `<div class="card"><h2>고등학교 유형별<span class="note">막대를 눌러 목록 보기</span></h2>
@@ -1233,14 +1233,14 @@ function drillTagView(kind, tag, value) {
 }
 function codeView(code) {
   const s = idxByCode.get(code);
-  if (!s) return notFound("학교", code, schools, c => `#/school/${encodeURIComponent(c)}`);
+  if (!s) return notFound("학교", code, schools, c => `/school/${encodeURIComponent(c)}`);
   const recs = R.filter(r => r.schoolCode === code);
   if (recs.length) {
     const names = uniq(recs.map(r => r.school));
     return schoolView(names[0]);
   }
   return `
-    <div class="crumb"><a href="#/">홈</a> › 학교 상세</div>
+    <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(s.n)}</h2>
       <div class="meta">${esc(s.l)}${s.h ? " · " + esc(s.h) : ""} · ${esc(s.s)}
         <div class="conf">NEIS ${[s.f, s.a, "학교코드 " + s.c].filter(Boolean).map(esc).join(" · ")}</div>
@@ -1265,7 +1265,7 @@ function drillView(kind, value) {
   if (ES.size) conds.push(`설립 주체 ${esLabel()}`);
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
   return `
-    <div class="crumb"><a href="#/">홈</a> › 통계 상세</div>
+    <div class="crumb"><a href="/">홈</a> › 통계 상세</div>
     <div class="pagehead"><h2>${what}</h2>
       <div class="meta">${conds.length ? "적용 조건: " + esc(conds.join(" · ")) + " · " : ""}학교 ${nSchools}개교 · 기록 ${nd.length.toLocaleString()}건</div></div>
     <div class="card">${pagedTable(recs)}</div>`;
@@ -1374,10 +1374,10 @@ function namePool() {
   // 네 번째 칸은 견주고 다시 찾을 때 쓰는 이름 — 회사는 법인 표기를 뺀 알맹이로 견준다
   // ('주식회사 아이포트폴리오'를 통째로 견주면 '아이포트톨리오'와 덜 닮아 보인다)
   const core = n => (n || "").replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|유한책임회사|\(재\)|재단법인|\(사\)|사단법인/g, "").trim();
-  for (const [t] of tags) NAME_POOL.push([tagName(t), `#/tag/${encodeURIComponent(t)}`, "제품", tagName(t)]);
+  for (const [t] of tags) NAME_POOL.push([tagName(t), `/tag/${encodeURIComponent(t)}`, "제품", tagName(t)]);
   for (const v of VENDORS.values()) if (v.n >= 3 && vendorKind(v.key) === "공급 기업")
-    NAME_POOL.push([v.name, `#/vendor/${encodeURIComponent(v.key)}`, "회사", core(v.name) || v.name]);
-  for (const s of schools) NAME_POOL.push([s, `#/school/${encodeURIComponent(s)}`, "학교", s]);
+    NAME_POOL.push([v.name, `/vendor/${encodeURIComponent(v.key)}`, "회사", core(v.name) || v.name]);
+  for (const s of schools) NAME_POOL.push([s, `/school/${encodeURIComponent(s)}`, "학교", s]);
   return NAME_POOL;
 }
 const nearNames = (q, min) => namePool().map(p => [p, sim(q, p[3])])
@@ -1413,7 +1413,7 @@ function vendorHitCard(q) {
   const vs = vendorHits(q);
   if (!vs.length) return "";
   return `<div class="card"><h2>이 이름의 공급 기업<span class="note">누르면 그 회사의 납품 기록을 볼 수 있습니다</span></h2>
-    <div class="plist">${vs.map(v => `<a href="#/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}<span class="n">${vendorKind(v.key)} · 기록 ${v.n.toLocaleString()}건</span></a>`).join("")}</div></div>`;
+    <div class="plist">${vs.map(v => `<a href="/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}<span class="n">${vendorKind(v.key)} · 기록 ${v.n.toLocaleString()}건</span></a>`).join("")}</div></div>`;
 }
 
 function searchView(q) {
@@ -1425,12 +1425,12 @@ function searchView(q) {
     terms.some(t => k.toLowerCase().includes(t) || t.includes(k.toLowerCase())));
   const note = noteKey ? PLATFORM_NOTES[noteKey] : null;
   return `
-    <div class="crumb"><a href="#/">홈</a> › 검색 결과</div>
+    <div class="crumb"><a href="/">홈</a> › 검색 결과</div>
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${
       OLD_STATE === "done" ? ` · <span class="conf">전 기간(2020.1~2026.7)에서 찾았습니다</span>`
       : ` · <span class="conf">지난 기록을 불러오는 중입니다…</span>`}${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
-      <p class="cv"><a href="#/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
+      <p class="cv"><a href="/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}
     ${vendorHitCard(q)}
     ${hit.length ? "" : nearMisses(q)}
     ${recs.length || !hidden ? `<div class="card">${pagedTable(recs)}</div>`
@@ -1461,7 +1461,7 @@ function animateCount() {
 function aboutView() {
   const m = DB.meta || {};
   return `
-    <div class="crumb"><a href="#/">홈</a> › 데이터 안내</div>
+    <div class="crumb"><a href="/">홈</a> › 데이터 안내</div>
     <div class="page">
       <div class="page-intro">
         <div>
@@ -1469,7 +1469,7 @@ function aboutView() {
           <p>이 서비스는 공개된 조달 기록을 모아 전국 초·중·고등학교의 에듀테크 도입 현황을 보여줍니다.
           학교가 무엇을 계약했는지는 공개 정보지만 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
         </div>
-        <img src="hero_person_m.png?v=2" width="239" height="186" alt="">
+        <img src="/hero_person_m.png?v=2" width="239" height="186" alt="">
       </div>
 
       <h3>어디에서 모았나</h3>
@@ -1566,7 +1566,7 @@ function aboutView() {
       <p style="margin-top:18px">정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
-        <a href="#/contact">정정 요청</a>으로 알려 주세요.</p>
+        <a href="/contact">정정 요청</a>으로 알려 주세요.</p>
     </div>`;
 }
 
@@ -1615,7 +1615,7 @@ function productsView() {
   const sel = PLIST_G && groups[PLIST_G] ? PLIST_G : "전체";
   const show = sel === "전체" ? names : groups[sel];
   return `
-    <div class="crumb"><a href="#/">홈</a> › 제품 전체 보기</div>
+    <div class="crumb"><a href="/">홈</a> › 제품 전체 보기</div>
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
         이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
@@ -1634,7 +1634,7 @@ function productsView() {
       ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="PLIST_G='${g}';render()">${g}</button>`).join("")}
     </div>
     <div class="plist">
-      ${show.map(n => `<a href="#/tag/${encodeURIComponent(n)}">${tagLabel(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
+      ${show.map(n => `<a href="/tag/${encodeURIComponent(n)}">${tagLabel(n)}<span class="n">${sch[n].size.toLocaleString()}개교</span></a>`).join("")}
     </div>`;
 }
 
@@ -1648,17 +1648,17 @@ function regionsView() {
   const sch = {};
   for (const r of src) (sch[r.sido] = sch[r.sido] || new Set()).add(r.school);
   return `
-    <div class="crumb"><a href="#/">홈</a> › 지역별 전체</div>
+    <div class="crumb"><a href="/">홈</a> › 지역별 전체</div>
     <div class="pagehead"><h2>지역별 사례 수</h2>
       <div class="sub2">전국 ${rows.length}개 시도 ·
         ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다</div>${filterNote()}</div>
     <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
     <div class="plist" style="margin-top:14px">
-      ${rows.map(([s, n]) => `<a href="#/drill/sido/${encodeURIComponent(s)}">${esc(s)}
+      ${rows.map(([s, n]) => `<a href="/drill/sido/${encodeURIComponent(s)}">${esc(s)}
         <span class="n">${n.toLocaleString()}건 · ${(sch[s] ? sch[s].size : 0).toLocaleString()}개교</span></a>`).join("")}
     </div>
     ${etc.length ? `<p class="sub2" style="margin-top:14px">시도를 특정하지 못한 기록:
-      ${etc.map(([s, n]) => `<a href="#/drill/sido/${encodeURIComponent(s)}">${esc(s)} ${n.toLocaleString()}건</a>`).join(" · ")}</p>` : ""}`;
+      ${etc.map(([s, n]) => `<a href="/drill/sido/${encodeURIComponent(s)}">${esc(s)} ${n.toLocaleString()}건</a>`).join(" · ")}</p>` : ""}`;
 }
 
 function contactView() {
@@ -1676,7 +1676,7 @@ function contactView() {
     "4. 해당 기록(학교명·계약명·계약일) — 목록에 없다면 '없음'이라고 적어 주세요:\n" +
     "5. 올바른 내용:\n6. 근거 자료(계약서·납품 확인서·조달 공고 번호 등):\n7. 회신받을 담당자·연락처:\n");
   return `
-    <div class="crumb"><a href="#/">홈</a> › 정정 요청</div>
+    <div class="crumb"><a href="/">홈</a> › 정정 요청</div>
     <div class="page">
       <h2>정정 요청 · 문의</h2>
       <p class="lead">정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
@@ -1719,15 +1719,15 @@ function contactView() {
             <a class="mailbtn alt" href="mailto:gklim001@gmail.com?subject=${subjCo}&body=${bodyCo}">공급 기업 정정 요청</a>
           </div>
         </div>
-        <img src="contact_person.png?v=1" width="137" height="186" alt="">
+        <img src="/contact_person.png?v=1" width="137" height="186" alt="">
       </div>
-      <p style="margin-top:18px">데이터를 어떻게 모으고 판정하는지는 <a href="#/about">데이터 안내</a>에서 보실 수 있습니다.</p>
+      <p style="margin-top:18px">데이터를 어떻게 모으고 판정하는지는 <a href="/about">데이터 안내</a>에서 보실 수 있습니다.</p>
     </div>`;
 }
 
 let PLIST_G = "";
 function render() {
-  const seg = (location.hash.slice(1) || "/").split("/");
+  const seg = (location.pathname || "/").split("/");
   const kind = seg[1];
   const arg = seg.length > 2 ? decodeURIComponent(seg.slice(2).join("/")) : undefined;
   const view = $("#view");
@@ -1754,7 +1754,7 @@ function render() {
   }
   // 현재 화면에 해당하는 상단 메뉴 강조
   document.querySelectorAll(".navlinks a").forEach(a =>
-    a.classList.toggle("on", a.getAttribute("href") === `#/${kind || ""}`));
+    a.classList.toggle("on", a.getAttribute("href") === `/${kind || ""}`));
   // 히어로는 첫 화면에서만 크게, 하위 화면에서는 접어 둔다
   document.body.classList.toggle("sub-page", !!kind);
   // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
@@ -1764,7 +1764,27 @@ function render() {
   if (sEl) sEl.hidden = true;
   window.scrollTo(0, 0);
 }
-window.addEventListener("hashchange", () => { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; render(); });
+// 화면을 옮길 때 쓰는 하나뿐인 통로. 주소를 진짜 경로로 바꾸고 다시 그린다.
+// (전에는 주소 뒤 #에 화면을 적었다 — 논문·공문에 인용하기 나빴다)
+function resetView() { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; }
+function go(path) {
+  if (path === location.pathname) return;
+  history.pushState(null, "", path + location.search);
+  resetView(); render();
+}
+window.go = go;
+window.addEventListener("popstate", () => { resetView(); render(); });
+// 사이트 안 링크는 페이지를 새로 부르지 않고 그 자리에서 넘긴다.
+// 새 탭으로 열기(⌘·Ctrl·가운데 클릭)와 바깥 링크는 브라우저에 맡긴다.
+document.addEventListener("click", e => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest("a");
+  if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+  const href = a.getAttribute("href");
+  if (!href || !href.startsWith("/") || href.startsWith("//")) return;
+  e.preventDefault();
+  go(href);
+});
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");
@@ -1786,11 +1806,11 @@ const groupBySchool = {};
 R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
 perfMark("학교 색인");
 const suggItems = [
-  ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `#/tag/${encodeURIComponent(t)}`})),
-  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `#/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
-  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `#/code/${s.c}`, g: idxGroup(s), rg: s.s})),
+  ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `/tag/${encodeURIComponent(t)}`})),
+  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
+  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `/code/${s.c}`, g: idxGroup(s), rg: s.s})),
   ...[...VENDORS.values()].filter(v => v.n >= 5 && vendorKind(v.key) === "공급 기업")
-     .map(v => ({label: v.name, kind: "공급 기업", href: `#/vendor/${encodeURIComponent(v.key)}`})),
+     .map(v => ({label: v.name, kind: "공급 기업", href: `/vendor/${encodeURIComponent(v.key)}`})),
 ];
 const q = $("#q"), sugg = $("#sugg");
 // 요약 화면이 걸어 둔 '불러오는 중' 안내를 걷고, 그 사이에 입력한 글자가 있으면 바로 반영한다
@@ -1814,17 +1834,17 @@ q.addEventListener("input", () => {
 sugg.addEventListener("mousedown", e => {
   const el = e.target.closest("[data-i]"); if (!el) return;
   const i = +el.dataset.i;
-  location.hash = i >= 0 ? current[i].href.slice(1) : `/search/${encodeURIComponent(q.value.trim())}`;
+  go(i >= 0 ? current[i].href : `/search/${encodeURIComponent(q.value.trim())}`);
   sugg.hidden = true; q.blur();
 });
 q.addEventListener("keydown", e => {
   if (e.isComposing || e.keyCode === 229) return;  // 한글 IME 조합 중 Enter/방향키 무시 (글자 중복 방지)
-  if (sugg.hidden) { if (e.key === "Enter" && q.value.trim()) { location.hash = `/search/${encodeURIComponent(q.value.trim())}`; } return; }
+  if (sugg.hidden) { if (e.key === "Enter" && q.value.trim()) { go(`/search/${encodeURIComponent(q.value.trim())}`); } return; }
   const n = current.length;
   if (e.key === "ArrowDown") { selIdx = (selIdx + 1) % n; }
   else if (e.key === "ArrowUp") { selIdx = (selIdx - 1 + n) % n; }
   else if (e.key === "Enter") {
-    location.hash = selIdx >= 0 ? current[selIdx].href.slice(1) : `/search/${encodeURIComponent(q.value.trim())}`;
+    go(selIdx >= 0 ? current[selIdx].href : `/search/${encodeURIComponent(q.value.trim())}`);
     sugg.hidden = true; q.blur(); return;
   } else if (e.key === "Escape") { sugg.hidden = true; return; }
   else return;
