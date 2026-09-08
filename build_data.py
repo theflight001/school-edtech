@@ -247,10 +247,23 @@ SPECIFIC_RULES = [
     # 'MS'만으로 잡으면 '삼성 전자레인지 … MS 스마트쿡'처럼 모델명에 붙은 MS까지 걸린다.
     # 뒤에 오피스·윈도우·라이선스 계열 낱말이 따라올 때만 인정한다.
     # 반대로 'MS오피스'처럼 붙여 쓴 한글 표기는 예전 패턴이 놓치고 있었다.
-    ("MS Office",          r"(?:Microsoft|마이크로소프트)(?![\s\-]*(?:서피스|Surface))|오피스 ?365|\bM365\b|\bO365\b|"
-                           r"MS[\s\-]?(?:Office|오피스|365|Word|Excel|Power ?Point|워드|엑셀|"
-                           r"파워포인트|Windows|윈도우|OVS|EES|SPLA|제품군|라이선스|라이센스|"
-                           r"러닝|Learn|Teams|팀즈|Azure|애저)"),
+    # 윈도우와 코파일럿은 같은 회사 것이지만 오피스가 아니다 — 각자 태그로 나눈다(48건).
+    ("MS Office",          r"오피스 ?365|\bM365\b|\bO365\b|"
+                           r"MS[\s\-]?(?:Office|오피스|365|Word|Excel|Power ?Point|워드|엑셀|파워포인트)|"
+                           r"(?:Microsoft|마이크로소프트)[\s\-]*(?:Office|오피스)|"
+                           r"(?!.*(?:윈도우|Windows|WinPro|코파일럿|Copilot|서피스|Surface))^.*"
+                           r"(?:Microsoft|마이크로소프트|"
+                           r"MS[\s\-]?(?:OVS|EES|SPLA|제품군|라이선스|라이센스|러닝|Learn|Teams|팀즈|Azure|애저))"),
+    # 컴퓨터에 딸려 오는 윈도우는 기기 계약이다 — 운영체제만 따로 산 건만 잡는다.
+    ("Windows",            r"(?!.*(?:노트북|갤럭시 ?북|그램|울트라 ?PC|데스크탑|올인원|서피스|Surface|태블릿))^.*"
+                           r"(?:(?:윈도우|Windows|WinPro)\s*(?:서버|Server|10|11|7|8|XP|Pro|프로|홈|Home|OS|"
+                           r"운영체제|라이선스|라이센스|업그레이드|패키지|정품|DSP|COEM|FPP)|"
+                           r"(?:MS|Microsoft|마이크로소프트)[\s\-]*(?:윈도우|Windows))"),
+    # '코파일럿 PC'는 노트북 상표라 기기 쪽이다 — 구독·라이선스로 산 것만 제품으로 본다.
+    ("Microsoft Copilot",  r"(?!.*(?:노트북|갤럭시 ?북|서피스|Surface|키보드|슬림펜))^.*"
+                           r"(?:(?:Microsoft|MS|마이크로소프트)[\s\-]*(?:365 )?(?:Copilot|코파일럿)|"
+                           r"Copilot[\s\-]*(?:MS ?365|For Microsoft|Pro|프로)|"
+                           r"코파일럿[\s\-]*(?:퍼스널|프리미엄|프로|라이선스|라이센스))"),
     ("Google Workspace",   r"구글 ?워크스페이스|Google Workspace|구글 ?클래스룸|Google Classroom"),
     ("Notion",             r"노션|Notion"),
         # ZOOM은 오디오 장비 상표이기도 하다 — 녹음기·믹서·렌즈가 걸렸다(21건)
@@ -338,7 +351,11 @@ SPECIFIC_RULES = [
     # 게다가 한글 '스크래치'는 미술 재료(스크래치북·스크래치 페이퍼)와 수세미(제로스크래치)에도 쓰인다.
     # 실제로 1,220건(스크래치)·680건(엔트리) 가운데 구독·라이선스·이용권 신호가 있는 계약은 0건이었다.
     # ("Scratch", r"\bScratch\b|스크래치(?!치)"), ("엔트리", r"엔트리(?! ?고|타)|\bEntry\b(?! ?Level)")
-    ("Tinkercad",          r"Tinkercad|팅커캐드"),
+        # 틴커캐드는 오토데스크의 무료 웹 서비스라 구매 계약이 남지 않는다.
+    # 10건 전부 '메이커 다은쌤의 틴커캐드' 교재와 동아리 재료였다.
+    # 틴커캐드는 오토데스크의 무료 웹 서비스라 구매 계약이 남지 않는다.
+    # 10건 전부 '메이커 다은쌤의 틴커캐드' 교재와 동아리 재료였다.
+    ("Tinkercad",         r"(?!.*(?:교재|재료|책|도서|만들기|세트|FDM|다은쌤))^.*(?:Tinkercad|팅커캐드|틴커캐드)"),
     # 투핸즈인터랙티브의 체육활동 에듀테크 교구. 이 회사의 유일한 제품이라 태그는 '디딤'으로 통일한다.
     # ('디딤' 단독으로 잡으면 디딤돌·디딤학교 등과 겹치므로 앞말이 붙은 표기만 인정)
     ("디딤",                 r"플레이 ?디딤|play ?didim|투핸즈인터랙티브|디딤_|"
@@ -474,6 +491,15 @@ BOOK_BUY = re.compile(r"(교재|도서|워크북|문제집|참고서|학습지)\
                       r"(교재|도서|워크북|문제집|참고서|학습지)\s*$")
 # 계약명이 '~공사'로 끝나면 건물·설비를 짓는 계약이다 ('SW/AI교육 채움교실 구축에 따른 전기 공사').
 # '공사에 따른 소프트웨어 구입'처럼 끝이 구매인 것은 그대로 둔다.
+# 산 것이 다과·간식·생수인 계약 — 협의회·연수 자리에 낸 먹을거리는 제품 도입이 아니다.
+# (예: '소프트웨어 선도학교 업무협의회 다과 구입', 'AI코스웨어 선정 물품선정위원회 다과비')
+# 다만 '교구 및 다과', '실습재료 외 5종 및 간식'처럼 물건을 함께 산 건은 남긴다.
+REFRESHMENT = re.compile(r"(?:다과|간식|생수|음료수|음료|커피|원두|과자|샌드위치|떡|피자|케이크)"
+                         r"(?:류|비|값)?\s*(?:\([^)]*\)|외 ?\d+ ?[종건개품]?)?\s*(?:등)?\s*"
+                         r"(?:구[입매]|구매|지출|지급|비용|요청|품의|계약)")
+REFRESH_WITH_GOODS = re.compile(r"(?:재료|교구|기기|장비|용품|단말|노트북|태블릿|프린터|SSD|키트|도서)"
+                                r"[^,]{0,12}?(?:및|외 ?\d+ ?종[^,]{0,8}?및)\s*(?:협의회 ?)?"
+                                r"(?:다과|간식|음료|생수)")
 EXCLUDE_WORK = re.compile(r"공사\s*(?:비|대금|계약|건)?\s*$|공사\s*\(?[^)]{0,12}\)?\s*(?:계약|입찰|발주)\s*$")
 EXCLUDE_EVENT = re.compile(r"전세버스|버스 ?임차|차량 ?임차|차량 ?렌트|임대차|숙박|수송|캠프|위탁용역|위탁 ?운영|여행|정기간행물|간행물|설계 ?용역|감리|도시락|급식|체험학습|물류|청소|방역|소독|경비 ?용역|인쇄|승강기|엘리베이터|정수기|교복|체육복|상품권|기념품|시상품|트로피|기념패|홍보물품")
 # "○○ 프로그램 운영"의 '프로그램'은 소프트웨어가 아니라 교육·연수 과정 — 특정 제품명이 없으면 비제품 용역
@@ -1026,9 +1052,52 @@ for r in records:
         _narrowed += 1
 print(f"업체가 만드는 제품으로 좁힘: {_narrowed:,}건")
 
+# '○○ 운영 물품 구입' — 산 것은 다과·문구·색연필이고 ○○은 그 활동의 이름일 뿐인 계약.
+# (예: '하이러닝 선도학교 운영 물품 구입', 'AI펭톡 프로그램 보상 물품 구입비 지급')
+# 무형 서비스는 물품·재료·다과로 살 수 없으므로 그 이름이 '물품' 앞에만 나오면 태그를 뗀다.
+# 로봇·교구·태블릿처럼 만질 수 있는 제품은 그 물품이 곧 제품일 수 있어 건드리지 않는다.
+# 이름이 '물품(챗GPT 외 6종)'처럼 산 물건 목록 안에 있으면 그건 진짜 구매라 그대로 둔다.
+OPER_GOODS = re.compile(
+    r"(?:운영|활동|수업|연수|협의회|공동체|동아리|대회|축제|캠프|교수학습|보상|홍보|"
+    r"기반 ?조성|선도학교|체험|학급|부서|멘토링|발표회|부스)"
+    r"[^()]{0,14}?(물품|재료|준비물|다과|간식|소모품)")
+OPER_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|사용료|이용료|소프트웨어|플랫폼|S/?W|"
+                       r"계정|콘텐츠|설치|재계약|및 ?물품 ?구[입매]")
+SERVICE_TAGS = {
+    "하이러닝", "AI 펭톡", "아이톡톡", "오토아이", "강원아이로", "코드잇", "클래스팅",
+    "클래스카드", "리딩게이트", "리딩앤", "매쓰홀릭T", "마타수학", "마음톡톡", "알공",
+    "e-NIE", "띵커벨", "젭(ZEP)", "Notion", "Zoom", "Google Workspace", "Canva",
+    "Padlet", "ChatGPT", "Adobe", "북크리에이터(Bookcreator)", "웨이메이커", "원아워",
+    "학과계열선정검사", "링스쿨", "Ghost", "부커스", "AI CLASS", "인공지능 히어로",
+    "코딩스쿨", "자작자작", "네오쏘코", "이지메이커",
+}
+_oper = 0
+for r in records:
+    hit = SERVICE_TAGS & set(r["tags"])
+    if not hit:
+        continue
+    name = r["product"]
+    g = OPER_GOODS.search(name)
+    if not g or OPER_KEEP.search(name):
+        continue
+    cut = g.end(1)
+    off = [t for t in hit
+           if t in _RULE_PAT_I
+           and (ms := list(_RULE_PAT_I[t].finditer(name))) and all(m.start() < cut for m in ms)]
+    if off:
+        r["tags"] = sorted(set(r["tags"]) - set(off))
+        _oper += 1
+print(f"활동 이름일 뿐인 제품 태그 뗌: {_oper:,}건")
+
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
 records = [r for r in records if not EXCLUDE_EVENT.search(r["product"]) and not EXCLUDE_WORK.search(r["product"])]
+_before_rf = len(records)
+records = [r for r in records
+           if not (REFRESHMENT.search(r["product"])
+                   and not REFRESH_WITH_GOODS.search(r["product"]))]
+if _before_rf - len(records):
+    print(f"먹을거리만 산 계약 제외: {_before_rf - len(records)}건")
 # 교육·연수 운영 용역 제외 — 단, 특정 제품명 태그나 명시적 SW 구입 문구가 있으면 유지
 SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
@@ -1144,6 +1213,22 @@ if AI_CLS:
         kept_ai.append(r)
     records = kept_ai
     print(f"AI 분류 적용: {ai_n}건, AI 잡음 제외: {ai_noise}건")
+
+# 같은 제품이 영문·한글, 옛 이름·새 이름으로 갈려 메뉴와 통계가 둘로 나뉜다.
+# 대표 이름 하나로 모은다 (에듀집에 올라온 표기를 대표로 삼는다).
+TAG_ALIAS = {
+    "Typecast": "타입캐스트",
+    "타임리": "타임리GPT",
+    "홈런": "아이스크림 홈런",
+    "페더": "페더 에듀",
+}
+_aliased = 0
+for r in records:
+    if TAG_ALIAS.keys() & set(r["tags"]):
+        r["tags"] = sorted({TAG_ALIAS.get(t, t) for t in r["tags"]})
+        _aliased += 1
+if _aliased:
+    print(f"같은 제품의 다른 이름 통합: {_aliased:,}건")
 
 # 결제 수수료 기록 표시 — 해외/카드 결제의 부대 지출은 제품 구매액이 아니다.
 # ('아이엠스쿨 이용 수수료'처럼 이용료 자체인 경우는 제외하려고 결제 수단·소액 조건을 함께 본다)
