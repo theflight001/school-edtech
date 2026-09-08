@@ -1644,3 +1644,14 @@ if _sh.which("node"):
     _sp.run(["node", "make_summary.js"], check=False)
 else:
     print("! node가 없어 data_summary.js를 만들지 못했습니다 — 첫 화면이 원자료를 기다리게 됩니다")
+
+# 공유 카드와 메타 설명의 건수 — 손으로 적어 두면 자동 갱신 때마다 어긋난다
+try:
+    import make_ogcard as _og
+    _sc = len({r["schoolCode"] for r in records if r.get("schoolCode")})
+    _yrs = sorted({r["year"] for r in records if r.get("year")})
+    _og.build(len(records), _sc, _yrs[0] if _yrs else 2020, _yrs[-1] if _yrs else 2026)
+    _og.rewrite_meta(len(records))
+    print(f"공유 카드·메타 설명 갱신: {len(records):,}건 · 학교 {_sc:,}곳")
+except Exception as _e:
+    print(f"! 공유 카드를 갱신하지 못했습니다 ({type(_e).__name__}: {_e})")
