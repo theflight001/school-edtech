@@ -110,6 +110,9 @@ def parse_view(page_html):
             amt = nums[0]
     return amt, vendor
 
+# 연 단위 조회는 안 된다. srchM을 비우면 그 해 전체가 아니라 서버가 기본값(이번 달)을
+# 채워 넣는다 — 2025년 '소프트웨어'가 월 12번 합계 624건인데 월을 비우면 62건(9월치)만 나온다.
+# 그래서 대구는 검색어 × 월(80개월)로 훑을 수밖에 없다.
 def months(begin, end):
     y, m = map(int, begin.split("-")); ey, em = map(int, end.split("-"))
     out = []

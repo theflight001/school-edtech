@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260908d";
+  s.src = "data_detail.js?b=20260908e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260908d";
+    s2.src = "data_detail_old.js?b=20260908e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260908d";
+  s.src = "data_old.js?b=20260908e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -659,7 +659,7 @@ function drawRegionPicker() {
         <div class="pk-foot">
           <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다<br>
             전남광주는 2026년 7월 1일 통합되었습니다. 다만 정보시스템은 당분간 별도로 운영되어,
-            세부검색 결과는 통합 전 지역(광주·전남)을 제시하고 있습니다</span>
+            세부검색 결과는 통합 전 지역(광주·전남)이 제공됩니다</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="rgAll()">전국</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
