@@ -1416,8 +1416,12 @@ for cands in master_by_name.values():
             school_index.append(rec)
 print(f"전국 학교 인덱스: {len(school_index)}개교")
 
+import datetime as _dt
 meta = {
     "asOf": "2026-07-20",
+    # 이 파일을 만든 날. 화면 아래에 '마지막 갱신'으로 보여 준다 —
+    # 자동 갱신이 실제로 돌았는지 방문자가 알 수 있어야 한다.
+    "builtOn": _dt.date.today().isoformat(),
     "total": len(records),
     "schools": len({rec["school"] for rec in records}),
     # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
@@ -1648,7 +1652,7 @@ else:
 # 공유 카드와 메타 설명의 건수 — 손으로 적어 두면 자동 갱신 때마다 어긋난다
 try:
     import make_ogcard as _og
-    _sc = len({r["schoolCode"] for r in records if r.get("schoolCode")})
+    _sc = meta["schools"]        # 기록이 하나라도 있는 학교 수
     _yrs = sorted({r["year"] for r in records if r.get("year")})
     _og.build(len(records), _sc, _yrs[0] if _yrs else 2020, _yrs[-1] if _yrs else 2026)
     _og.rewrite_meta(len(records))

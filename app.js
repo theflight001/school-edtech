@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260909e";
+  s.src = "/data_detail.js?b=20260909f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260909e";
+    s2.src = "/data_detail_old.js?b=20260909f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260909e";
+  s.src = "/data_old.js?b=20260909f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1517,9 +1517,11 @@ function aboutView() {
         <b>실제 거래 규모보다 작게 보일 수 있습니다.</b></p>
 
       <h3>자료는 어떻게 갱신되나</h3>
-      <p><b>매월 10일에 자동으로 갱신됩니다.</b> 시도교육청 계약공개는 그달이 끝나고
-        <b>평균 6일, 늦어도 10일</b> 안에 올라옵니다(서울 게시물 1,300건을 재 봤습니다).
-        1일에 받으면 지난달 자료가 아직 하나도 없습니다.</p>
+      <p><b>매월 10일 새벽 3시에 자동으로 갱신됩니다.</b> 자료를 다시 받는 일부터
+        판정·집계를 거쳐 이 화면에 반영되기까지 사람 손이 가지 않습니다.</p>
+      <p>왜 10일인가 — 시도교육청 계약공개는 그달이 끝나고 <b>평균 6일, 늦어도 10일</b> 안에
+        올라옵니다(서울 게시물 1,300건을 재 봤습니다). 1일에 받으면 지난달 자료가
+        아직 하나도 없습니다.</p>
       <ul>
         <li>갱신할 때마다 <b>최근 석 달</b>을 다시 훑습니다. 계약일과 공개일이 달라
           지난달 목록에 그 앞 계약이 섞여 올라오기 때문입니다.</li>
@@ -1532,7 +1534,7 @@ function aboutView() {
         비어 있는 달에는 <b>왜 비었는지</b> 함께 적었습니다 — 원천이 그 시기 자료를 갖고 있지
         않은 경우, 자료는 받았으나 그달 에듀테크 계약이 없었던 경우, 저희가 더 확인해야 하는
         경우를 갈라 두었습니다.</p>
-      <p><a href="수집현황.csv" download><b>수집 현황표 내려받기 (CSV)</b></a>
+      <p><a href="/수집현황.csv" download><b>수집 현황표 내려받기 (CSV)</b></a>
         <span class="cv"> · 자료원 20종 × 2020.01부터 매월</span></p>
 
       <h3>전남광주 통합과 이 서비스</h3>
