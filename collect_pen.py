@@ -11,7 +11,28 @@ OFFICES = {
 }
 URL = OFFICES["부산"][0]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 1.2
+# ── 예의 있게 받기 ─────────────────────────────────────────────
+# 2026-09 전남교육청이 우리 IP를 막았다. 초당 한 번씩 몇 시간을 두드리고, 타임아웃이
+# 나도 재시도를 이어 갔다 — 웹방화벽이 보기에 크롤링 봇 그 자체다.
+# 간격을 열 배로 늘리고, 재시도는 세 번에서 멈추고, 한 번 실행에 받는 양에 상한을 둔다.
+# 환경변수로 조절한다: EDTECH_SPACING(초) · EDTECH_MAXREQ(요청 상한)
+import random as _rnd
+SPACING = float(os.environ.get("EDTECH_SPACING", "10"))
+MAXREQ = int(os.environ.get("EDTECH_MAXREQ", "1200"))
+_req_used = [0]
+
+
+class BudgetOut(Exception):
+    """이번 실행에서 받기로 한 양을 다 썼다 — 체크포인트를 남기고 곱게 끝낸다"""
+
+
+def polite():
+    """요청 사이 간격 — 기계처럼 일정하면 더 눈에 띈다. 조금씩 흔든다."""
+    _req_used[0] += 1
+    if _req_used[0] > MAXREQ:
+        raise BudgetOut(f"이번 실행 상한 {MAXREQ:,}회를 다 썼다")
+    time.sleep(SPACING * _rnd.uniform(0.8, 1.4))
+# ───────────────────────────────────────────────────────────────
 OUT = "pen_candidates.csv"
 CKPT = ".ckpt_pen.json"
 FIELDS = ["회계연도", "기관명", "계약방법", "계약명", "계약일", "계약금액", "계약상대자", "키워드"]
@@ -115,14 +136,14 @@ def main():
                 if len(rows) < 100:
                     break
                 page += 1
-                time.sleep(SPACING)
+                polite()
             done.add(key)
             if len(done) % 6 == 0:
                 print(f"  {bdt[:7]}까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
             ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
             with open(CKPT, "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
-            time.sleep(SPACING)
+            polite()
         ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
         with open(CKPT, "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
@@ -131,4 +152,8 @@ def main():
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BudgetOut as e:
+        # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
+        print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")

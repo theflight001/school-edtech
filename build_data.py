@@ -225,7 +225,9 @@ def resolve_school(row):
 SPECIFIC_RULES = [
     # '챗지피티'처럼 한글로 옮겨 적은 표기가 많다. 다만 GPT킬러·MonoGPT·타임리 GPT처럼
     # 다른 제품에 GPT가 붙는 경우가 있어, GPT 단독은 잡지 않는다.
-    ("ChatGPT",            r"Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇겟][\s\-]?지피티|GPT[- ]?[45]|OpenAI"),
+    ("ChatGPT",            # '겟지피티(GetGPT)'는 유한책임회사 워드브릭스의 딴 제품이다 — 에듀집에 따로 등록돼 있다.
+                           # 이름이 닮았다고 ChatGPT로 묶으면 안 된다(46건이 그랬다).
+                           r"Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇][\s\-]?지피티|GPT[- ]?[45]|OpenAI"),
     # Google AI Pro/Ultra는 2025년 개편된 구글 AI 구독 요금제 공식 명칭(구 Gemini Advanced·Google One AI Premium)
     ("Google AI Pro",       r"구글 ?AI ?(?:PRO|프로|Ultra|울트라)|Google ?AI ?(?:Pro|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
     ("Gemini",             r"Gemini|제미나이"),

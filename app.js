@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260828a";
+  s.src = "data_detail.js?b=20260908a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260828a";
+    s2.src = "data_detail_old.js?b=20260908a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260828a";
+  s.src = "data_old.js?b=20260908a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -597,20 +597,57 @@ let RG = new Set();
 const rgMatch = r => !RG.size || RG.has(r.sido);
 const rgLabel = () => {
   if (!RG.size) return "전국";
-  const names = SIDOS.filter(s => RG.has(s));
+  // 합쳐진 시도를 다 골랐으면 통합 이름 한 칸으로 적는다
+  const left = new Set(SIDOS.filter(s => RG.has(s)));
+  const names = [];
+  for (const [k, ms] of Object.entries(MERGED)) {
+    if (ms.every(x => left.has(x))) {
+      names.push(k);
+      ms.forEach(x => left.delete(x));
+    }
+  }
+  names.push(...SIDOS.filter(s => left.has(s)));
   return names.length <= 3 ? names.join("·") : `${names[0]} 외 ${names.length - 1}개 지역`;
 };
+// 2026년 7월 1일 광주광역시와 전라남도가 '전남광주통합특별시'로 합쳐졌고 교육청도
+// 함께 통합됐다(전남광주통합특별시교육청). 다만 계약 공개 시스템은 2028년까지 따로 돌아
+// 자료는 여전히 '광주'·'전남'으로 들어온다. 그래서 기록의 딱지는 그대로 두고 —
+// 2023년에 광주에서 산 것을 '광주'로 찾을 수 있어야 한다 — 고르개에서만 한 칸으로 묶는다.
+const MERGED = {"전남광주": ["광주", "전남"]};
+const mergedOf = s => Object.keys(MERGED).find(k => MERGED[k].includes(s));
 let rgSel = null;
 window.openRegionPicker = () => { rgSel = new Set(RG); drawRegionPicker(); };
-window.rgToggle = s => { rgSel.has(s) ? rgSel.delete(s) : rgSel.add(s); drawRegionPicker(); };
+window.rgToggle = s => {
+  // 통합된 시도는 함께 켜고 함께 끈다
+  const group = MERGED[s] || [s];
+  const on = group.every(x => rgSel.has(x));
+  group.forEach(x => on ? rgSel.delete(x) : rgSel.add(x));
+  drawRegionPicker();
+};
 window.rgAll = () => { RG = new Set(); closePicker(); render(); };
-window.rgApply = () => { RG = rgSel.size === SIDOS.length ? new Set() : rgSel; closePicker(); render(); };
+window.rgApply = () => { RG = rgSel.size === SIDOS.length ? new Set() : new Set(rgSel); closePicker(); render(); };
+// 고르개에 보여 줄 칸 — 합쳐진 시도는 한 칸으로 묶는다
+const RG_CELLS = (() => {
+  const out = [], seen = new Set();
+  for (const s of SIDOS) {
+    const g = mergedOf(s);
+    if (!g) { out.push({k: s, label: s, members: [s]}); continue; }
+    if (seen.has(g)) continue;
+    seen.add(g);
+    out.push({k: g, label: g, members: MERGED[g]});
+  }
+  return out;
+})();
 function drawRegionPicker() {
-  const cells = SIDOS.map(s => `
-    <button class="pk-cell sc-cell${rgSel.has(s) ? " end" : ""}" onclick="rgToggle('${s}')">
-      <span>${s}</span><span class="sc-n">${(IDX_SIDO_COUNT[s] || 0).toLocaleString()}개교</span>
-    </button>`).join("");
-  const picked = SIDOS.filter(s => rgSel.has(s)).join(" · ");
+  const cells = RG_CELLS.map(c => {
+    const n = c.members.reduce((a, x) => a + (IDX_SIDO_COUNT[x] || 0), 0);
+    const on = c.members.every(x => rgSel.has(x));
+    const part = !on && c.members.some(x => rgSel.has(x));
+    return `<button class="pk-cell sc-cell${on ? " end" : part ? " part" : ""}" onclick="rgToggle('${c.k}')">
+      <span>${c.label}</span><span class="sc-n">${n.toLocaleString()}개교</span>
+    </button>`;
+  }).join("");
+  const picked = RG_CELLS.filter(c => c.members.every(x => rgSel.has(x))).map(c => c.label).join(" · ");
   document.getElementById("pickerRoot").innerHTML = `
     <div class="pk-overlay">
       <div class="pk-panel" role="dialog" aria-label="지역 선택">
@@ -620,7 +657,10 @@ function drawRegionPicker() {
         <span></span></div>
         <div class="pk-grid rg-grid">${cells}</div>
         <div class="pk-foot">
-          <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다</span>
+          <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다<br>
+            전남광주는 2026년 7월 1일 통합됐으나 계약 공개 시스템은 2028년 통합 예정이라,
+            기록에는 통합 전 지역(광주·전남)이 그대로 적혀 있습니다 ·
+            <a href="#/about">자세히</a></span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="rgAll()">전국</button>
             <button class="pk-btn" onclick="closePicker()">취소</button>
@@ -1495,6 +1535,18 @@ function aboutView() {
         경우를 갈라 두었습니다.</p>
       <p><a href="수집현황.csv" download><b>수집 현황표 내려받기 (CSV)</b></a>
         <span class="cv"> · 자료원 20종 × 2020.01부터 매월</span></p>
+
+      <h3>전남광주 통합과 이 서비스</h3>
+      <p><b>2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 합쳐졌습니다.</b>
+        교육청도 같은 날 <b>전남광주통합특별시교육청</b>으로 통합됐습니다
+        (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
+        2026.3.5. 공포 · 2026.7.1. 시행).</p>
+      <p><b>다만 계약 공개 시스템은 2028년에 통합될 예정입니다.</b> 지금은 옛 광주교육청과
+        전남교육청 시스템이 각각 돌아가고, 계약 기록도 두 곳에서 따로 올라옵니다.</p>
+      <p class="cv">그래서 이 서비스는 <b>기록에 적힌 지역을 그대로 둡니다</b> —
+        2023년에 광주에서 맺은 계약은 계속 ‘광주’로 남습니다. 통합 이후 것까지 한꺼번에
+        ‘전남광주’로 바꾸면 그 이전 기록까지 사실과 다르게 보이기 때문입니다.
+        대신 지역을 고를 때 <b>전남광주</b> 한 칸으로 두 지역을 함께 볼 수 있게 했습니다.</p>
 
       <h3>수록 범위</h3>
       <ul>

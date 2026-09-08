@@ -25,7 +25,28 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 PAGE = 100          # 한 번에 받는 행 수 (경기는 서버가 10으로 고정해 --page-size로 낮춘다)
 SYSID = OFFICES["인천"][1]
 MI = OFFICES["인천"][2]
-SPACING = 1.5       # 초 — 공개 시스템이라 여유 있으나 예의상 간격을 둔다
+# ── 예의 있게 받기 ─────────────────────────────────────────────
+# 2026-09 전남교육청이 우리 IP를 막았다. 초당 한 번씩 몇 시간을 두드리고, 타임아웃이
+# 나도 재시도를 이어 갔다 — 웹방화벽이 보기에 크롤링 봇 그 자체다.
+# 간격을 열 배로 늘리고, 재시도는 세 번에서 멈추고, 한 번 실행에 받는 양에 상한을 둔다.
+# 환경변수로 조절한다: EDTECH_SPACING(초) · EDTECH_MAXREQ(요청 상한)
+import random as _rnd
+SPACING = float(os.environ.get("EDTECH_SPACING", "10"))
+MAXREQ = int(os.environ.get("EDTECH_MAXREQ", "1200"))
+_req_used = [0]
+
+
+class BudgetOut(Exception):
+    """이번 실행에서 받기로 한 양을 다 썼다 — 체크포인트를 남기고 곱게 끝낸다"""
+
+
+def polite():
+    """요청 사이 간격 — 기계처럼 일정하면 더 눈에 띈다. 조금씩 흔든다."""
+    _req_used[0] += 1
+    if _req_used[0] > MAXREQ:
+        raise BudgetOut(f"이번 실행 상한 {MAXREQ:,}회를 다 썼다")
+    time.sleep(SPACING * _rnd.uniform(0.8, 1.4))
+# ───────────────────────────────────────────────────────────────
 OUT = "ice_candidates.csv"
 CKPT = ".ckpt_ice.json"
 FIELDS = ["회계연도", "기관명", "계약방법", "구분", "계약명", "계약일", "계약금액", "계약상대자", "키워드"]
@@ -119,9 +140,13 @@ def main():
         return max(toks, key=len) if toks else ""
 
     kept = req_n = 0
+    failed = set()                 # 오류로 못 받은 칸 — 완료로 적지 않는다
     kws = a.keywords.split(",")
     if a.keyword_file:
-        kws = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
+        # 파일을 주면 기본 검색어를 '더한다' — 덮어쓰면 '에듀테크·구독·코딩' 같은
+        # 알짜가 통째로 빠진다(경기 2025년이 그렇게 얇아졌다: 에듀테크 2,927 → 423건).
+        extra = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
+        kws = list(dict.fromkeys(kws + extra))
     print(f"검색어 {len(kws)}종", flush=True)
     years = a.years.split(",")
     for kw in kws:
@@ -143,8 +168,11 @@ def main():
             try:
                 body = fetch(q, page, year, st, ed)
             except Exception as e:
-                # 특정 검색어에서만 나는 오류로 전체 수집이 멈추지 않게 한다
+                # 특정 검색어에서만 나는 오류로 전체 수집이 멈추지 않게 한다.
+                # 다만 실패를 '완료'로 적으면 안 된다 — 다음 실행에서 영영 다시 안 본다.
+                # (경기 2025년이 그렇게 묻혔다: 38칸이 완료로 찍혔는데 자료는 없었다)
                 print(f"  [{kw}] 건너뜀 ({e})", flush=True)
+                failed.add(tag)
                 break
             req_n += 1
             rows = parse(body)
@@ -164,14 +192,21 @@ def main():
             if len(rows) < PAGE:
                 break
             page += 1
-            time.sleep(SPACING)
-        done.add(tag)
+            polite()
+        if tag not in failed:
+            done.add(tag)
         ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
         with open(CKPT, "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
         print(f"[{tag}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {a.out}")
+    if failed:
+        print(f"   ※ 오류로 못 받은 칸 {len(failed):,}개 — 다음 실행에서 다시 받는다")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BudgetOut as e:
+        # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
+        print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
