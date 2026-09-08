@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "data_detail.js?b=20260908a";
+  s.src = "data_detail.js?b=20260908b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -461,7 +461,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "data_detail_old.js?b=20260908a";
+    s2.src = "data_detail_old.js?b=20260908b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -473,7 +473,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "data_old.js?b=20260908a";
+  s.src = "data_old.js?b=20260908b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -658,7 +658,7 @@ function drawRegionPicker() {
         <div class="pk-grid rg-grid">${cells}</div>
         <div class="pk-foot">
           <span class="pk-hint">시도교육청 단위 · 여러 지역을 함께 선택할 수 있습니다<br>
-            전남광주는 2026년 7월 1일 통합됐으나 계약 공개 시스템은 2028년 통합 예정이라,
+            전남광주는 2026년 7월 1일 통합됐으나 정보시스템은 당분간 따로 돌아,
             기록에는 통합 전 지역(광주·전남)이 그대로 적혀 있습니다 ·
             <a href="#/about">자세히</a></span>
           <span style="display:flex;gap:8px">
@@ -1541,8 +1541,11 @@ function aboutView() {
         교육청도 같은 날 <b>전남광주통합특별시교육청</b>으로 통합됐습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
         2026.3.5. 공포 · 2026.7.1. 시행).</p>
-      <p><b>다만 계약 공개 시스템은 2028년에 통합될 예정입니다.</b> 지금은 옛 광주교육청과
-        전남교육청 시스템이 각각 돌아가고, 계약 기록도 두 곳에서 따로 올라옵니다.</p>
+      <p><b>다만 정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</b>
+        나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은
+        <b>2028년 완전 통합을 목표로 단계적으로 개편</b>됩니다
+        (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>).
+        그래서 계약 기록도 지금은 옛 광주교육청·전남교육청 두 곳에서 따로 올라옵니다.</p>
       <p class="cv">그래서 이 서비스는 <b>기록에 적힌 지역을 그대로 둡니다</b> —
         2023년에 광주에서 맺은 계약은 계속 ‘광주’로 남습니다. 통합 이후 것까지 한꺼번에
         ‘전남광주’로 바꾸면 그 이전 기록까지 사실과 다르게 보이기 때문입니다.
