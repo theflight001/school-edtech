@@ -14,6 +14,14 @@
 #   - 자료가 하나도 늘지 않으면 빌드·배포를 하지 않는다(빈 커밋 방지).
 set -uo pipefail
 cd "$(dirname "$0")" || exit 1
+. ./collect_lock.sh
+# 밀린 곳을 받는 중이면 최대 두 시간까지 기다린다. 그래도 안 놓으면 수집은 건너뛰고
+# 정제·빌드·배포만 한다 — 이달 갱신을 통째로 거르는 것보다 낫다.
+COLLECT=1
+if ! lock_acquire "monthly" 7200; then
+  echo "!! 다른 수집이 두 시간 넘게 도는 중 — 이번 달은 수집을 건너뛰고 빌드만 한다"
+  COLLECT=0
+fi
 
 MONTH="${1:-$(date -v-1m +%Y-%m)}"          # 예: 2026-07
 Y="${MONTH%%-*}"; M="${MONTH##*-}"
@@ -31,6 +39,7 @@ echo "══ 갱신 시작 $(date '+%Y-%m-%d %H:%M') · 최근 석 달 ${FROM3}~
 FAILED=()
 run() {                                      # run <이름> <명령…>
   local name="$1"; shift
+  [ "$COLLECT" = "0" ] && { echo "── $name (자물쇠 때문에 건너뜀)"; return 0; }
   echo "── $name"
   if timeout 7200 "$@"; then echo "   ✓ $name"; else echo "   ✗ $name (건너뜀)"; FAILED+=("$name"); fi
 }
@@ -58,6 +67,9 @@ run "광주"           python3 collect_gen.py --years "$YEARS" --keyword-file ed
 run "울산"           python3 collect_use.py --keyword-file edzip_brand_keywords.txt
 # S2B는 접근 제한이 잦아 마지막에 둔다 — 실패해도 나머지는 이미 반영된다
 run "S2B 학교장터"   python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH"
+
+# 정제·빌드는 남의 서버를 두드리지 않으니 자물쇠와 상관없이 늘 한다
+COLLECT=1
 
 # ── 2. 정제
 run "시도 정제"      python3 refine_office.py
