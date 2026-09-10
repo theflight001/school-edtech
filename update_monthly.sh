@@ -23,10 +23,9 @@ COLLECT=1
 
 MONTH="${1:-$(date -v-1m +%Y-%m)}"          # 예: 2026-07
 Y="${MONTH%%-*}"; M="${MONTH##*-}"
-FROM3=$(date -v"${Y}${M}01" -v-2m +%Y-%m 2>/dev/null || date -d "${Y}-${M}-01 -2 month" +%Y-%m)
-BEGIN="${FROM3%%-*}${FROM3##*-}01"
-YEARS=$(python3 -c "import sys;a,b=sys.argv[1:3];print(','.join(sorted({a[:4],b[:4]})))" "$FROM3" "$MONTH")
-END=$(date -v"${Y}${M}01" -v+1m -v-1d +%Y%m%d 2>/dev/null || date -d "${Y}-${M}-01 +1 month -1 day" +%Y%m%d)
+# 달 계산은 python으로 한다 — macOS의 date -v는 "20260801" 같은 형태를 받지 않아
+# 조용히 빈 값을 내놓았다. 그 탓에 YEARS가 ",2026"이 되어 수집이 0건으로 끝났다.
+eval "$(python3 monthspan.py "$MONTH")"
 LOG="logs/update_${MONTH}.log"
 mkdir -p logs
 exec > >(tee -a "$LOG") 2>&1
@@ -67,8 +66,8 @@ if [ "$COLLECT" = "1" ]; then
   par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" &
   par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" &
   par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" &
-  par_run 부산 month_부산 python3 collect_pen.py --office 부산 --years "$YEARS" &
-  par_run 경북 month_경북 python3 collect_pen.py --office 경북 --years "$YEARS" &
+  par_run 부산 month_부산 python3 collect_pen.py --office 부산 --begin "$FROM3" --end "$MONTH" &
+  par_run 경북 month_경북 python3 collect_pen.py --office 경북 --begin "$FROM3" --end "$MONTH" &
   par_run 대전 month_대전 python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file $KF &
   par_run 충남 month_충남 python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file $KF &
   par_run 경남 month_경남 python3 collect_gne.py --years "$YEARS" --keyword-file $KF &
