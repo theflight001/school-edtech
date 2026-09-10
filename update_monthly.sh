@@ -17,11 +17,9 @@ cd "$(dirname "$0")" || exit 1
 . ./collect_lock.sh
 # 밀린 곳을 받는 중이면 최대 두 시간까지 기다린다. 그래도 안 놓으면 수집은 건너뛰고
 # 정제·빌드·배포만 한다 — 이달 갱신을 통째로 거르는 것보다 낫다.
+# 자물쇠는 서버별로 par_run이 알아서 잡는다. 어느 서버를 다른 수집이 잡고 있으면
+# 그 곳만 건너뛰고 나머지는 그대로 받는다.
 COLLECT=1
-if ! lock_acquire "monthly" 7200; then
-  echo "!! 다른 수집이 두 시간 넘게 도는 중 — 이번 달은 수집을 건너뛰고 빌드만 한다"
-  COLLECT=0
-fi
 
 MONTH="${1:-$(date -v-1m +%Y-%m)}"          # 예: 2026-07
 Y="${MONTH%%-*}"; M="${MONTH##*-}"
@@ -59,22 +57,31 @@ before=$(wc -l < data.js 2>/dev/null || echo 0)
 # ── 1. 수집 (저마다 체크포인트로 이어 받는다)
 run "나라장터 계약"   python3 collect_nara_full.py --begin "$BEGIN" --end "$END"
 run "나라장터 입찰"   python3 collect_nara_bid.py  --begin "$BEGIN" --end "$END"
-run "서울"           python3 collect_sen.py --relist --years "$YEARS"
-run "경기"           python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10
-run "인천"           python3 collect_ice.py --office 인천 --years "$YEARS"
-run "충북"           python3 collect_ice.py --office 충북 --years "$YEARS"
-run "전남"           python3 collect_ice.py --office 전남 --years "$YEARS"
-run "세종"           python3 collect_ice.py --office 세종 --years "$YEARS"
-run "부산"           python3 collect_pen.py --office 부산 --years "$YEARS"
-run "경북"           python3 collect_pen.py --office 경북 --years "$YEARS"
-run "대전"           python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file edzip_brand_keywords.txt
-run "충남"           python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file edzip_brand_keywords.txt
-run "경남"           python3 collect_gne.py --years "$YEARS" --keyword-file edzip_brand_keywords.txt
-run "제주"           python3 collect_jje.py --years "$YEARS"
-run "강원"           python3 collect_gwe.py --keyword-file edzip_brand_keywords.txt
-run "대구"           python3 collect_dge.py --begin "$FROM3" --end "$MONTH" --keyword-file edzip_brand_keywords.txt
-run "광주"           python3 collect_gen.py --years "$YEARS" --keyword-file edzip_brand_keywords.txt
-run "울산"           python3 collect_use.py --keyword-file edzip_brand_keywords.txt
+# 시도교육청은 저마다 다른 서버다 — 서버별 자물쇠를 잡고 동시에 받는다.
+# (한 줄로 세우면 열여섯 곳이 차례를 기다리느라 하룻밤에 서너 곳밖에 못 받는다)
+if [ "$COLLECT" = "1" ]; then
+  KF=edzip_brand_keywords.txt
+  par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
+  par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 &
+  par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" &
+  par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" &
+  par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" &
+  par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" &
+  par_run 부산 month_부산 python3 collect_pen.py --office 부산 --years "$YEARS" &
+  par_run 경북 month_경북 python3 collect_pen.py --office 경북 --years "$YEARS" &
+  par_run 대전 month_대전 python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file $KF &
+  par_run 충남 month_충남 python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file $KF &
+  par_run 경남 month_경남 python3 collect_gne.py --years "$YEARS" --keyword-file $KF &
+  par_run 제주 month_제주 python3 collect_jje.py --years "$YEARS" &
+  par_run 강원 month_강원 python3 collect_gwe.py --keyword-file $KF &
+  par_run 대구 month_대구 python3 collect_dge.py --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
+  par_run 광주 month_광주 python3 collect_gen.py --years "$YEARS" --keyword-file $KF &
+  par_run 울산 month_울산 python3 collect_use.py --keyword-file $KF &
+  wait
+  echo "── 시도교육청 수집 끝 $(date '+%H:%M')"
+else
+  echo "── 시도교육청 수집 (자물쇠 때문에 건너뜀)"
+fi
 # S2B는 접근 제한이 잦아 마지막에 둔다 — 실패해도 나머지는 이미 반영된다
 run "S2B 학교장터"   python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH"
 
