@@ -91,6 +91,7 @@ def main():
     ap.add_argument("--begin", default="2023-01")
     ap.add_argument("--end", default=date.today().strftime("%Y-%m"))
     ap.add_argument("--keywords", default=",".join(DEFAULT_KEYWORDS))
+    ap.add_argument("--keyword-file", help="검색어를 줄 단위로 담은 파일 (에듀집 제품명 등)")
     ap.add_argument("--sweep", action="store_true",
                     help="키워드 없이 월별 전수 수집 — 제품명만 적힌 계약도 놓치지 않는다")
     a = ap.parse_args()
@@ -110,6 +111,16 @@ def main():
 
     wins = months(a.begin, a.end)
     kws = [""] if a.sweep else a.keywords.split(",")
+    if a.keyword_file and not a.sweep:
+        # 파일을 주면 기본 검색어를 '더한다' — 덮어쓰면 '에듀테크·구독·코딩' 같은
+        # 알짜가 통째로 빠진다(경기 2025년이 그렇게 얇아졌다: 에듀테크 2,927 → 423건).
+        extra = [l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
+        seen, merged = set(), []
+        for k in kws + extra:
+            if k not in seen:
+                seen.add(k); merged.append(k)
+        kws = merged
+        print(f"검색어 {len(kws):,}종 (기본 {len(a.keywords.split(','))} + 파일 {len(extra):,})", flush=True)
     print(f"월 {len(wins)}개 × {'전수 스윕' if a.sweep else f'키워드 {len(kws)}개'} = {len(wins)*len(kws)}조합", flush=True)
     kept = req_n = 0
     for kw in kws:

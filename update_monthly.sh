@@ -39,6 +39,10 @@ if ! command -v node >/dev/null; then
 fi
 command -v node >/dev/null || echo "! node를 찾지 못했다 — data_summary.js를 못 만든다"
 
+# 검색어를 전부 쓰면 한 곳에 5천 번 안팎을 물어야 한다. 기본 상한(1,200회)으로는
+# 중간에 끊겨 매달 같은 앞부분만 다시 받게 된다. 간격 10초는 그대로 지킨다.
+export EDTECH_SPACING=${EDTECH_SPACING:-10} EDTECH_MAXREQ=${EDTECH_MAXREQ:-8000}
+
 FAILED=()
 run() {                                      # run <이름> <명령…>
   local name="$1"; shift
@@ -61,13 +65,13 @@ run "나라장터 입찰"   python3 collect_nara_bid.py  --begin "$BEGIN" --end 
 if [ "$COLLECT" = "1" ]; then
   KF=edzip_brand_keywords.txt
   par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
-  par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 &
-  par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" &
-  par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" &
-  par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" &
-  par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" &
-  par_run 부산 month_부산 python3 collect_pen.py --office 부산 --begin "$FROM3" --end "$MONTH" &
-  par_run 경북 month_경북 python3 collect_pen.py --office 경북 --begin "$FROM3" --end "$MONTH" &
+  par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF &
+  par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
+  par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" --keyword-file $KF &
+  par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" --keyword-file $KF &
+  par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" --keyword-file $KF &
+  par_run 부산 month_부산 python3 collect_pen.py --office 부산 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
+  par_run 경북 month_경북 python3 collect_pen.py --office 경북 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
   par_run 대전 month_대전 python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file $KF &
   par_run 충남 month_충남 python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file $KF &
   par_run 경남 month_경남 python3 collect_gne.py --years "$YEARS" --keyword-file $KF &
