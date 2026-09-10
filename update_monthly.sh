@@ -35,13 +35,23 @@ exec > >(tee -a "$LOG") 2>&1
 
 echo "══ 갱신 시작 $(date '+%Y-%m-%d %H:%M') · 최근 석 달 ${FROM3}~${MONTH} (${BEGIN}~${END})"
 [ -f "$HOME/.edtech_env" ] && { set -a; . "$HOME/.edtech_env"; set +a; }
+# launchd는 로그인 셸의 PATH를 물려받지 않는다 — node(nvm)를 직접 찾아 붙인다
+if ! command -v node >/dev/null; then
+  NODEBIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | tail -1)
+  [ -n "$NODEBIN" ] && export PATH="$NODEBIN:$PATH"
+fi
+command -v node >/dev/null || echo "! node를 찾지 못했다 — data_summary.js를 못 만든다"
 
 FAILED=()
 run() {                                      # run <이름> <명령…>
   local name="$1"; shift
   [ "$COLLECT" = "0" ] && { echo "── $name (자물쇠 때문에 건너뜀)"; return 0; }
   echo "── $name"
-  if timeout 7200 "$@"; then echo "   ✓ $name"; else echo "   ✗ $name (건너뜀)"; FAILED+=("$name"); fi
+  # macOS에는 timeout 명령이 없다. 뒤에서 돌리고 지켜보다 두 시간이 넘으면 끊는다.
+  "$@" & local pid=$!
+  ( sleep 7200; kill -0 $pid 2>/dev/null && { echo "   ⏱ $name 두 시간 넘어 끊는다"; kill $pid; } ) & local watch=$!
+  if wait $pid; then echo "   ✓ $name"; else echo "   ✗ $name (건너뜀)"; FAILED+=("$name"); fi
+  kill $watch 2>/dev/null; wait $watch 2>/dev/null
 }
 
 before=$(wc -l < data.js 2>/dev/null || echo 0)
@@ -101,9 +111,12 @@ for path in ("index.html", "app.js"):
     open(path, "w", encoding="utf-8").write(s)
 print(f"   캐시 파라미터 → {stamp}")
 PY
-  git add -A data.js data_old.js data_detail.js data_detail_old.js data_summary.js \
-           index.html app.js mined_rules.csv tag_review.md product_origin.csv \
-           수집현황.csv office_refined.csv *_refined.csv 2>/dev/null
+  # 파일 하나가 없으면 git add가 통째로 실패해 아무것도 담기지 않는다 — 있는 것만 골라 담는다
+  for f in data.js data_old.js data_detail.js data_detail_old.js data_summary.js \
+           index.html app.js og_card.png mined_rules.csv tag_review.md product_origin.csv \
+           수집현황.csv office_refined.csv *_refined.csv; do
+    [ -e "$f" ] && git add "$f"
+  done
   git commit -q -m "월 갱신 ${MONTH} — 자동 수집·정제·빌드
 
 $( [ ${#FAILED[@]} -gt 0 ] && echo "실패한 곳: ${FAILED[*]}" || echo "모든 자료원 정상" )

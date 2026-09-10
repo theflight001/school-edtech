@@ -27,3 +27,6 @@ nara_office.csv
 서울에듀파인_full.csv
 서울에듀파인_candidates.csv
 *.log
+
+# 수집기 자물쇠 — 남길 것이 아니다
+.collect.lock/
