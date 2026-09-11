@@ -74,6 +74,13 @@ def req_retry(target, data=None):
         except Exception as e:
             if wait is None:
                 raise
+            # 대전 서버는 접속한 지 10분쯤 지나면 409(Conflict)로 끊는다(2026-09-11 확인 — 검색어가 달라도
+            # 네 번 모두 시작 7~11분 뒤, 요청 50~60번째에 죽었다). 예전엔 처음 받은 쿠키를 끝까지 써서
+            # 다시 물어도 똑같이 409였다. 거부 응답이면 세션을 버리고 새로 받아 묻는다.
+            global _opener
+            if isinstance(e, urllib.error.HTTPError) and e.code in (400, 403, 409, 419, 440):
+                _opener = None
+                print(f"  세션을 새로 받는다({e.code})", flush=True)
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
 
