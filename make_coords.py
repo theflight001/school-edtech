@@ -225,6 +225,27 @@ def main():
                 time.sleep(1.1)
                 json.dump(pcache, open(pcache_path, "w", encoding="utf-8"), ensure_ascii=False)
             return pcache.get(q)
+        p2_path = os.path.join(GEO, "photon_cache2.json")
+        p2 = json.load(open(p2_path, encoding="utf-8")) if os.path.exists(p2_path) else {}
+        def photon_all(q):
+            """Photon 후보 다섯까지 [위도, 경도, 종류, 이름, 도로, 번호, 시군구] — 판단은 부르는 쪽이 한다"""
+            if q not in p2:
+                url = "https://photon.komoot.io/api/?" + urllib.parse.urlencode({"q": q, "limit": 5})
+                try:
+                    res = subprocess.run(["curl", "-s", "-f", "-m", "20", "-A", "school-edtech.kr school map (research)", url],
+                                         capture_output=True, timeout=30)
+                    feats = json.loads(res.stdout)["features"] if not res.returncode else None
+                except Exception:
+                    feats = None
+                if feats is None:
+                    return []
+                p2[q] = [[f["geometry"]["coordinates"][1], f["geometry"]["coordinates"][0], f["properties"].get("type"),
+                          f["properties"].get("name") or "", f["properties"].get("street") or "", f["properties"].get("housenumber") or "",
+                          " ".join(filter(None, (f["properties"].get(x) for x in ("city", "county", "district", "locality"))))]
+                         for f in feats]
+                time.sleep(1.1)
+                json.dump(p2, open(p2_path, "w", encoding="utf-8"), ensure_ascii=False)
+            return p2[q]
         for s in left:
             k, sd = key_of(s), sido(s["sido"])
             # "(본교) 서울특별시 …"처럼 괄호로 시작하는 주소가 있다 — 앞 괄호를 떼야 빈 검색어가 안 된다
@@ -250,6 +271,15 @@ def main():
                     g3 = nom(rq) if rq and rq != q else None
                     if g3 and inside(sd, g3):
                         g, tier, how = g3, "D", "도로 수준(근사) — 건물번호를 못 찾아 도로 위치"
+            if not g and k not in out and road(q):
+                # 마지막 — 건물도 이름도 못 찾으면 도로 위치(Photon). 같은 이름의 길이 다른 시군구에도
+                # 있으니(중앙로 등) 시군구가 맞고 도로명이 똑같을 때만 받는다. 등급 D(근사)로 둔다.
+                rd = road(q)[0]
+                sgg = re.findall(r"(\S+?[시군구])(?=\s)", q)[:2]
+                for c in photon_all(" ".join(sgg + [rd])) if sgg else []:
+                    if c[2] == "street" and norm(c[3]) == norm(rd) and inside(sd, c) and any(t[:-1] in c[6] for t in sgg):
+                        g, tier, how = c, "D", "도로 수준(근사, Photon) — 건물을 못 찾아 도로 위치"
+                        break
             if not g:
                 continue
             if k not in out:
