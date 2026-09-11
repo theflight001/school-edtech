@@ -68,7 +68,9 @@ def windows(begin, end):
     e = date(int(end[:4]), int(end[4:6]), int(end[6:]))
     out = []
     while b <= e:
-        nxt = min(b + timedelta(days=89), e)
+        # 나라장터는 한 번에 한 달까지만 받는다 — 45일만 물어도 '입력범위값 초과'(07)로
+        # 거부한다(2026-09-11 확인. 예전엔 89일씩 받아졌다). 달력 한 달씩 끊는다.
+        nxt = min(date(b.year + (b.month == 12), b.month % 12 + 1, 1) - timedelta(days=1), e)
         out.append((b.strftime("%Y%m%d"), nxt.strftime("%Y%m%d")))
         b = nxt + timedelta(days=1)
     return out
