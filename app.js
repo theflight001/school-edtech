@@ -1888,19 +1888,25 @@ window.clearMapSel = () => {
   if (box) box.innerHTML = "";
   if (MAP && MAP.getLayer("pt-sel")) MAP.setFilter("pt-sel", ["==", ["get", "href"], ""]);
 };
-// 학교 이름표 — Airbnb 지도의 가격 딱지처럼 양끝이 둥근 알약, 그림자는 옅게.
-// 높이는 고정하고 가로만 늘려(icon-text-fit: width) 이름 길이에 맞춘다.
+// 학교 이름표 — 작고 납작한 둥근 사각 딱지(높이 26·모서리 9·좌우 여백 9, 그림자는 옅게).
+// 처음엔 양끝을 완전한 반원으로 두었더니 높이 40에 통통해 보였다(2026-09-12).
+// 가로만 늘려(icon-text-fit: width) 이름 길이에 맞춘다 — 늘림 구간과 글자 자리를 함께 적어 준다.
 function pillImage(fill) {
-  const r = 2, pad = 6 * r, rad = 14 * r, h = 2 * (pad + rad), w = 2 * (pad + rad) + 12 * r;
+  const r = 2, pad = 4 * r, ph = 26 * r, rad = 9 * r, px = 9 * r;
+  const h = ph + pad * 2, w = (px + rad) * 2 + pad * 2;
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const g = c.getContext("2d");
-  g.shadowColor = "rgba(0,0,0,0.20)"; g.shadowBlur = 5 * r; g.shadowOffsetY = 1.5 * r;
+  g.shadowColor = "rgba(15,23,42,0.18)"; g.shadowBlur = 2.5 * r; g.shadowOffsetY = 1.5 * r;
   g.beginPath();
-  g.arc(pad + rad, pad + rad, rad, Math.PI / 2, Math.PI * 1.5);
-  g.arc(w - pad - rad, pad + rad, rad, Math.PI * 1.5, Math.PI / 2);
+  g.moveTo(pad + rad, pad);
+  g.arcTo(w - pad, pad, w - pad, h - pad, rad);
+  g.arcTo(w - pad, h - pad, pad, h - pad, rad);
+  g.arcTo(pad, h - pad, pad, pad, rad);
+  g.arcTo(pad, pad, w - pad, pad, rad);
   g.closePath(); g.fillStyle = fill; g.fill();
-  return [g.getImageData(0, 0, w, h), {pixelRatio: r, stretchX: [[pad + rad, w - pad - rad]],
-    content: [pad + rad, pad, w - pad - rad, h - pad]}];
+  return [g.getImageData(0, 0, w, h), {pixelRatio: r,
+    stretchX: [[pad + px + rad * 0.6, w - pad - px - rad * 0.6]],
+    content: [pad + px, pad, w - pad - px, h - pad]}];
 }
 // ⌘(맥)·Ctrl을 누른 채 끌면 좌우로 방향을 돌리고 위아래로 기울인다 — 기울이면 건물이 입체로 선다.
 // MapLibre 기본은 Ctrl·오른쪽 버튼뿐이라 맥에서 흔히 쓰는 ⌘로도 되게 한다.
@@ -1978,13 +1984,13 @@ function mountMap() {
         "circle-color": ["case", has, G, DIM], "circle-radius": 4.5, "circle-stroke-width": 2, "circle-stroke-color": "#ffffff"}});
       // 이름표 — 겹치면 기록 많은 학교가 남고, 가려진 학교도 점은 보인다
       const pill = (id, icon, extra) => ({id, type: "symbol", source: "sch", filter: ["!", ["has", "point_count"]],
-        layout: {"text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 13,
-          "icon-image": icon, "icon-text-fit": "width", "icon-text-fit-padding": [0, 4, 0, 4],
+        layout: {"text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 12,
+          "icon-image": icon, "icon-text-fit": "width", "icon-text-fit-padding": [0, 0, 0, 0],
           "symbol-sort-key": ["-", 0, ["get", "k"]], ...extra},
         paint: {"text-color": ["case", has, "#222222", "#8a8f98"]}});
       map.addLayer(pill("pt-n", "pill", {}));
       // 올려 둔 학교는 조금 크게 — Airbnb처럼 어느 딱지를 가리키는지 바로 보인다
-      map.addLayer({...pill("pt-hov", "pill", {"text-size": 14.5, "icon-allow-overlap": true, "text-allow-overlap": true}),
+      map.addLayer({...pill("pt-hov", "pill", {"text-size": 13, "icon-allow-overlap": true, "text-allow-overlap": true}),
         filter: ["==", ["get", "href"], ""]});
       map.addLayer({...pill("pt-sel", "pill-on", {"icon-allow-overlap": true, "text-allow-overlap": true}),
         filter: ["==", ["get", "href"], ""]});
