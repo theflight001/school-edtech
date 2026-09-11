@@ -370,6 +370,12 @@ button.chip.gen:hover { border-color: var(--muted); }
 .notice p:first-of-type { margin-top: 6px; }
 .notice .cv { color: var(--muted); font-size: 12.5px; }
 .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+.tile-link { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600;
+  color: var(--accent); text-decoration: none; }
+.tile-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.plist a.dim { opacity: .55; }
+.alpha.pager { justify-content: center; margin-top: 18px; }
+.alpha.pager button[disabled] { opacity: .35; cursor: default; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; line-height: 1.8; }
 footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 </style>
@@ -460,7 +466,8 @@ footer a { color: inherit; text-decoration: underline; text-underline-offset: 2p
     view.innerHTML =
       '<div class="tiles">' +
         '<div class="tile"><div class="v">전국</div><div class="l" style="margin-top:6px">지역 (시도교육청) <span class="hint">변경 ▾</span></div></div>' +
-        '<div class="tile"><div class="v">' + S.idxCount.toLocaleString() + '</div><div class="l">검색 가능 학교 (전국) <span class="hint">변경 ▾</span></div></div>' +
+        '<div class="tile"><div class="v">' + S.idxCount.toLocaleString() + '</div><div class="l">검색 가능 학교 (전국) <span class="hint">변경 ▾</span></div>' +
+        '<a class="tile-link" href="/schools">전체 보기 ›</a></div>' +
         // 첫 그림에 적을 것은 '지금 보고 있는 기간'이다. 자료가 닿는 범위(coveragePeriod)를
         // 적으면 원자료가 도착하는 순간 2020.1에서 2026.1로 바뀌어 깜빡인다.
         '<div class="tile"><div class="v">' + esc(S.meta.basePeriod || S.meta.coveragePeriod) + '</div><div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div></div>' +

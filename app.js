@@ -571,8 +571,10 @@ const foundingOf = r => { const s = r.schoolCode ? idxByCode.get(r.schoolCode) :
 const esMatch = r => !ES.size || ES.has(foundingOf(r));
 const esLabel = () => ES.size ? [...ES].join("·") : "전체";
 const sfMatch = r => { if (!SF.size) return true; const g = recLeaf(r); return g !== null && SF.has(g); };
-const sfIdxCount = () => IDX.filter(s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))
-  && (!ES.size || ES.has(s.f))).length;
+// 첫 화면 '검색 가능 학교' 칸과 '학교 전체 보기' 목록이 같은 판정식을 쓴다 — 숫자가 어긋나지 않게
+const idxPass = s => (!SF.size || SF.has(idxGroup(s))) && (!RG.size || RG.has(s.s))
+  && (!ES.size || ES.has(s.f));
+const sfIdxCount = () => IDX.filter(idxPass).length;
 const IDX_FOUND_COUNT = {};
 IDX.forEach(s => { IDX_FOUND_COUNT[s.f] = (IDX_FOUND_COUNT[s.f] || 0) + 1; });
 function setParts(set) {
@@ -926,6 +928,7 @@ function homeView() {
       <div class="tile clickable" onclick="openSchoolPicker()" role="button" aria-label="학교 계열 선택">
         <div class="v" id="cntSchools" data-target="${sfIdxCount()}">${sfIdxCount().toLocaleString()}</div>
         <div class="l">검색 가능 학교 (${ES.size ? `${sfLabel()}·${esLabel()}` : sfLabel()}) <span class="hint">변경 ▾</span></div>
+        <a class="tile-link" href="/schools" onclick="event.stopPropagation();event.preventDefault();go('/schools')">전체 보기 ›</a>
       </div>
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
         <!-- 칸에 적는 것은 지금 보고 있는 기간이다. 자료는 2020년까지 닿지만 기본은 2023년부터
@@ -1580,8 +1583,68 @@ const ORIGIN = DB_RAW.origin || {};
 const originOf = t => ORIGIN[t] || "";
 let PORIGIN = "";                       // "" 전체 · 국내 · 해외
 window.setPOrigin = v => { PORIGIN = v; const y = window.scrollY; render(); window.scrollTo(0, y); };
+let SSORT = "count", SLIST_G = "", SPAGE = 1;   // 학교 전체 보기: 정렬·첫 글자·쪽
 let PSORT = "count";                    // count = 도입 학교 순(순위표), name = 가나다순
 function setPSort(v) { PSORT = v; const y = window.scrollY; render(); window.scrollTo(0, y); }
+
+// 학교 전체 보기 — 첫 화면 '검색 가능 학교' 칸의 숫자를 그대로 펼친 목록.
+// 기록 수는 지금 고른 기간·지역·계열을 따른다(다른 화면과 같게).
+// 1만 곳이 넘으므로 한 번에 300곳씩 보여 준다.
+const SCH_PAGE = 300;
+function choGroup(name) {
+  const c0 = name[0] || "", code = name.charCodeAt(0);
+  if (/[A-Za-z]/.test(c0)) return "A–Z";
+  if (/[0-9]/.test(c0)) return "0–9";
+  if (code < 0xac00 || code > 0xd7a3) return "기타";
+  const c = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"][Math.floor((code - 0xac00) / 588)];
+  return { "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ" }[c] || c;
+}
+function schoolsView() {
+  const list = IDX.filter(idxPass);
+  const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
+  const cnt = {};
+  for (const r of src) if (r.schoolCode) cnt[r.schoolCode] = (cnt[r.schoolCode] || 0) + 1;
+  const n = x => cnt[x.c] || 0;
+  const withRec = list.filter(x => n(x) > 0).length;
+  const sorted = list.slice().sort(SSORT === "count"
+    ? (a, b) => n(b) - n(a) || a.n.localeCompare(b.n, "ko")
+    : (a, b) => a.n.localeCompare(b.n, "ko"));
+  const groups = {};
+  for (const x of sorted) (groups[choGroup(x.n)] = groups[choGroup(x.n)] || []).push(x);
+  const order = ["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ","A–Z","0–9","기타"].filter(g => groups[g]);
+  const sel = SLIST_G && groups[SLIST_G] ? SLIST_G : "전체";
+  const show = sel === "전체" ? sorted : groups[sel];
+  const pages = Math.max(1, Math.ceil(show.length / SCH_PAGE));
+  const page = Math.min(Math.max(1, SPAGE), pages);
+  const slice = show.slice((page - 1) * SCH_PAGE, page * SCH_PAGE);
+  const item = x => {
+    const k = n(x);
+    // 기록이 있는 학교는 기록 화면으로, 없는 학교는 학교 정보 화면으로
+    const href = k ? `/school/${encodeURIComponent(x.n)}` : `/code/${x.c}`;
+    return `<a href="${href}"${k ? "" : ' class="dim"'}>${esc(x.n)}<span class="n">${esc(x.s)} · ${esc(x.h || x.l || "")} · ${k ? k.toLocaleString() + "건" : "기록 없음"}</span></a>`;
+  };
+  const pager = pages > 1 ? `<div class="alpha pager">
+      <button ${page <= 1 ? "disabled" : ""} onclick="SPAGE=${page - 1};render()">‹ 이전</button>
+      <span class="alab">${page} / ${pages}쪽 · ${((page - 1) * SCH_PAGE + 1).toLocaleString()}–${Math.min(page * SCH_PAGE, show.length).toLocaleString()}번째</span>
+      <button ${page >= pages ? "disabled" : ""} onclick="SPAGE=${page + 1};render()">다음 ›</button>
+    </div>` : "";
+  return `
+    <div class="crumb"><a href="/">홈</a> › 학교 전체 보기</div>
+    <div class="pagehead"><h2>학교 전체 보기</h2>
+      <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 그중 기록이 있는 곳 ${withRec.toLocaleString()}곳 ·
+        이름을 누르면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
+    <div class="alpha">
+      <span class="alab">정렬</span>
+      <button class="${SSORT === "count" ? "on" : ""}" onclick="SSORT='count';SPAGE=1;render()">기록 많은 순</button>
+      <button class="${SSORT === "name" ? "on" : ""}" onclick="SSORT='name';SPAGE=1;render()">가나다순</button>
+      <span class="alpha-gap"></span>
+      <span class="alab">첫 글자</span>
+      <button class="${sel === "전체" ? "on" : ""}" onclick="SLIST_G='';SPAGE=1;render()">전체</button>
+      ${order.map(g => `<button class="${sel === g ? "on" : ""}" onclick="SLIST_G='${g}';SPAGE=1;render()">${g}</button>`).join("")}
+    </div>
+    <div class="plist">${slice.map(item).join("")}</div>
+    ${pager}`;
+}
 
 function productsView() {
   const cnt = {}, sch = {};
@@ -1747,6 +1810,7 @@ function render() {
     if (OLD_STATE !== "done") withOld("", () => render());
   }
   else if (kind === "about") view.innerHTML = aboutView();
+  else if (kind === "schools") view.innerHTML = schoolsView();
   else if (kind === "products") view.innerHTML = productsView();
   else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "vendor") view.innerHTML = vendorView(arg);
@@ -1770,7 +1834,7 @@ function render() {
 }
 // 화면을 옮길 때 쓰는 하나뿐인 통로. 주소를 진짜 경로로 바꾸고 다시 그린다.
 // (전에는 주소 뒤 #에 화면을 적었다 — 논문·공문에 인용하기 나빴다)
-function resetView() { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; }
+function resetView() { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; SLIST_G = ""; SPAGE = 1; }
 function go(path) {
   if (path === location.pathname) return;
   history.pushState(null, "", path + location.search);
