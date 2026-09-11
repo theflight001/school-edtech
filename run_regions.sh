@@ -16,7 +16,13 @@ Y=2020,2021,2022,2023,2024,2025,2026
 
 echo "══ 지역 수집 시작 $(date '+%Y-%m-%d %H:%M') — 서버별 동시"
 
-par_run 대전 region_대전 python3 collect_dje.py --office 대전 --years $Y --keyword-file $KF &
+# 대전은 2026-09-11 하루에 여러 번 두드린 뒤로 새 세션까지 곧바로 409로 거부한다 — 전남이 막혔을
+# 때와 같은 모양이다. 9월 13일까지는 건드리지 않고, 그 뒤로도 30초 간격·하루 300회로만 받는다.
+if [ "$(date +%Y%m%d)" -ge 20260913 ]; then
+  ( export EDTECH_SPACING=30 EDTECH_MAXREQ=300; par_run 대전 region_대전 python3 collect_dje.py --office 대전 --years $Y --keyword-file $KF ) &
+else
+  echo "▷ 대전 — 9월 13일까지 쉰다(거부 응답이 이어져 차단 위험)"
+fi
 par_run 충남 region_충남 python3 collect_dje.py --office 충남 --years $Y --keyword-file $KF &
 par_run 경남 region_경남 python3 collect_gne.py --years $Y --keyword-file $KF &
 par_run 강원 region_강원 python3 collect_gwe.py --keyword-file $KF --refresh &
