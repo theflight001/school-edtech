@@ -37,7 +37,17 @@ def fetch(op, begin, end, page):
     for attempt in range(len(backoff) + 1):
         try:
             with urllib.request.urlopen(url, timeout=90) as res:
-                d = json.load(res)
+                raw = res.read().decode("utf-8", "replace")
+            d = json.loads(raw)
+            if "response" not in d:
+                # 오류는 'response' 대신 OpenAPI_ServiceResponse로 온다. 예전엔 이걸 KeyError로
+                # 삼켜 무엇이 틀렸는지 몰랐다(2026-09-11). 사유를 찍고, 할당량 초과처럼 다시 물어도
+                # 소용없는 것은 곧바로 멈춘다.
+                hdr = (d.get("OpenAPI_ServiceResponse") or {}).get("cmmMsgHeader") or {}
+                code, msg = str(hdr.get("returnReasonCode", "?")), hdr.get("errMsg") or raw[:200]
+                if code in ("20", "22", "30", "31", "32"):   # 접근거부·일일할당초과·키 문제
+                    raise SystemExit(f"나라장터가 거부했다 — 코드 {code}: {msg} ({op} {begin}~{end} {page}쪽)")
+                raise RuntimeError(f"나라장터 오류 응답 — 코드 {code}: {msg}")
             body = d["response"]["body"]
             return body.get("items") or [], int(body.get("totalCount", 0))
         except Exception as e:
