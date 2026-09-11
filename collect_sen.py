@@ -142,6 +142,10 @@ def main():
                 if page % 20 == 0:
                     print(f"  [{ora}] 목록 {page}쪽 · 학교 게시물 누적 {len(posts):,}건", flush=True)
                 page += 1
+                # 넓은 검색어는 수백 쪽이라 한 검색어가 끝날 때만 적으면 15분 넘게 조용해져
+                # 멈춤 감시에 끊기고, 다시 걸어도 같은 자리에서 또 끊긴다(2026-09-12 경기·강원·광주)
+                if page % 10 == 0:
+                    print(f"  …{page}페이지째", flush=True)
                 time.sleep(SPACING)
             print(f"  [{ora}] 목록 {page - 1}쪽까지 · 누적 {len(posts):,}건", flush=True)
         # 같은 게시물이 여러 쪽에 걸쳐 나오는 경우를 없앤다
@@ -194,6 +198,10 @@ def main():
             if not rows or page * 1000 >= total:
                 break
             page += 1
+            # 넓은 검색어는 수백 쪽이라 한 검색어가 끝날 때만 적으면 15분 넘게 조용해져
+            # 멈춤 감시에 끊기고, 다시 걸어도 같은 자리에서 또 끊긴다(2026-09-12 경기·강원·광주)
+            if page % 10 == 0:
+                print(f"  …{page}페이지째", flush=True)
             time.sleep(SPACING)
         done.add(sc["sc"])
         f.flush()

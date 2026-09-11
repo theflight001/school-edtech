@@ -147,6 +147,10 @@ def main():
                 if len(rows) < 100:
                     break
                 page += 1
+                # 넓은 검색어는 수백 쪽이라 한 검색어가 끝날 때만 적으면 15분 넘게 조용해져
+                # 멈춤 감시에 끊기고, 다시 걸어도 같은 자리에서 또 끊긴다(2026-09-12 경기·강원·광주)
+                if page % 10 == 0:
+                    print(f"  …{page}페이지째", flush=True)
                 polite()
             done.add(key)
             if len(done) % 6 == 0:
