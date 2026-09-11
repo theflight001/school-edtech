@@ -1945,9 +1945,14 @@ function mountMap() {
       const mk = [];
       let selH = [];
       const paintSel = () => { for (const m of mk) m._el.classList.toggle("on", selH.includes(m._href)); };
-      const CELL = 44, MAX = 400;
+      // 묶는 칸은 멀리서 볼수록 크게 — 44px로 묶었더니 전국 화면에 딱지가 40개 넘게 깔려
+      // 어지러웠다(2026-09-12). 칸 크기는 시안이 쓰는 값(180/140/88)을 그대로 쓴다.
+      const cellOf = z => z < 11.5 ? 180 : z < 13 ? 140 : 88;
+      const MAX = 400;
+      // 딱지가 차지할 가로폭(글자 수로 어림) — 한글은 넓고 숫자·영문은 좁다
+      const pinW = t => 30 + [...t].reduce((a, ch) => a + (/[가-힣]/.test(ch) ? 13 : 7.5), 0);
       const draw = () => {
-        const b = map.getBounds(), pad = 0.15;
+        const b = map.getBounds(), pad = 0.15, CELL = cellOf(map.getZoom());
         const cells = new Map();
         for (const f of feats) {
           const [lng, lat] = f.geometry.coordinates;
@@ -1959,16 +1964,30 @@ function mountMap() {
           cells.set(key, c);
         }
         // 딱지로 화면이 뒤덮이지 않게 — 묶음과 기록 많은 학교부터
-        const list = [...cells.values()].sort((x, y) => y.items.length - x.items.length
-          || (y.items[0].properties.k || 0) - (x.items[0].properties.k || 0)).slice(0, MAX);
+        // 큰 묶음부터 자리를 잡고, 이미 놓인 딱지와 겹치면 놓지 않는다 — 겹쳐 쌓이면 읽을 수 없다
+        const sorted = [...cells.values()].sort((x, y) => y.items.length - x.items.length
+          || (y.items[0].properties.k || 0) - (x.items[0].properties.k || 0));
+        const list = [], boxes = [];
+        for (const c of sorted) {
+          if (list.length >= MAX) break;
+          const many = c.items.length > 1;
+          const txt = many ? `${c.items.length.toLocaleString()}개교` : c.items[0].properties.n;
+          // 겹침은 '실제로 놓을 자리'로 재야 한다 — 묶음은 속한 학교들의 가운데에 놓는다
+          c.at = many ? [c.items.reduce((a, f) => a + f.geometry.coordinates[0], 0) / c.items.length,
+                         c.items.reduce((a, f) => a + f.geometry.coordinates[1], 0) / c.items.length]
+                      : c.items[0].geometry.coordinates;
+          const pt = map.project(c.at);
+          const w = pinW(txt), box = [pt.x - w / 2, pt.y - 18, pt.x + w / 2, pt.y + 18];
+          if (boxes.some(o => box[0] < o[2] + 4 && box[2] > o[0] - 4 && box[1] < o[3] + 4 && box[3] > o[1] - 4)) continue;
+          boxes.push(box); list.push(c);
+        }
         for (const m of mk) m.remove();
         mk.length = 0;
         for (const c of list) {
           const many = c.items.length > 1;
           const p = c.items[0].properties;
           const lngs = c.items.map(f => f.geometry.coordinates[0]), lats = c.items.map(f => f.geometry.coordinates[1]);
-          const at = many ? [lngs.reduce((x, y) => x + y, 0) / lngs.length, lats.reduce((x, y) => x + y, 0) / lats.length]
-                          : c.items[0].geometry.coordinates;
+          const at = c.at;
           const el = document.createElement("button");
           el.type = "button";
           el.className = "mpin" + (many ? " mcluster" : p.k > 0 ? "" : " dim");
