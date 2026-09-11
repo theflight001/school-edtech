@@ -10,6 +10,7 @@
 #   한 달만 보면 뒤늦게 올라온 것을 영영 놓친다.
 # 원칙:
 #   - 수집기는 저마다 체크포인트가 있어 중간에 끊겨도 다음 실행에서 이어 받는다.
+#   - 검색어 하나당 30쪽까지만 넘긴다(석 달 창에서 그 이상이면 검색어가 폭주한 것이다).
 #   - 한 곳이 실패해도 나머지는 계속한다. 실패는 로그에 남기고 마지막에 요약한다.
 #   - 자료가 하나도 늘지 않으면 빌드·배포를 하지 않는다(빈 커밋 방지).
 set -uo pipefail
@@ -67,21 +68,21 @@ if [ "$COLLECT" = "1" ]; then
   par_run 나라장터입찰 month_나라장터입찰 python3 collect_nara_bid.py --begin "$BEGIN" --end "$END" &
   par_run S2B month_S2B python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH" &
   par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
-  par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF &
-  par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
-  par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" --keyword-file $KF &
-  par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" --keyword-file $KF &
-  par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" --keyword-file $KF &
+  par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF --max-pages 30 &
+  par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" --keyword-file $KF --max-pages 30 &
   par_run 부산 month_부산 python3 collect_pen.py --office 부산 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
   par_run 경북 month_경북 python3 collect_pen.py --office 경북 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
-  par_run 대전 month_대전 python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file $KF &
-  par_run 충남 month_충남 python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file $KF &
-  par_run 경남 month_경남 python3 collect_gne.py --years "$YEARS" --keyword-file $KF &
+  par_run 대전 month_대전 python3 collect_dje.py --office 대전 --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 충남 month_충남 python3 collect_dje.py --office 충남 --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 경남 month_경남 python3 collect_gne.py --years "$YEARS" --keyword-file $KF --max-pages 30 &
   par_run 제주 month_제주 python3 collect_jje.py --years "$YEARS" &
-  par_run 강원 month_강원 python3 collect_gwe.py --keyword-file $KF &
+  par_run 강원 month_강원 python3 collect_gwe.py --keyword-file $KF --max-pages 30 &
   par_run 대구 month_대구 python3 collect_dge.py --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
-  par_run 광주 month_광주 python3 collect_gen.py --years "$YEARS" --keyword-file $KF &
-  par_run 울산 month_울산 python3 collect_use.py --keyword-file $KF &
+  par_run 광주 month_광주 python3 collect_gen.py --years "$YEARS" --keyword-file $KF --max-pages 30 &
+  par_run 울산 month_울산 python3 collect_use.py --keyword-file $KF --max-pages 30 &
   wait
   echo "── 시도교육청 수집 끝 $(date '+%H:%M')"
 else
