@@ -41,7 +41,26 @@ par_run() {
   fi
   trap "lock_release $key" EXIT
   echo "▶ $key 시작 $(date '+%m-%d %H:%M')" | tee -a "$log"
-  if "$@" >> "$log" 2>&1; then
+  # 멈춤 감시: 로그가 EDTECH_STALL초(기본 15분) 넘게 안 움직이면 끊는다.
+  # urllib의 timeout은 바이트가 오가는 사이 간격만 재서, 서버가 찔끔찔끔 보내거나 TLS가
+  # 중간에 걸리면 총 시간은 끝없이 늘어난다(2026-09-11 경기가 연결 하나를 붙잡고 18분 멈췄다).
+  # 요청 간격 10초·재시도 대기 최대 5분이라 정상이면 15분씩 조용할 일이 없다.
+  # 파이썬 출력이 파일로 갈 때 뭉쳐 쓰이면 진척이 있어도 조용해 보이므로 버퍼를 끈다.
+  PYTHONUNBUFFERED=1 "$@" >> "$log" 2>&1 &
+  local pid=$! stall="${EDTECH_STALL:-900}" stalled=0
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 60
+    local age=$(( $(date +%s) - $(stat -f %m "$log" 2>/dev/null || date +%s) ))
+    if [ "$age" -ge "$stall" ]; then
+      echo "⏸ $key — $((stall / 60))분 동안 진척이 없어 끊는다(체크포인트에서 이어 받는다)" | tee -a "$log"
+      kill "$pid" 2>/dev/null; sleep 5; kill -9 "$pid" 2>/dev/null
+      stalled=1; break
+    fi
+  done
+  wait "$pid" 2>/dev/null; local rc=$?
+  if [ "$stalled" = "1" ]; then
+    echo "✗ $key 멈춤 $(date '+%m-%d %H:%M') — $log 를 보라" | tee -a "$log"
+  elif [ "$rc" = "0" ]; then
     echo "✓ $key 끝 $(date '+%m-%d %H:%M')" | tee -a "$log"
   else
     echo "✗ $key 실패 $(date '+%m-%d %H:%M') — $log 를 보라" | tee -a "$log"
