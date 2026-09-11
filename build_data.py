@@ -1426,7 +1426,11 @@ def _ym_of(r):
     try: return int(str(r.get("ym") or "")[:6])
     except ValueError: return 0
 _YM_MAX = max((y for y in map(_ym_of, records) if 200001 <= y <= _now_ym), default=_now_ym)
-_YM_TXT = f"{_YM_MAX // 100}.{_YM_MAX % 100}"
+# 표시는 마지막으로 다 찬 달까지 — 이번 달은 열흘치만 있어도 기록이 생긴다(2026-09-11: 9월 357건).
+# 그걸 그대로 적으면 "2026.9까지 봤다"로 읽힌다. 이번 달 기록은 목록에 그대로 두고 표시만 지난달까지.
+_prev_ym = _now_ym - 1 if _now_ym % 100 > 1 else (_now_ym // 100 - 1) * 100 + 12
+_YM_LABEL = min(_YM_MAX, _prev_ym)
+_YM_TXT = f"{_YM_LABEL // 100}.{_YM_LABEL % 100}"
 meta = {
     "asOf": _dt.date.today().isoformat(),
     # 이 파일을 만든 날. 화면 아래에 '마지막 갱신'으로 보여 준다 —
@@ -1438,7 +1442,8 @@ meta = {
     # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
     "coveragePeriod": f"2020.1 ~ {_YM_TXT}",
     "basePeriod": f"{_BASE_YEAR}.1 ~ {_YM_TXT}",
-    "ymMax": _YM_MAX,
+    "ymMax": _YM_MAX,          # 자료가 닿는 마지막 달 (달력 고르개 끝)
+    "ymLabel": _YM_LABEL,      # 표시용 마지막 달 (다 찬 달)
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------
