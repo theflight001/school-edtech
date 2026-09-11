@@ -1886,7 +1886,7 @@ function showMapSel(spec, rows) {
 window.clearMapSel = () => {
   const box = document.getElementById("mapsel");
   if (box) box.innerHTML = "";
-  if (MAP && MAP.getLayer("pt-sel")) MAP.setFilter("pt-sel", ["==", ["get", "href"], ""]);
+  if (MAP && MAP._setSel) MAP._setSel([]);
 };
 // 학교 이름표 — 작고 납작한 둥근 사각 딱지(높이 26·모서리 9·좌우 여백 9, 그림자는 옅게).
 // 처음엔 양끝을 완전한 반원으로 두었더니 높이 40에 통통해 보였다(2026-09-12).
@@ -1992,6 +1992,17 @@ function mountMap() {
       // 올려 둔 학교는 조금 크게 — Airbnb처럼 어느 딱지를 가리키는지 바로 보인다
       map.addLayer({...pill("pt-hov", "pill", {"text-size": 13, "icon-allow-overlap": true, "text-allow-overlap": true}),
         filter: ["==", ["get", "href"], ""]});
+      // 한 학교는 한 겹만 그린다 — 고른 학교(초록) 뒤에 올려둔 이름표(조금 큰 흰 딱지)가 깔려
+      // 하얀 테두리처럼 보였다(2026-09-12).
+      let selH = [], hovH = "";
+      const applyPt = () => {
+        const off = ["literal", hovH && !selH.includes(hovH) ? selH.concat([hovH]) : selH];
+        map.setFilter("pt-n", ["all", ["!", ["has", "point_count"]], ["!", ["in", ["get", "href"], off]]]);
+        map.setFilter("pt-hov", ["all", ["!", ["has", "point_count"]],
+          ["==", ["get", "href"], hovH && !selH.includes(hovH) ? hovH : ""]]);
+        map.setFilter("pt-sel", ["all", ["!", ["has", "point_count"]], ["in", ["get", "href"], ["literal", selH]]]);
+      };
+      map._setSel = hrefs => { selH = hrefs; applyPt(); };
       map.addLayer({...pill("pt-sel", "pill-on", {"icon-allow-overlap": true, "text-allow-overlap": true}),
         filter: ["==", ["get", "href"], ""]});
       const pick = pt => map.queryRenderedFeatures([[pt.x - 6, pt.y - 6], [pt.x + 6, pt.y + 6]], {layers: ["pt-sel", "pt-hov", "pt-n", "pt"]});
@@ -2010,14 +2021,15 @@ function mountMap() {
         }
         if (!rows.length) return;
         rows.sort((a, b) => b.k - a.k || a.n.localeCompare(b.n, "ko"));
-        map.setFilter("pt-sel", ["in", ["get", "href"], ["literal", rows.map(p => p.href)]]);
+        map._setSel(rows.map(p => p.href));
         showMapSel(spec, rows);
       });
       map.on("mousemove", e => {
         const hit = map.queryRenderedFeatures(e.point, {layers: ["cl", "pt-sel", "pt-hov", "pt-n", "pt"]});
         map.getCanvas().style.cursor = hit.length ? "pointer" : "";
         const f = hit.find(x => x.layer.id !== "cl");
-        map.setFilter("pt-hov", ["==", ["get", "href"], f ? f.properties.href : ""]);
+        const h = f ? f.properties.href : "";
+        if (h !== hovH) { hovH = h; applyPt(); }
       });
     });
   }).catch(() => { el.innerHTML = `<div class="maploading">지도를 불러오지 못했습니다 — 목록으로 보세요</div>`; });
