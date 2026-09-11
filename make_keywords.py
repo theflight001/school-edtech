@@ -124,20 +124,37 @@ def expand_rule(pat):
     """판정 규칙 하나를 검색어 후보로 펼친다.
     - (?!…) (?<!…) '이 말이 있으면 아니다'는 버린다 — 예전엔 이게 조각조각 검색어로 새어
       가방·커피·모듈 같은 말이 들어갔고, 강원 서버가 '모듈'에 500을 냈다(2026-09-11).
-    - (?=…) '이 말이 있어야 한다'는 따로 펼쳐 더한다 — Tinkercad·교보문고처럼 제품명이
-      거기 들어 있는 규칙이 있다.
+    - (?=…) '이 말이 있어야 한다'는 갈래(맨 바깥 '|'로 나뉜 조각)마다 맨 앞의 첫 조건만 제품명으로
+      펼쳐 더한다 — Tinkercad·교보문고·밀크티(두 번째 갈래)처럼 제품명이 거기 있다. 그 뒤따르는 조건과
+      본문 중간의 조건은 문맥 낱말('선도학교'·'디지털')이라 버린다 — 흔한 말이라 강원 서버가 멈췄다.
     - (?:A|B)는 괄호 짝을 맞춰 곱해 펼친다 — 예전엔 괄호를 안 보고 '|'로 쪼개 Gamma·네프론·
       MS Office처럼 괄호 안 첫 갈래가 버려졌다."""
     main, pos, i = [], [], 0
+    depth, branch_text, branch_pos = 0, False, False
     while i < len(pat):
+        c = pat[i]
         if pat.startswith(("(?=", "(?!", "(?<=", "(?<!"), i):
             j = _close(pat, i)
             head = 3 if pat[i + 2] in "=!" else 4
-            if pat[i:i + head] == "(?=":
+            if pat[i:i + head] == "(?=" and depth == 0 and not branch_text and not branch_pos:
                 pos.append(re.sub(r"^\.\*", "", pat[i + head:j]))
+                branch_pos = True
             i = j + 1
             continue
-        main.append(pat[i]); i += 1
+        if c == "\\":
+            main.append(pat[i:i + 2]); branch_text = True; i += 2; continue
+        if c == "[":
+            k = pat.index("]", i + 1) + 1
+            main.append(pat[i:k]); branch_text = True; i = k; continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        if c == "|" and depth == 0:
+            branch_text, branch_pos = False, False      # 새 갈래 — 맨 앞을 다시 센다
+        elif c not in "^":
+            branch_text = True
+        main.append(c); i += 1
     out = []
     for piece in ["".join(main)] + pos:
         out.extend(_alts(piece))
