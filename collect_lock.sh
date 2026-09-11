@@ -48,18 +48,29 @@ par_run() {
   # 중간에 걸리면 총 시간은 끝없이 늘어난다(2026-09-11 경기가 연결 하나를 붙잡고 18분 멈췄다).
   # 요청 간격 10초·재시도 대기 최대 5분이라 정상이면 15분씩 조용할 일이 없다.
   # 파이썬 출력이 파일로 갈 때 뭉쳐 쓰이면 진척이 있어도 조용해 보이므로 버퍼를 끈다.
-  PYTHONUNBUFFERED=1 "$@" >> "$log" 2>&1 &
-  local pid=$! stall="${EDTECH_STALL:-900}" stalled=0
-  while kill -0 "$pid" 2>/dev/null; do
-    sleep 60
-    local age=$(( $(date +%s) - $(stat -f %m "$log" 2>/dev/null || date +%s) ))
-    if [ "$age" -ge "$stall" ]; then
-      echo "⏸ $key — $((stall / 60))분 동안 진척이 없어 끊는다(체크포인트에서 이어 받는다)" | tee -a "$log"
-      kill "$pid" 2>/dev/null; sleep 5; kill -9 "$pid" 2>/dev/null
-      stalled=1; break
+  # 멈춰 끊긴 것은 체크포인트에서 다시 건다(기본 세 번까지) — 한 연결이 걸려 멈춘 것이지
+  # 서버가 막은 것이 아니다. 실패(차단 등)는 다시 걸지 않는다.
+  local pid rc stalled attempt=0 tries="${EDTECH_STALL_RETRY:-3}" stall="${EDTECH_STALL:-900}"
+  while :; do
+    attempt=$((attempt + 1))
+    PYTHONUNBUFFERED=1 "$@" >> "$log" 2>&1 &
+    pid=$!; stalled=0
+    while kill -0 "$pid" 2>/dev/null; do
+      sleep 60
+      local age=$(( $(date +%s) - $(stat -f %m "$log" 2>/dev/null || date +%s) ))
+      if [ "$age" -ge "$stall" ]; then
+        echo "⏸ $key — $((stall / 60))분 동안 진척이 없어 끊는다(체크포인트에서 이어 받는다)" | tee -a "$log"
+        kill "$pid" 2>/dev/null; sleep 5; kill -9 "$pid" 2>/dev/null
+        stalled=1; break
+      fi
+    done
+    wait "$pid" 2>/dev/null; rc=$?
+    if [ "$stalled" = "1" ] && [ "$attempt" -lt "$tries" ]; then
+      echo "↻ $key — 멈춰서 체크포인트에서 다시 건다 ($((attempt + 1))/$tries)" | tee -a "$log"
+      continue
     fi
+    break
   done
-  wait "$pid" 2>/dev/null; local rc=$?
   if [ "$stalled" = "1" ]; then
     echo "✗ $key 멈춤 $(date '+%m-%d %H:%M') — $log 를 보라" | tee -a "$log"
   elif [ "$rc" = "0" ]; then
