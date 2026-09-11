@@ -355,7 +355,9 @@ window.setPF = v => { PF = v; render(); };
 window.setPT = v => { PT = v; render(); };
 window.clearPeriod = () => { PF = BASE_FROM; PT = ""; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
-const YM_MIN = 202001, YM_MAX = 202607;
+// 자료가 닿는 마지막 달은 빌드가 알려 준다 — 손으로 적어 두면 월 갱신 뒤에도 옛 달에 멈춘다
+const YM_MIN = 202001, YM_MAX = +((DB_RAW.meta && DB_RAW.meta.ymMax) || 202607);
+const YM_TO = `${String(YM_MAX).slice(0, 4)}-${String(YM_MAX).slice(4)}`;
 let pkS = null, pkE = null, pkBase = 2025;
 // 기본(2026년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
 const periodOn = () => (PF !== BASE_FROM) || !!PT;
@@ -889,7 +891,7 @@ function baseRecs() {
 }
 function filterNote() {
   const bits = [];
-  if (periodOn()) bits.push(`조사 기간 ${(PF || "2020-01").replaceAll("-", ".")} ~ ${(PT || "2026-07").replaceAll("-", ".")}`);
+  if (periodOn()) bits.push(`조사 기간 ${(PF || "2020-01").replaceAll("-", ".")} ~ ${(PT || YM_TO).replaceAll("-", ".")}`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
@@ -928,7 +930,7 @@ function homeView() {
       <div class="tile clickable" onclick="openPicker()" role="button" aria-label="조사 기간 변경">
         <!-- 칸에 적는 것은 지금 보고 있는 기간이다. 자료는 2020년까지 닿지만 기본은 2023년부터
              보여 주므로, 손대지 않았을 때 전체 범위를 적으면 없는 것을 보고 있다고 착각하게 된다. -->
-        <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || "2026-07"}`.replaceAll("-", ".")
+        <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || YM_TO}`.replaceAll("-", ".")
           : (DB.meta.basePeriod || DB.meta.coveragePeriod)}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
@@ -1260,7 +1262,7 @@ function drillView(kind, value) {
   const nd = recs.filter(r => !r.dup);
   const nSchools = uniq(nd.map(r => r.school)).length;
   const conds = [];
-  if (periodOn()) conds.push(`기간 ${(PF || "2020-01").replace("-", ".")} ~ ${(PT || "2026-07").replace("-", ".")}`);
+  if (periodOn()) conds.push(`기간 ${(PF || "2020-01").replace("-", ".")} ~ ${(PT || YM_TO).replace("-", ".")}`);
   if (SF.size) conds.push(`계열 ${sfLabel()}`);
   if (ES.size) conds.push(`설립 주체 ${esLabel()}`);
   if (RG.size) conds.push(`지역 ${rgLabel()}`);
@@ -1427,7 +1429,7 @@ function searchView(q) {
   return `
     <div class="crumb"><a href="/">홈</a> › 검색 결과</div>
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${
-      OLD_STATE === "done" ? ` · <span class="conf">전 기간(2020.1~2026.7)에서 찾았습니다</span>`
+      OLD_STATE === "done" ? ` · <span class="conf">전 기간(${esc((DB_RAW.meta.coveragePeriod || "").replace(/ /g, ""))})에서 찾았습니다</span>`
       : ` · <span class="conf">지난 기록을 불러오는 중입니다…</span>`}${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}

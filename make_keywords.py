@@ -96,7 +96,12 @@ def main():
             "프로", "유아", "의자", "가구", "책상", "도서", "카드", "블록", "키트", "노트",
             "수학", "영어", "과학", "미술", "음악", "체육", "국어", "한자", "독서", "진로",
             "로봇", "소파", "영상", "자막", "증강", "침대", "러닝", "AI", "SW", "엑셀", "워드"}
-    allk = sorted((rules | prod | comp) - STOP)
+    # 에듀집 제품명에 보이지 않는 글자(U+200B 등)와 ®·™가 섞여 있다. 그대로 검색하면
+    # 서버가 사실상 전부를 돌려준다 — 광주에서 한 검색어가 301페이지를 끌어왔다(2026-09-11).
+    INVIS = re.compile(r"[\u200b-\u200f\u2060-\u206f\ufeff\u00ad\u00a0]|[®™©℠]")
+    def clean(k):
+        return re.sub(r"\s+", " ", INVIS.sub(" ", k)).strip()
+    allk = sorted({clean(k) for k in (rules | prod | comp)} - STOP - {""})
     open(OUT, "w", encoding="utf-8").write("\n".join(allk) + "\n")
     print(f"{OUT} — {len(allk):,}종 "
           f"(규칙 표기 {len(rules):,} · 에듀집 제품 {len(prod):,} · 회사 {len(comp):,})")

@@ -58,12 +58,14 @@ run() {                                      # run <이름> <명령…>
 before=$(wc -l < data.js 2>/dev/null || echo 0)
 
 # ── 1. 수집 (저마다 체크포인트로 이어 받는다)
-run "나라장터 계약"   python3 collect_nara_full.py --begin "$BEGIN" --end "$END"
-run "나라장터 입찰"   python3 collect_nara_bid.py  --begin "$BEGIN" --end "$END"
 # 시도교육청은 저마다 다른 서버다 — 서버별 자물쇠를 잡고 동시에 받는다.
 # (한 줄로 세우면 열여섯 곳이 차례를 기다리느라 하룻밤에 서너 곳밖에 못 받는다)
 if [ "$COLLECT" = "1" ]; then
   KF=edzip_brand_keywords.txt
+  # 나라장터·S2B도 남의 서버다. 한 곳이 응답을 안 해도 나머지가 기다리지 않게 함께 돌린다.
+  par_run 나라장터 month_나라장터 python3 collect_nara_full.py --begin "$BEGIN" --end "$END" &
+  par_run 나라장터입찰 month_나라장터입찰 python3 collect_nara_bid.py --begin "$BEGIN" --end "$END" &
+  par_run S2B month_S2B python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH" &
   par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
   par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF &
   par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
@@ -85,8 +87,6 @@ if [ "$COLLECT" = "1" ]; then
 else
   echo "── 시도교육청 수집 (자물쇠 때문에 건너뜀)"
 fi
-# S2B는 접근 제한이 잦아 마지막에 둔다 — 실패해도 나머지는 이미 반영된다
-run "S2B 학교장터"   python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH"
 
 # 정제·빌드는 남의 서버를 두드리지 않으니 자물쇠와 상관없이 늘 한다
 COLLECT=1

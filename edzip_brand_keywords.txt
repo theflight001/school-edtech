@@ -509,7 +509,7 @@ HHIPS-양치기록솔루션
 HMH All products
 HWP
 Hamster Soccer - 햄스터 축구 조이스틱
-Hamster Soccer- 햄스터  축구 조이스틱
+Hamster Soccer- 햄스터 축구 조이스틱
 Heinemann All products
 HelloTalk
 Hey, HECTO
@@ -531,7 +531,7 @@ ITQ
 Illustrator
 Inknoe
 IoT 플랫폼 서비스
-JCT  기초적성검사
+JCT 기초적성검사
 JCT 인성역량검사
 JCT 직무적성검사
 JINNY
@@ -613,6 +613,10 @@ LCSI·성격검사
 LCSI성격검사
 LCT 학습역량검사
 LEGO Education
+LEGO Education레고에듀케이션 사이언스(11+)
+LEGO Education레고에듀케이션 스파이크_에센셜앱
+LEGO Education레고에듀케이션 스파이크_프라임 앱
+LEGO Education레고에듀케이션 컴퓨터사이언스&AI S/W
 LEGOEducation
 LITHO MASKLESS
 LXP
@@ -622,7 +626,7 @@ LearningLemur
 LilysAI
 LingoClip
 LiveWorksheets
-Logger Pro™ 3
+Logger Pro 3
 LoiLoNote School
 LoroTOPIK
 Lyrics Into Song AI
@@ -686,7 +690,7 @@ MathsPad Limited
 Maxon One Classroom License
 MazM 스튜디오
 McGraw Hill
-McGraw Hill Learning Platform  (K-12)
+McGraw Hill Learning Platform (K-12)
 Mentimeter
 Mentor Online
 Merge
@@ -795,7 +799,7 @@ Real PT
 RealLives Simulation Game
 Replit
 RoboMaster
-Robomation DFU -  로보메이션 DFU
+Robomation DFU - 로보메이션 DFU
 Rodocodo
 Rodocodo Limited
 Room Planner Ltd
@@ -860,7 +864,7 @@ TCLIMBWORLD
 TOPIKBOT
 TUKORS
 TVPaint Animation Software
-Teachers Pay Teachers (TPT)  Service
+Teachers Pay Teachers (TPT) Service
 Teams
 TexPro
 ThinkWise 씽크와이즈
@@ -1087,10 +1091,6 @@ wordwall
 xTool F1
 xTool S1
 zSpace Studio A3
-​LEGO® Education레고에듀케이션 사이언스(11+)
-​LEGO® Education레고에듀케이션 스파이크_에센셜앱
-​LEGO® Education레고에듀케이션 스파이크_프라임 앱
-​LEGO® Education레고에듀케이션 컴퓨터사이언스&AI S/W
 『울산교육종단연구 2024』본조사 시스템
 가람수강신청시스템
 가르치는 사람들
@@ -1500,9 +1500,9 @@ zSpace Studio A3
 도원산업
 도트 타이머
 도트 플래너
-독갑이™
-독갑이™ 커리어플래너
-독갑이™ 팀플
+독갑이
+독갑이 커리어플래너
+독갑이 팀플
 독도 가상여행 체험학습 KIT
 독서 플랫폼 아이윙 이용권(12개월)
 독서교육 플랫폼 리딩오션
@@ -2249,10 +2249,10 @@ zSpace Studio A3
 브로콜리 아두이노 센서키트 + 코리의 외계행성 살아남기
 브로콜리 코딩
 브리그로교육
-브릭셀(BRIXEL)  에디터 페이지(웹 기반 에디터)
 브릭셀(BRIXEL) AI 페이지
 브릭셀(BRIXEL) 랜딩 페이지
 브릭셀(BRIXEL) 실시간 데이터 로깅 및 분석 페이지
+브릭셀(BRIXEL) 에디터 페이지(웹 기반 에디터)
 브릭셀(BRIXEL) 회로 설계 시뮬레이터 페이지
 브릭슨
 브이브이알
@@ -4387,7 +4387,7 @@ zSpace Studio A3
 플레이큐리오
 플레이파이썬
 플렉슬
-플렉슬(flexcil) - PDF 필기,  메모
+플렉슬(flexcil) - PDF 필기, 메모
 플로어픽
 피규어
 피씨엔씨

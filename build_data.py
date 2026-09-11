@@ -1417,8 +1417,18 @@ for cands in master_by_name.values():
 print(f"전국 학교 인덱스: {len(school_index)}개교")
 
 import datetime as _dt
+_BASE_YEAR = 2026                                   # app.js의 BASE_FROM과 같은 해라야 한다
+# 자료가 닿는 마지막 달 — 손으로 적어 두면 월 갱신 뒤에도 화면이 옛 달에 멈춘다
+# (2026-09-11: 8월분을 받았는데 조사 기간이 "2026.1 ~ 2026.7"에 박혀 있었다).
+# 계약일 오기로 미래 달이 섞이므로 이번 달을 넘는 값은 버린다.
+_now_ym = _dt.date.today().year * 100 + _dt.date.today().month
+def _ym_of(r):
+    try: return int(str(r.get("ym") or "")[:6])
+    except ValueError: return 0
+_YM_MAX = max((y for y in map(_ym_of, records) if 200001 <= y <= _now_ym), default=_now_ym)
+_YM_TXT = f"{_YM_MAX // 100}.{_YM_MAX % 100}"
 meta = {
-    "asOf": "2026-07-20",
+    "asOf": _dt.date.today().isoformat(),
     # 이 파일을 만든 날. 화면 아래에 '마지막 갱신'으로 보여 준다 —
     # 자동 갱신이 실제로 돌았는지 방문자가 알 수 있어야 한다.
     "builtOn": _dt.date.today().isoformat(),
@@ -1426,8 +1436,9 @@ meta = {
     "schools": len({rec["school"] for rec in records}),
     # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
     # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
-    "coveragePeriod": "2020.1 ~ 2026.7",
-    "basePeriod": "2026.1 ~ 2026.7",
+    "coveragePeriod": f"2020.1 ~ {_YM_TXT}",
+    "basePeriod": f"{_BASE_YEAR}.1 ~ {_YM_TXT}",
+    "ymMax": _YM_MAX,
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------
@@ -1559,7 +1570,6 @@ _det_dict = {c: v for c, v in _dicts.items() if c in _det_cols}
 # 첫 화면은 올해(2026년)만 보여 준다(app.js의 BASE_FROM). 그 앞은 기간을 넓힐 때만
 # 쓰이는데 전체의 86%를 차지한다 — 첫 화면에서 기다릴 까닭이 없다. 그래서 따로 낸다.
 # 행 번호(_i)로 상세를 찾아오므로 옛 기록을 뒤로 몰아 번호가 어긋나지 않게 한다.
-_BASE_YEAR = 2026                                   # app.js의 BASE_FROM과 같은 해라야 한다
 _base_ix = [i for i, r in enumerate(records) if not r.get("year") or r["year"] >= _BASE_YEAR]
 _old_ix = [i for i, r in enumerate(records) if r.get("year") and r["year"] < _BASE_YEAR]
 _order = _base_ix + _old_ix
