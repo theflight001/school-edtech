@@ -1400,9 +1400,12 @@ for t, c in tag_counts.most_common():
 # 재외한국학교·외국인학교·국제학교는 국내 공교육이 아니어서, 공동실습소는 학교가 아니어서 제외.
 INDEX_EXCLUDE = ("재외한국학교", "외국인학교", "국제학교", "공동실습소")
 school_index = []
+_index_keys = []                                    # make_coords.py의 key_of와 같은 열쇠 — 좌표를 붙일 때 쓴다
 for cands in master_by_name.values():
     for s in cands:
         if s["level"] and not any(e in s["level"] for e in INDEX_EXCLUDE):
+            _index_keys.append((s.get("code") or "").strip() or "local-" + __import__("hashlib").sha1(
+                f"{s['sido']}|{s['name']}|{s['address']}".encode()).hexdigest()[:12])
             rec = {
                 "c": s["code"], "n": s["name"], "l": s["level"],
                 "s": NEIS_SIDO_SHORT.get(s["sido"], s["sido"]),
@@ -1415,6 +1418,18 @@ for cands in master_by_name.values():
                 rec["d"] = s.get("hsDetail") or ""
             school_index.append(rec)
 print(f"전국 학교 인덱스: {len(school_index)}개교")
+
+# 학교 좌표 — make_coords.py가 만든 geo/school_coords.json을 색인 순서 그대로 따로 싣는다.
+# 지도를 처음 열 때만 받도록 data.js와 떼어 둔다(1만 2천여 곳 좌표로 첫 화면을 무겁게 하지 않는다).
+# 없는 곳은 0 — 화면이 '위치를 찾지 못한 학교'로 따로 센다.
+_geo_path = "geo/school_coords.json"
+if __import__("os").path.exists(_geo_path):
+    _coords = json.load(open(_geo_path, encoding="utf-8"))
+    _geo = [[round(p[0], 5), round(p[1], 5), p[2]] if (p := _coords.get(k)) else 0 for k in _index_keys]
+    with open("school_geo.js", "w", encoding="utf-8") as f:
+        f.write("// build_data.py가 생성한 파일 — 직접 수정 금지 (좌표는 make_coords.py)\n")
+        f.write("const SCHOOL_GEO = " + json.dumps(_geo, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    print(f"학교 좌표: {sum(1 for g in _geo if g):,}/{len(_geo):,}곳 → school_geo.js")
 
 import datetime as _dt
 _BASE_YEAR = 2026                                   # app.js의 BASE_FROM과 같은 해라야 한다

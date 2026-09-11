@@ -378,6 +378,30 @@ button.chip.gen:hover { border-color: var(--muted); }
 .alpha.pager button[disabled] { opacity: .35; cursor: default; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; line-height: 1.8; }
 footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* 목록 | 지도 */
+.vbar { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+.vmode { display: inline-flex; border: 1px solid var(--grid); border-radius: 8px; overflow: hidden; background: var(--plane); }
+.vmode button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; padding: 5px 16px; cursor: pointer; }
+.vmode button + button { border-left: 1px solid var(--grid); }
+.vmode button.on { background: var(--bar); color: #fff; font-weight: 600; }
+.map { height: min(70vh, 620px); min-height: 380px; border-radius: 10px; overflow: hidden; background: var(--surface); position: relative; }
+.maploading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
+.maplegend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.maplegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: var(--muted); }
+.maplegend i.on { background: var(--bar); }
+.maplegend .src { color: var(--muted); flex-basis: 100%; }
+.map .maplibregl-popup-content { background: var(--plane); color: var(--ink); border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.18); padding: 8px 14px 8px 12px; font-family: inherit; }
+.map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--plane); }
+.map .maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--plane); }
+.map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--plane); }
+.map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--plane); }
+.map .maplibregl-popup-close-button { color: var(--muted); font-size: 16px; }
+.mpop a { display: block; padding: 6px 12px 6px 0; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--grid); }
+.mpop a:last-of-type { border-bottom: 0; }
+.mpop a:hover b { color: var(--accent); }
+.mpop b { display: block; font-size: 14px; }
+.mpop span { font-size: 12px; color: var(--muted); }
+.mmore { font-size: 12px; color: var(--muted); padding-top: 4px; }
 </style>
 </head>
 <body>
