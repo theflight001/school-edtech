@@ -4,7 +4,7 @@
 # 배경: 나라장터·S2B에 안 잡히는 소액 구매(수만~수십만 원)가 여기에 남는다.
 #       K-에듀파인과 연계돼 자동 공개되며 로그인이 필요 없다.
 # 결과: ice_candidates.csv (계약번호 대신 기관+계약명+계약일로 중복 판별)
-import argparse, csv, html, http.cookiejar, json, os, re, sys, time, urllib.parse, urllib.request
+import signal, argparse, csv, html, http.cookiejar, json, os, re, sys, time, urllib.parse, urllib.request
 
 # 시도별: (주소, sysId, mi) — mi가 없는 곳은 빈 문자열
 OFFICES = {
@@ -67,6 +67,14 @@ def opener():
         _opener.open(URL + (f"?mi={MI}" if MI else ""), timeout=30).read()   # 세션 쿠키 확보
     return _opener
 
+class Deadline(Exception):
+    pass
+
+def _deadline(sig, frm):
+    raise Deadline("응답이 90초 넘게 끝나지 않음")
+
+signal.signal(signal.SIGALRM, _deadline)
+
 def fetch(keyword, page, year="ALL", st="", ed=""):
     data = {"sysId": SYSID, "currPage": str(page), "pageIndex": str(PAGE), "cmSeqNo": "",
             "schFsclY": year, "schInstClssDiv": "5",   # 5 = 학교
@@ -77,6 +85,10 @@ def fetch(keyword, page, year="ALL", st="", ed=""):
     req = urllib.request.Request(URL, data=urllib.parse.urlencode(data).encode(),
                                  headers={"Referer": URL + (f"?mi={MI}" if MI else "")})
     for attempt, wait in enumerate([5, 20, 60, None]):
+        # 한 요청에 90초 넘게 걸리면 끊는다. timeout=60은 바이트 사이 간격만 재서, 경기 서버가 넓은
+        # 검색어(에듀테크 등)에 연결을 연 채 답을 안 주면 몇십 분씩 붙잡혔다(2026-09-12).
+        # 끝내 못 받은 칸은 '끝냄'으로 적지 않으므로 다음 실행에서 다시 받는다.
+        signal.alarm(90)
         try:
             return opener().open(req, timeout=60).read().decode("utf-8", "replace")
         except Exception as e:
@@ -84,6 +96,8 @@ def fetch(keyword, page, year="ALL", st="", ed=""):
                 raise
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
+        finally:
+            signal.alarm(0)
 
 def parse(page_html):
     rows = []
