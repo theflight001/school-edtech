@@ -57,6 +57,14 @@ run() {                                      # run <이름> <명령…>
 
 before=$(wc -l < data.js 2>/dev/null || echo 0)
 
+# ── 0. 다시 훑을 기간을 연다. 수집기는 한 번 훑은 (검색어·기간)을 체크포인트에 '끝냄'으로
+#      적고 다시 부르지 않는다 — 이걸 지우지 않아 기간이 끝나기 전에 훑은 곳은 그 뒤 올라온
+#      계약을 영영 받지 못했다(2026-09-12 발견: 강원 8월 재수집이 427번만 부르고 끝났다).
+#      받은 줄은 체크포인트의 seen이 막으므로 다시 훑어도 겹치지 않는다. 백업은 ckpt_backup/.
+if [ "$COLLECT" = "1" ]; then
+  python3 ckpt_reopen.py --from "$FROM3" --to "$MONTH" --apply || echo "   ✗ 체크포인트 열기 실패 — 새 계약을 놓칠 수 있다"
+fi
+
 # ── 1. 수집 (저마다 체크포인트로 이어 받는다)
 # 시도교육청은 저마다 다른 서버다 — 서버별 자물쇠를 잡고 동시에 받는다.
 # (한 줄로 세우면 열여섯 곳이 차례를 기다리느라 하룻밤에 서너 곳밖에 못 받는다)
@@ -109,6 +117,12 @@ fi
 
 python3 make_coverage.py || echo "   ✗ 수집현황.csv 생성 실패"
 
+# 손으로 다시 돌릴 때 — 모아서 만들기까지만 하고, 확인한 뒤 올린다
+if [ "${EDTECH_NODEPLOY:-0}" = "1" ]; then
+  echo "── 배포는 건너뛴다(EDTECH_NODEPLOY=1)"
+  echo "══ 끝 $(date '+%H:%M')  실패 ${#FAILED[@]}곳 ${FAILED[*]:-없음}"; exit 0
+fi
+
 # ── 4. 캐시 파라미터를 올리고 배포 (data.js가 바뀐 때만)
 if git diff --quiet -- data.js data_old.js data_detail.js data_summary.js; then
   echo "── 자료에 변화가 없어 배포하지 않는다"
@@ -126,7 +140,7 @@ print(f"   캐시 파라미터 → {stamp}")
 PY
   # 파일 하나가 없으면 git add가 통째로 실패해 아무것도 담기지 않는다 — 있는 것만 골라 담는다
   for f in data.js data_old.js data_detail.js data_detail_old.js data_summary.js \
-           index.html app.js og_card.png mined_rules.csv tag_review.md product_origin.csv \
+           index.html app.js school_geo.js og_card.png mined_rules.csv tag_review.md product_origin.csv \
            수집현황.csv office_refined.csv *_refined.csv; do
     [ -e "$f" ] && git add "$f"
   done

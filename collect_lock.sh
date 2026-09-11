@@ -35,6 +35,8 @@ par_run() {
   local key="$1" logname="$2"; shift 2
   local log="logs/${logname}.log"
   mkdir -p logs
+  # EDTECH_SKIP="대전 전남" — 차단당해 쉬게 둔 서버는 건너뛴다
+  case " ${EDTECH_SKIP:-} " in *" $key "*) echo "▷ $key — 쉬게 둔 서버라 건너뜀(EDTECH_SKIP)"; return 0 ;; esac
   if ! lock_acquire "$key" 0; then
     echo "▷ $key — 다른 수집이 잡고 있어 건너뜀"
     return 0
