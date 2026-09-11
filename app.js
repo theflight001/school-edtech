@@ -293,28 +293,32 @@ window.applyListQ = v => {
   const el = document.getElementById("lq");
   if (el) { el.focus(); const n = el.value.length; el.setSelectionRange(n, n); }
 };
+// 결과 내 검색 — 목록과 지도가 같은 기준으로 거른다
+function listQFilter(recs) {
+  if (!LISTQ) return recs;
+  const terms = queryTerms(LISTQ.toLowerCase());
+  return recs.filter(r => terms.some(t => (r.school + r.product + contentOf(r)).toLowerCase().includes(t)));
+}
+// 목록 위 도구줄 — 왼쪽에 '목록 | 지도', 오른쪽에 정렬·결과 내 검색
+function listToolbar(total, showFilter, tool) {
+  const sortSel = `<select class="sortsel" onchange="setSort(this.value)" aria-label="정렬">
+      ${[["new","최신순"],["old","오래된순"],["school","학교명순"],["product","제품군순"],["amt","금액 높은순"]].map(([k,l]) => `<option value="${k}"${SORTK===k?" selected":""}>${l}</option>`).join("")}
+    </select>`;
+  const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
+    <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
+      oninput="if(this.value==='')applyListQ('')" onkeyup="if(event.key==='Enter')applyListQ(this.value)">` : "";
+  return `<div class="listtool">${tool ? tool + '<span class="lt-grow"></span>' : ""}${sortSel}${filterHtml}</div>`;
+}
 function pagedTable(recs, opts) {
   const origTotal = recs.length;
   const showFilter = origTotal > PAGE_SIZE || LISTQ;
-  if (LISTQ) {
-    const terms = queryTerms(LISTQ.toLowerCase());
-    recs = recs.filter(r => terms.some(t => (r.school + r.product + contentOf(r)).toLowerCase().includes(t)));
-  }
-  recs = sortRecs(recs);
+  recs = sortRecs(listQFilter(recs));
   const total = recs.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(PAGE, pages);
   const slice = fillDetail(recs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
-  let topbar = "";
-  if (pages > 1 || showFilter || SORTK !== "new") {
-    const sortSel = `<select class="sortsel" onchange="setSort(this.value)" aria-label="정렬">
-        ${[["new","최신순"],["old","오래된순"],["school","학교명순"],["product","제품군순"],["amt","금액 높은순"]].map(([k,l]) => `<option value="${k}"${SORTK===k?" selected":""}>${l}</option>`).join("")}
-      </select>`;
-    const filterHtml = showFilter ? `${LISTQ ? `<span class="listq-n"><b>${total.toLocaleString()}건</b></span>` : ""}
-      <input id="lq" class="listq" type="search" placeholder="결과 내 검색" value="${esc(LISTQ)}"
-        oninput="if(this.value==='')applyListQ('')" onkeyup="if(event.key==='Enter')applyListQ(this.value)">` : "";
-    topbar = `<div class="listtool">${sortSel}${filterHtml}</div>`;
-  }
+  const tool = opts && opts.tool;
+  const topbar = tool || pages > 1 || showFilter || SORTK !== "new" ? listToolbar(total, showFilter, tool) : "";
   let bottom = "";
   if (pages > 1) {
     const nums = [];
@@ -1634,9 +1638,8 @@ function schoolsView() {
     <div class="pagehead"><h2>학교 전체 보기</h2>
       <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 그중 기록이 있는 곳 ${withRec.toLocaleString()}곳 ·
         이름을 누르면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
-    ${modeBar()}
-    ${VMODE === "map" ? mapBox({items: list.map(x => ({s: x, k: n(x)})), lost: 0, unit: "idx"}) : `
-    <div class="alpha">
+    ${VMODE === "map" ? `<div class="alpha">${modeToggle()}</div>` + mapBox({items: list.map(x => ({s: x, k: n(x)})), lost: 0, unit: "idx"}) : `
+    <div class="alpha">${modeToggle()}<span class="alpha-gap"></span>
       <span class="alab">정렬</span>
       <button class="${SSORT === "count" ? "on" : ""}" onclick="SSORT='count';SPAGE=1;render()">기록 많은 순</button>
       <button class="${SSORT === "name" ? "on" : ""}" onclick="SSORT='name';SPAGE=1;render()">가나다순</button>
@@ -1826,11 +1829,11 @@ function loadMapKit() {
   ]).catch(e => { MAP_KIT = null; throw e; });
   return MAP_KIT;
 }
-function modeBar() {
-  return `<div class="vbar"><span class="vmode" role="group" aria-label="보기 방식">
-    <button type="button" class="${VMODE === "list" ? "on" : ""}" aria-pressed="${VMODE === "list"}" onclick="setVMode('list')">목록</button>
-    <button type="button" class="${VMODE === "map" ? "on" : ""}" aria-pressed="${VMODE === "map"}" onclick="setVMode('map')">지도</button>
-  </span></div>`;
+// 목록 도구줄 맨 왼쪽의 '목록 | 지도'
+function modeToggle() {
+  return `<span class="vmode" role="group" aria-label="보기 방식">` +
+    `<button type="button" class="${VMODE === "list" ? "on" : ""}" aria-pressed="${VMODE === "list"}" onclick="setVMode('list')">목록</button>` +
+    `<button type="button" class="${VMODE === "map" ? "on" : ""}" aria-pressed="${VMODE === "map"}" onclick="setVMode('map')">지도</button></span>`;
 }
 // 기록 목록 → 학교별 건수. 학교코드가 없는 기록(집합 항목·학교 미상)은 지도에 올릴 수 없어 따로 센다.
 function mapFromRecs(recs) {
@@ -1844,98 +1847,149 @@ function mapFromRecs(recs) {
   }
   return {items: [...by].map(([s, e]) => ({s, k: e.k, name: e.name})), lost, unit: "recs"};
 }
-function recsBlock(recs, opts) {
-  return modeBar() + (VMODE === "map" ? mapBox(mapFromRecs(recs)) : pagedTable(recs, opts));
+function recsBlock(recs, opts = {}) {
+  const tool = modeToggle();
+  if (VMODE !== "map") return pagedTable(recs, {...opts, tool});
+  const rs = listQFilter(recs);
+  const spec = mapFromRecs(rs);
+  spec.nrec = rs.filter(r => !r.dup).length;
+  return listToolbar(rs.length, recs.length > PAGE_SIZE || !!LISTQ, tool) + mapBox(spec);
 }
 function mapBox(spec) {
   MAP_SPEC = spec;
-  return `<div id="map" class="map" aria-label="학교 지도"><div class="maploading">지도를 불러오는 중입니다…</div></div>
+  return `<div class="mapsum" id="mapsum">&nbsp;</div>
+    <div id="map" class="map" aria-label="학교 지도"><div class="maploading">지도를 불러오는 중입니다…</div></div>
     <div class="maplegend" id="mapleg"></div>`;
 }
+// 학교 이름표 — 둥근 딱지. 가운데를 늘림 구간으로 두어 이름 길이에 맞춰 늘어난다.
+function pillImage(fill, stroke) {
+  const r = 2, w = 40 * r, h = 36 * r, pad = 5 * r, rad = 10 * r;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  const path = () => {
+    g.beginPath(); g.moveTo(pad + rad, pad);
+    g.arcTo(w - pad, pad, w - pad, h - pad, rad); g.arcTo(w - pad, h - pad, pad, h - pad, rad);
+    g.arcTo(pad, h - pad, pad, pad, rad); g.arcTo(pad, pad, w - pad, pad, rad); g.closePath();
+  };
+  g.shadowColor = "rgba(15,23,42,0.25)"; g.shadowBlur = 4 * r; g.shadowOffsetY = 1.5 * r;
+  path(); g.fillStyle = fill; g.fill();
+  g.shadowColor = "transparent";
+  if (stroke) { path(); g.lineWidth = r; g.strokeStyle = stroke; g.stroke(); }
+  return [g.getImageData(0, 0, w, h), {pixelRatio: r, stretchX: [[pad + rad, w - pad - rad]], stretchY: [[pad + rad, h - pad - rad]],
+    content: [pad + 2 * r, pad + 2 * r, w - pad - 2 * r, h - pad - 2 * r]}];
+}
+// ⌘(맥)·Ctrl을 누른 채 끌면 좌우로 방향을 돌리고 위아래로 기울인다 — 기울이면 건물이 입체로 선다.
+// MapLibre 기본은 Ctrl·오른쪽 버튼뿐이라 맥에서 흔히 쓰는 ⌘로도 되게 한다.
+let MAP_ROT = null;
+window.addEventListener("mousemove", e => {
+  if (!MAP_ROT || !MAP) return;
+  MAP.jumpTo({bearing: MAP_ROT.b + (e.clientX - MAP_ROT.x) * 0.4,
+              pitch: Math.max(0, Math.min(70, MAP_ROT.p - (e.clientY - MAP_ROT.y) * 0.3))});
+});
+window.addEventListener("mouseup", () => { MAP_ROT = null; });
 function mountMap() {
   const el = document.getElementById("map"), spec = MAP_SPEC;
   if (MAP) { MAP.remove(); MAP = null; }
   if (!el || !spec) return;
   loadMapKit().then(() => {
     if (!el.isConnected || MAP_SPEC !== spec) return;           // 받는 사이 화면이 바뀌었다
-    const feats = []; let noXY = 0;
+    const feats = []; let noXY = 0, withRec = 0;
     for (const {s, k, name} of spec.items) {
       const g = SCHOOL_GEO[IDX_POS.get(s)];
       if (!g) { noXY++; continue; }
+      if (k) withRec++;
       feats.push({type: "Feature", geometry: {type: "Point", coordinates: [g[1], g[0]]},
         properties: {n: s.n, l: s.h || s.l || "", s: s.s, k,
           href: k ? `/school/${encodeURIComponent(name || s.n)}` : `/code/${s.c}`}});
     }
+    const N = v => v.toLocaleString();
+    const sum = document.getElementById("mapsum");
+    if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교 · 위치 미확인 ${N(noXY)}개교`
+      + (spec.unit === "idx" ? ` · 그중 기록 있는 곳 ${N(withRec)}개교` : "")
+      + (spec.lost ? ` · 학교 미특정 기록 ${N(spec.lost)}건` : "")
+      + (spec.nrec != null ? ` · 결과 ${N(spec.nrec)}건` : "");
     const leg = document.getElementById("mapleg");
     if (leg) leg.innerHTML =
-      (spec.unit === "idx" ? `<span><i class="on"></i>기록 있는 학교</span><span><i></i>기록 없는 학교</span>` : `<span><i class="on"></i>기록 있는 학교(원이 클수록 기록이 많음)</span>`)
-      + `<span>원 안의 숫자는 학교 수 · 누르면 확대</span>`
-      + `<span class="src">지도에 올린 학교 ${feats.length.toLocaleString()}곳`
-      + (noXY ? ` · 위치를 찾지 못한 학교 ${noXY.toLocaleString()}곳` : "")
-      + (spec.lost ? ` · 학교를 특정하지 못해 지도에 없는 기록 ${spec.lost.toLocaleString()}건` : "")
-      + ` · 위치: 한국교육시설안전원 학교위치(2026.3), 없는 곳은 주소로 찾음</span>`;
-    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      (spec.unit === "idx" ? `<span><i class="on"></i>기록 있는 학교</span><span><i></i>기록 없는 학교</span>` : "")
+      + `<span>숫자 원은 학교 수 · 누르면 확대 · 가까이 가면 학교 이름</span>`
+      + `<span>${/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"} 누른 채 끌면 회전·기울이기(입체)</span>`
+      + `<span class="src">위치: 한국교육시설안전원 학교위치(2026.3), 없는 곳은 OpenStreetMap·주소 검색 · 바탕 지도 OpenFreeMap</span>`;
     el.innerHTML = "";
-    const map = MAP = new maplibregl.Map({container: el, center: [127.8, 36.2], zoom: 5.6, minZoom: 5, maxZoom: 17,
-      style: `https://tiles.openfreemap.org/styles/${dark ? "dark" : "positron"}`, attributionControl: {compact: true}});
-    map.addControl(new maplibregl.NavigationControl({showCompass: false}), "top-right");
+    const map = MAP = new maplibregl.Map({container: el, center: [127.8, 36.2], zoom: 5.6, minZoom: 5, maxZoom: 18, maxPitch: 70,
+      style: "https://tiles.openfreemap.org/styles/liberty", attributionControl: {compact: true}});
+    map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), "top-right");
+    el.addEventListener("mousedown", e => {
+      if (!(e.metaKey || e.ctrlKey) || e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();                  // 끌기(이동)로 넘기지 않는다
+      MAP_ROT = {x: e.clientX, y: e.clientY, b: map.getBearing(), p: map.getPitch()};
+    }, true);
     if (feats.length) {
       const xs = feats.map(f => f.geometry.coordinates[0]), ys = feats.map(f => f.geometry.coordinates[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], {padding: 40, maxZoom: 13, duration: 0});
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], {padding: 40, maxZoom: 14, duration: 0});
     }
     // 양식만 오면 바로 얹는다 — "load"는 바탕 타일까지 기다려 학교가 늦게 떴다
     map.once("style.load", () => {
-      // 지명은 한글로 — 기본 양식은 로마자와 현지 표기를 겹쳐 쓴다
       for (const ly of map.getStyle().layers) {
+        // 바탕 지도의 가게·시설 이름은 걷는다 — 학교 이름표와 겹쳐 어지럽다
+        if (ly.id.startsWith("poi")) { map.setLayoutProperty(ly.id, "visibility", "none"); continue; }
         if (ly.type !== "symbol") continue;
+        // 지명은 한글로 — 기본 양식은 로마자와 현지 표기를 겹쳐 쓴다
         const tf = map.getLayoutProperty(ly.id, "text-field");
         if (tf && JSON.stringify(tf).includes("name")) map.setLayoutProperty(ly.id, "text-field", ["coalesce", ["get", "name:ko"], ["get", "name"]]);
       }
-      const css = (v, d) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || d;
-      const C = {bar: css("--bar", "#0d84c8"), dim: css("--muted", "#9298a2"), soft: css("--baseline", "#d6e0eb"),
-                 ink: css("--ink", "#1d2733"), ring: css("--plane", "#ffffff")};
-      const has = [">", ["get", "k"], 0];
+      map.addImage("pill", ...pillImage("#ffffff", "rgba(15,23,42,0.10)"));
+      map.addImage("pill-on", ...pillImage("#4fd49a"));
+      const G = "#16a36f", DIM = "#98a2b3", has = [">", ["get", "k"], 0];
       map.addSource("sch", {type: "geojson", data: {type: "FeatureCollection", features: feats},
-        cluster: true, clusterMaxZoom: 12, clusterRadius: 42,
+        cluster: true, clusterMaxZoom: 12, clusterRadius: 44,
         clusterProperties: {w: ["+", ["case", has, 1, 0]]}});
       map.addLayer({id: "cl", type: "circle", source: "sch", filter: ["has", "point_count"], paint: {
-        "circle-color": ["case", [">", ["get", "w"], 0], C.bar, C.soft], "circle-opacity": 0.9,
-        "circle-radius": ["step", ["get", "point_count"], 13, 20, 16, 100, 20, 500, 25, 2000, 30],
-        "circle-stroke-width": 2, "circle-stroke-color": C.ring}});
+        "circle-color": ["case", [">", ["get", "w"], 0], G, DIM], "circle-opacity": 0.92,
+        "circle-radius": ["step", ["get", "point_count"], 14, 20, 17, 100, 21, 500, 26, 2000, 31],
+        "circle-stroke-width": 3, "circle-stroke-color": "#ffffff"}});
       map.addLayer({id: "cl-n", type: "symbol", source: "sch", filter: ["has", "point_count"],
         layout: {"text-field": ["to-string", ["get", "point_count"]], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-allow-overlap": true},
-        paint: {"text-color": ["case", [">", ["get", "w"], 0], "#ffffff", C.ink]}});
+        paint: {"text-color": "#ffffff"}});
       map.addLayer({id: "pt", type: "circle", source: "sch", filter: ["!", ["has", "point_count"]], paint: {
-        "circle-color": ["case", has, C.bar, C.dim],
-        "circle-radius": ["case", has, ["interpolate", ["linear"], ["get", "k"], 1, 6, 20, 9, 100, 12], 4.5],
-        "circle-stroke-width": 1.5, "circle-stroke-color": C.ring}});
-      map.addLayer({id: "pt-n", type: "symbol", source: "sch", minzoom: 14, filter: ["!", ["has", "point_count"]],
-        layout: {"text-field": ["get", "n"], "text-size": 11, "text-offset": [0, 1.1], "text-anchor": "top", "text-font": ["Noto Sans Regular"]},
-        paint: {"text-color": C.ink, "text-halo-color": C.ring, "text-halo-width": 1.5}});
-      map.on("click", "cl", e => {
-        const f = e.features[0];
-        map.getSource("sch").getClusterExpansionZoom(f.properties.cluster_id)
-          .then(z => map.easeTo({center: f.geometry.coordinates, zoom: z + 0.3}));
-      });
-      // 한 건물에 여러 학교(병설·통합)가 겹치면 한꺼번에 보여 준다
-      map.on("click", "pt", e => {
+        "circle-color": ["case", has, G, DIM], "circle-radius": 4.5, "circle-stroke-width": 2, "circle-stroke-color": "#ffffff"}});
+      // 이름표 — 겹치면 기록 많은 학교가 남고, 가려진 학교도 점은 보인다
+      const pill = (id, icon, extra) => ({id, type: "symbol", source: "sch", filter: ["!", ["has", "point_count"]],
+        layout: {"text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 13,
+          "icon-image": icon, "icon-text-fit": "both", "icon-text-fit-padding": [5, 11, 5, 11],
+          "symbol-sort-key": ["-", 0, ["get", "k"]], ...extra},
+        paint: {"text-color": ["case", has, "#1d2733", "#7b8494"]}});
+      map.addLayer(pill("pt-n", "pill", {}));
+      map.addLayer({...pill("pt-sel", "pill-on", {"icon-allow-overlap": true, "text-allow-overlap": true}),
+        filter: ["==", ["get", "href"], ""]});
+      const pick = pt => map.queryRenderedFeatures([[pt.x - 6, pt.y - 6], [pt.x + 6, pt.y + 6]], {layers: ["pt-sel", "pt-n", "pt"]});
+      map.on("click", e => {
         const box = [[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]];
+        const cl = map.queryRenderedFeatures(box, {layers: ["cl"]})[0];
+        if (cl) {
+          map.getSource("sch").getClusterExpansionZoom(cl.properties.cluster_id)
+            .then(z => map.easeTo({center: cl.geometry.coordinates, zoom: z + 0.3}));
+          return;
+        }
+        // 한 건물에 여러 학교(병설·통합)가 겹치면 한꺼번에 보여 준다
         const seen = new Set(), rows = [];
-        for (const f of map.queryRenderedFeatures(box, {layers: ["pt"]})) {
+        for (const f of pick(e.point)) {
           const p = f.properties; if (seen.has(p.href)) continue; seen.add(p.href); rows.push(p);
         }
+        if (!rows.length) return;
         rows.sort((a, b) => b.k - a.k || a.n.localeCompare(b.n, "ko"));
-        new maplibregl.Popup({maxWidth: "280px", offset: 10})
-          .setLngLat(e.features[0].geometry.coordinates)
+        map.setFilter("pt-sel", ["==", ["get", "href"], rows[0].href]);
+        const at = pick(e.point)[0].geometry.coordinates;
+        new maplibregl.Popup({maxWidth: "280px", offset: 16})
+          .setLngLat(at)
           .setHTML(`<div class="mpop">${rows.slice(0, 8).map(p => `<a href="${esc(p.href)}"><b>${esc(p.n)}</b>
             <span>${esc(p.s)} · ${esc(p.l)} · ${p.k ? p.k.toLocaleString() + "건" : "기록 없음"}</span></a>`).join("")}
             ${rows.length > 8 ? `<div class="mmore">외 ${rows.length - 8}곳 — 더 확대해 보세요</div>` : ""}</div>`)
+          .on("close", () => { if (MAP === map) map.setFilter("pt-sel", ["==", ["get", "href"], ""]); })
           .addTo(map);
       });
-      for (const id of ["cl", "pt"]) {
-        map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
-      }
+      map.on("mousemove", e => {
+        map.getCanvas().style.cursor = map.queryRenderedFeatures(e.point, {layers: ["cl", "pt", "pt-n", "pt-sel"]}).length ? "pointer" : "";
+      });
     });
   }).catch(() => { el.innerHTML = `<div class="maploading">지도를 불러오지 못했습니다 — 목록으로 보세요</div>`; });
 }

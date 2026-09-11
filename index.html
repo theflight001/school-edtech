@@ -378,12 +378,12 @@ button.chip.gen:hover { border-color: var(--muted); }
 .alpha.pager button[disabled] { opacity: .35; cursor: default; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; line-height: 1.8; }
 footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* 목록 | 지도 */
-.vbar { display: flex; justify-content: flex-end; margin: 0 0 10px; }
-.vmode { display: inline-flex; border: 1px solid var(--grid); border-radius: 8px; overflow: hidden; background: var(--plane); }
-.vmode button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; padding: 5px 16px; cursor: pointer; }
-.vmode button + button { border-left: 1px solid var(--grid); }
-.vmode button.on { background: var(--bar); color: #fff; font-weight: 600; }
+/* 목록 | 지도 — 목록 도구줄 맨 왼쪽 */
+.lt-grow { flex: 1; }
+span.vmode { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--grid); border-radius: 12px; background: var(--surface); }
+span.vmode button { border: 0; border-radius: 9px; background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; padding: 6px 18px; cursor: pointer; }
+span.vmode button.on { background: var(--plane); color: var(--accent); font-weight: 700; box-shadow: 0 1px 3px rgba(15,23,42,.14); }
+.mapsum { font-size: 13px; color: var(--ink-2); margin: -2px 0 8px; }
 .map { height: min(70vh, 620px); min-height: 380px; border-radius: 10px; overflow: hidden; background: var(--surface); position: relative; }
 .maploading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
 .maplegend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
@@ -449,7 +449,7 @@ footer a { color: inherit; text-decoration: underline; text-underline-offset: 2p
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260912"></script>
+<script src="/data_summary.js?b=20260912b"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -514,7 +514,7 @@ footer a { color: inherit; text-decoration: underline; text-underline-offset: 2p
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260912", function () { load("/app.js?b=20260912"); });
+    load("/data.js?b=20260912b", function () { load("/app.js?b=20260912b"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
