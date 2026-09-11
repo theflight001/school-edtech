@@ -243,9 +243,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 60px; }
 .pk-years.drag { cursor: grabbing; }
 /* 해가 바뀌면 옛 달력이 밀려 나가고 새 달력이 들어온다 — 한 판이 통째로 움직여야
    넘어갔다고 느낀다. 옛 것을 그대로 복사해 겹쳐 두고 둘을 같이 움직인다. */
-.pk-viewport { position: relative; overflow: hidden; flex: 1 1 auto; min-width: 0; }
+.pk-viewport { position: relative; overflow: hidden; flex: 1 1 auto; min-width: 0; padding: 4px; margin: -4px; }
 .pk-viewport .pk-years { margin: 0; background: var(--plane); }
-.pk-years.ghost { position: absolute; inset: 0; }
+.pk-years.ghost { position: absolute; inset: 4px; }
 .pk-years.in-next { animation: pkInNext .38s cubic-bezier(.25,.8,.3,1) both; }
 .pk-years.out-next { animation: pkOutNext .38s cubic-bezier(.25,.8,.3,1) both; }
 .pk-years.in-prev { animation: pkInPrev .38s cubic-bezier(.25,.8,.3,1) both; }
@@ -455,7 +455,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260912d"></script>
+<script src="/data_summary.js?b=20260912e"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -520,7 +520,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260912d", function () { load("/app.js?b=20260912d"); });
+    load("/data.js?b=20260912e", function () { load("/app.js?b=20260912e"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

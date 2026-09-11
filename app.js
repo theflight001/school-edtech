@@ -359,8 +359,10 @@ window.setPF = v => { PF = v; render(); };
 window.setPT = v => { PT = v; render(); };
 window.clearPeriod = () => { PF = BASE_FROM; PT = ""; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
-// 자료가 닿는 마지막 달은 빌드가 알려 준다 — 손으로 적어 두면 월 갱신 뒤에도 옛 달에 멈춘다
-const YM_MIN = 202001, YM_MAX = +((DB_RAW.meta && DB_RAW.meta.ymMax) || 202607);
+// 고를 수 있는 마지막 달은 빌드가 알려 준다 — 손으로 적어 두면 월 갱신 뒤에도 옛 달에 멈춘다.
+// 자료가 닿는 마지막 달(ymMax)이 아니라 '온전히 다 받은 달'(ymLabel)까지만 연다 —
+// 이번 달치는 아직 며칠분뿐이라(2026-09-12 기준 9월 357건) 고르면 텅 빈 결과처럼 보인다.
+const YM_MIN = 202001, YM_MAX = +((DB_RAW.meta && (DB_RAW.meta.ymLabel || DB_RAW.meta.ymMax)) || 202608);
 const YM_TO = `${String(YM_MAX).slice(0, 4)}-${String(YM_MAX).slice(4)}`;
 let pkS = null, pkE = null, pkBase = 2025;
 // 기본(2026년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
@@ -824,7 +826,8 @@ function drawPicker() {
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
         <div class="pk-foot">
-          <span class="pk-hint">시작 월과 종료 월을 차례로 선택하세요.</span>
+          <span class="pk-hint">시작 월과 종료 월을 차례로 선택하세요.<br>
+            선택 가능 기간: ${Math.floor(YM_MIN / 100)}년 ${YM_MIN % 100}월 ~ ${Math.floor(YM_MAX / 100)}년 ${YM_MAX % 100}월</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
@@ -2056,10 +2059,18 @@ function render() {
 }
 // 화면을 옮길 때 쓰는 하나뿐인 통로. 주소를 진짜 경로로 바꾸고 다시 그린다.
 // (전에는 주소 뒤 #에 화면을 적었다 — 논문·공문에 인용하기 나빴다)
-function resetView() { PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; SLIST_G = ""; SPAGE = 1; }
+function resetView() {
+  PAGE = 1; LISTQ = ""; SORTK = "new"; PLIST_G = ""; SCHOOL_TAG = ""; VLIST_KIND = ""; SLIST_G = ""; SPAGE = 1;
+  // 목록이냐 지도냐는 늘 주소가 정한다 — 지도를 보다 제품을 누르면 새 화면은 목록으로 열리고
+  // (go가 view를 떼어 낸다), ?view=map 링크로 들어오거나 뒤로 가면 그때 화면 그대로 돌아온다.
+  VMODE = new URLSearchParams(location.search).get("view") === "map" ? "map" : "list";
+  clearMapSel();
+}
 function go(path) {
   if (path === location.pathname) return;
-  history.pushState(null, "", path + location.search);
+  const q = new URLSearchParams(location.search);
+  q.delete("view");                                  // 옮겨 간 화면은 목록부터 보여 준다
+  history.pushState(null, "", path + (q.toString() ? "?" + q : ""));
   resetView(); render();
 }
 window.go = go;
