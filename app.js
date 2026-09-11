@@ -826,8 +826,7 @@ function drawPicker() {
           <button class="pk-nav" onclick="pkShift(1)" ${pkBase >= 2025 ? "disabled" : ""} aria-label="다음 해">›</button>
         </div>
         <div class="pk-foot">
-          <span class="pk-hint">시작 월과 종료 월을 차례로 선택하세요.<br>
-            선택 가능 기간: ${Math.floor(YM_MIN / 100)}년 ${YM_MIN % 100}월 ~ ${Math.floor(YM_MAX / 100)}년 ${YM_MAX % 100}월</span>
+          <span class="pk-hint">시작 월과 종료 월을 차례로 선택하세요. 선택 가능 기간: ${Math.floor(YM_MIN / 100)}년 ${YM_MIN % 100}월 ~ ${Math.floor(YM_MAX / 100)}년 ${YM_MAX % 100}월</span>
           <span style="display:flex;gap:8px">
             <button class="pk-btn" onclick="closePicker()">취소</button>
             <button class="pk-btn primary" onclick="pkApply()" ${pkS === null ? "disabled" : ""}>적용</button>
@@ -1920,6 +1919,13 @@ function mountMap() {
     const map = MAP = new maplibregl.Map({container: el, center: [127.8, 36.2], zoom: 5.6, minZoom: 5, maxZoom: 18, maxPitch: 70,
       style: "https://tiles.openfreemap.org/styles/liberty", attributionControl: {compact: true}});
     map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), "top-right");
+    // 출처 표기는 빼지 못한다(OpenStreetMap 자료·OpenFreeMap 이용 조건). 대신 평소엔 ⓘ만 두고
+    // 누르면 펼쳐지게 접어 둔다 — 지도 아래를 가로지르던 흰 띠가 사라진다.
+    // 접힘은 우리가 직접 관리한다: 지도가 출처를 갱신할 때마다 제 표시를 다시 붙여 놓기 때문이다.
+    el.classList.add("attr-min");
+    el.addEventListener("click", e => {
+      if (e.target.closest(".maplibregl-ctrl-attrib")) el.classList.toggle("attr-min");
+    });
     el.addEventListener("mousedown", e => {
       if (!(e.metaKey || e.ctrlKey) || e.button !== 0) return;
       e.preventDefault(); e.stopPropagation();                  // 끌기(이동)로 넘기지 않는다

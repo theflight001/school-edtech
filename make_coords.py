@@ -294,6 +294,25 @@ def main():
                     out[k][3] += f" · 주소변환과 {d:.1f}km"
         json.dump(cache, open(cache_path, "w", encoding="utf-8"), ensure_ascii=False)
 
+    # 5-2) 손으로 채운 좌표 — 자동으로 못 찾은 곳은 사람이 적어 넣는다.
+    #      geo/위치미확인_학교.csv(또는 geo/manual_coords.csv)의 위도·경도 칸을 채우면 그대로 쓴다.
+    #      사람이 확인한 값이므로 시도 상자 검사나 주소 변환보다 앞선다.
+    for mp in ("geo/위치미확인_학교.csv", "geo/manual_coords.csv"):
+        if not os.path.exists(mp):
+            continue
+        n_man = 0
+        for r in csv.DictReader(open(mp, encoding="utf-8-sig")):
+            k, la, lo = (r.get("학교코드") or "").strip(), (r.get("위도") or "").strip(), (r.get("경도") or "").strip()
+            if not (k and la and lo):
+                continue
+            try:
+                out[k] = [float(la), float(lo), "M", f"손으로 넣음({os.path.basename(mp)})"]
+                n_man += 1
+            except ValueError:
+                print(f"  좌표를 읽지 못했다: {r.get('학교명')} {la},{lo}")
+        if n_man:
+            print(f"  손으로 넣은 좌표 {n_man}곳 ({mp})")
+
     # 6) 검산 — A·B는 OSM 같은 이름이 1km 안에 있으면 한 번 더 확인된 것으로 센다
     osm_ok = sum(1 for s in M if key_of(s) in out and out[key_of(s)][2] in "AB"
                  and any(km(out[key_of(s)], p) <= 1.0 for p in osm.get(norm(s["name"]), [])))
@@ -302,11 +321,11 @@ def main():
         w = csv.writer(f); w.writerow(["학교열쇠", "학교명", "학교급", "시도", "주소", "등급", "방법", "위도", "경도"])
         for s in M:
             k = key_of(s); p = out.get(k)
-            if not p or p[2] not in "ARS":
+            if not p or p[2] not in "ARSM":
                 w.writerow([k, s["name"], s["level"], sido(s["sido"]), s["address"], p[2] if p else "X", p[3] if p else "못 찾음", p[0] if p else "", p[1] if p else ""])
     g = collections.Counter(p[2] for p in out.values())
     print(f"학교 {len(M):,}곳 · 좌표 {len(out):,}곳 · 못 찾음 {len(M) - len(out):,}곳")
-    print("등급:", " · ".join(f"{k} {g[k]:,}" for k in "ABRSHOGD" if g[k]))
+    print("등급:", " · ".join(f"{k} {g[k]:,}" for k in "ABRSHOGDM" if g[k]))
     print(f"검산: A·B 중 OSM 같은 이름이 1km 안에 있는 곳 {osm_ok:,}곳")
 
 
