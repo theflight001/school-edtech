@@ -79,8 +79,8 @@
 3D스팀펜
 56종 리딩캣 패키지
 A-City
-AI 505_Body 포즈인식
-AI 505_Face 얼굴인식
+AI 505 Body
+AI 505 Face
 AI BMI 악력
 AI CLASS
 AI CRAFT
@@ -109,7 +109,7 @@ AI 모두의 자서전
 AI 미디어아트 융합수업
 AI 미러봇
 AI 바이브 코딩
-AI 보이스_음성인식 기초
+AI 보이스 음성인식
 AI 브레인 문해력
 AI 삐리릭
 AI 상담실
@@ -140,7 +140,7 @@ AI 진로-교육
 AI 진로·교육
 AI 진로교육
 AI 천체망원경
-AI 초이스_최적화 실험실
+AI 초이스 최적화
 AI 초피티
 AI 코딩과 전통
 AI 크래프트
@@ -439,7 +439,7 @@ GPT5
 GPT킬러
 GS-LLM
 GSHS
-GT_DESIGNER3
+GT DESIGNER3
 GV-CNC
 GX-WORKS 2
 GX-WORKS 3
@@ -572,8 +572,7 @@ LCT 학습역량검사
 LED 조명액자 키트
 LEGO Education
 LEGO Education레고에듀케이션 사이언스
-LEGO Education레고에듀케이션 스파이크_에센셜앱
-LEGO Education레고에듀케이션 스파이크_프라임
+LEGO Education레고에듀케이션 스파이크
 LEGO Education레고에듀케이션 컴퓨터사이언스
 LEGOEducation
 LITHO MASKLESS
@@ -662,8 +661,8 @@ MyOpenMath
 Mystery Science
 N A V
 NAVER 웨일 TOSEL
+NE Times
 NEW sPLUS
-NE_Times
 NE능률
 NLG - 넘버렛츠고
 Nearpod
@@ -676,7 +675,7 @@ NetSupport School
 NetSupport-School
 NetSupportSchool
 NetSupport·School
-New_아이온
+New 아이온
 Newsela Inc
 Newsela Newsela LITE
 NoRedInk
@@ -705,13 +704,13 @@ Padlet Platinum Annual
 Padlet for Schools
 PageBuilder
 PearlMountain Limited
+Pentalk PBL PRO
+Pentalk PBL STD
+Pentalk PRO DP4
+Pentalk PRO DP6
+Pentalk PRO TC1
+Pentalk PRO TC4
 Pentalk Pro
-Pentalk_PBL_PRO
-Pentalk_PBL_STD
-Pentalk_PRO_DP4
-Pentalk_PRO_DP6
-Pentalk_PRO_TC1
-Pentalk_PRO_TC4
 Perplexity
 Perso AI
 Phedy Labs
@@ -867,7 +866,7 @@ Vooks
 Vooks Inc
 Vrew
 WAGZAK JUMP -
-WBHS_CODE
+WBHS CODE
 Wacom
 Wallwisher Inc DBA
 WeDo
@@ -918,7 +917,7 @@ e-알리미
 eBook
 eDIBON SCADA SYSTEM
 ePAPS
-ed_Glasses1 열공비서
+ed Glasses1 열공비서
 edu
 elice
 exbody670
@@ -1007,21 +1006,21 @@ zSpace Studio A3
 게티이미지코리아
 겟 지피티
 겟지피티
-경기 Be-Able _경기도교육청
-경기고교학점제_경기도교육청
+경기 Be-Able 경기도교육청
+경기고교학점제 경기도교육청
 경기관광 플랫폼
 경기관광공사
 경기교육청
-경기도교육청전자도서관_경기도교육청
+경기도교육청전자도서관 경기도교육청
 경기도재활공학서비스연구지원센터
-경기온라인학교_경기도교육청
+경기온라인학교 경기도교육청
 경기정보통신
-경기환경실천소프트웨어 _경기도교육청
+경기환경실천소프트웨어 경기도교육청
 경남교육청
 경남형 진로교육 지원
 경량형 버나 만들기
 경북교육청
-경북인공지능맞춤형교수학습플랫폼 _AIEP
+경북인공지능맞춤형교수학습플랫폼 AIEP
 경상남도교육청 전자도서관
 경상남도교육청 진로교육원
 경상북도교육청전자도서관
@@ -1218,7 +1217,7 @@ zSpace Studio A3
 꽃집사의 GREEN POT
 꽃집사의 이끼정원
 꾸럼e
-꿈it 다_경기도교육청
+꿈it 다 경기도교육청
 꿈多이음
 꿈多이음 다문화 학생들의
 꿈담길
@@ -1353,7 +1352,7 @@ zSpace Studio A3
 대전공공도서관 통합홈페이지
 대전광역시 한밭도서관
 대전교육청
-대표홈페이지_국립특수교육원
+대표홈페이지 국립특수교육원
 대학과목선이수
 대학서림
 대학입학정보프로그램 유니브
@@ -1487,7 +1486,7 @@ zSpace Studio A3
 땅굴버저
 또박한글
 똑똑 수학탐험대
-똑똑 주식 대결_AI
+똑똑 주식 대결
 똑똑 한자 공부방
 똑책 독서퀴즈
 똑플러스
@@ -2398,7 +2397,7 @@ zSpace Studio A3
 스윙투앱
 스카티고
 스카티고 Scottie go
-스케치소프트_운영입력
+스케치소프트 운영입력
 스콜라
 스콜라스
 스콜라스틱
@@ -2432,7 +2431,7 @@ zSpace Studio A3
 스타랜드 파닉스
 스타일러스
 스타트씨
-스타트업 메이커_예비창업패키지 도전기
+스타트업 메이커 예비창업패키지
 스택 for ROBOID
 스터디365
 스터디에이
@@ -2494,7 +2493,7 @@ zSpace Studio A3
 심테크시스템
 싸다보카
 써큘러스리더
-써큘러스리더_운영
+써큘러스리더 운영
 써클플라잉 키트
 쎄듀런
 쎈 진학 나침판
@@ -2995,7 +2994,7 @@ zSpace Studio A3
 온라인 체험 배정
 온리원
 온마음 성장펫
-온맘_국립특수교육원
+온맘 국립특수교육원
 온생각 시스템
 온웨이에듀 종합관리시스템
 온한글 한글해득 지원
@@ -3342,7 +3341,7 @@ zSpace Studio A3
 자원그물맵
 자율주행로봇 만들기 DIY
 자작자작
-잡에이블_국립특수교육원
+잡에이블 국립특수교육원
 장영실의 디지털 트윈
 장평 포털
 장학퀴즈세트
@@ -4047,7 +4046,7 @@ zSpace Studio A3
 페직스 유료 실험
 펜슬스페이스
 편집
-평생배움세상_국립특수교육원
+평생배움세상 국립특수교육원
 포디랜드
 포디메카트로닉스
 포레스트 베이직 심리
@@ -4185,15 +4184,15 @@ zSpace Studio A3
 하와이컴퍼니
 하와이클래쓰 교과서 연계
 하이동동
-하이랜드_경기도교육청
+하이랜드 경기도교육청
 하이러닝
-하이러닝 AI 서논술형평가시스템_경기도교육청
+하이러닝 AI 서논술형평가시스템
+하이러닝 CLASSUP 영어
+하이러닝 경기도교육청
+하이러닝 미리캔버스 경기도교육청
 하이러닝 스마트리영어
-하이러닝 스마트리영어_경기도교육청
-하이러닝_CLASSUP_영어 수업 평가
-하이러닝_경기도교육청
-하이러닝_미리캔버스_경기도교육청
-하이러닝_아티클러 _ 경기도교육청
+하이러닝 스마트리영어 경기도교육청
+하이러닝 아티클러 경기도교육청
 하이브레디
 하이씨티
 하이에듀
@@ -4233,7 +4232,7 @@ zSpace Studio A3
 학내망스마트-채점
 학내망스마트·채점
 학내망스마트채점
-학생관리프로그램_진학통
+학생관리프로그램 진학통
 학생선수 e-School 온라인
 학생역량강화 솔루션
 학생참여중심수업
