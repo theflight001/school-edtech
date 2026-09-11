@@ -92,6 +92,9 @@ fi
 COLLECT=1
 
 # ── 2. 정제
+# 나라장터 계약은 extract_edtech.py가 refined_full.csv로 추려야 빌드(refined_*.csv)에 들어간다.
+# 이 줄이 빠져 있어 8월 18일 이후 받은 나라장터 자료가 한 번도 사이트에 들어가지 않았다(2026-09-11 발견).
+run "나라장터 추림"   python3 extract_edtech.py
 run "시도 정제"      python3 refine_office.py
 run "S2B 정제"       python3 refine_s2b.py
 run "교육청 일괄"    python3 collect_nara_office.py --begin "$BEGIN" --end "$END"
