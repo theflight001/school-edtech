@@ -13,43 +13,135 @@ OUT = "edzip_brand_keywords.txt"
 MAXALT = 64                     # 한 규칙에서 펼칠 최대 가짓수 (조합 폭발 막기)
 
 
-def expand(pat):
-    """정규식 한 갈래를 검색어 후보들로 펼친다"""
-    pat = re.sub(r"\(\?[:=!][^)]*\)", "", pat)       # (?:…) (?=…) (?!…)
-    pat = re.sub(r"\(\?<[=!][^)]*\)", "", pat)       # (?<=…) (?<!…)
-    pat = pat.replace("\\b", "")
-    parts, i = [], 0
-    while i < len(pat):
-        ch = pat[i]
-        if ch == "[":                                 # 글자 묶음 → 갈래
-            j = pat.index("]", i)
-            body = pat[i + 1:j]
-            i = j + 1
-            opt = pat[i] in "?*" if i < len(pat) else False
-            if opt:
-                i += 1
-            chars = [c for c in re.sub(r"\\s", " ", body).replace("\\-", "-") if c != "\\"]
-            parts.append(([""] if opt else []) + chars)
-        elif ch == "\\" and i + 1 < len(pat) and pat[i + 1] == "s":
-            i += 2
-            if i < len(pat) and pat[i] in "?*+":
-                i += 1
-            parts.append(["", " "])                   # 공백은 있어도 없어도 된다
-        elif ch in "?*+":
-            if parts and len(parts[-1]) == 1:         # 앞 글자가 없어도 된다
-                parts[-1] = ["", parts[-1][0]]
-            i += 1
-        elif ch in "(){}^$":
-            i += 1
+def _close(p, i):
+    """p[i]가 '('일 때 짝이 되는 ')'의 자리 — 글자 묶음 [...] 안의 괄호와 \\ 이스케이프는 세지 않는다"""
+    depth, j = 0, i
+    while j < len(p):
+        c = p[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            j = p.index("]", j + 1) + 1
+            continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return j
+        j += 1
+    return len(p) - 1
+
+
+def _split_top(p):
+    """괄호·글자 묶음 밖의 '|'에서만 가른다"""
+    parts, depth, cur, j = [], 0, [], 0
+    while j < len(p):
+        c = p[j]
+        if c == "\\":
+            cur.append(p[j:j + 2]); j += 2; continue
+        if c == "[":
+            k = p.index("]", j + 1) + 1
+            cur.append(p[j:k]); j = k; continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        if c == "|" and depth == 0:
+            parts.append("".join(cur)); cur = []
         else:
-            parts.append([ch])
-            i += 1
-    n = 1
-    for p in parts:
-        n *= max(1, len(p))
-        if n > MAXALT:
-            return []
-    return ["".join(c).strip() for c in itertools.product(*[p or [""] for p in parts])]
+            cur.append(c)
+        j += 1
+    parts.append("".join(cur))
+    return parts
+
+
+def _class(body):
+    """글자 묶음을 글자들로 — 범위(가-힣, 0-9)나 부정([^...])은 셀 수 없으니 None"""
+    if body.startswith("^") or re.search(r"[^\\]-[^\]]", body.replace("\\-", "")):
+        return None
+    out, j = [], 0
+    while j < len(body):
+        if body[j] == "\\" and j + 1 < len(body):
+            out.append(" " if body[j + 1] == "s" else body[j + 1]); j += 2
+        else:
+            out.append(body[j]); j += 1
+    return out
+
+
+def _alts(p):
+    """괄호 깊이를 지키며 정규식 한 덩어리를 문자열들로 펼친다"""
+    result = []
+    for b in _split_top(p):
+        seqs, i = [""], 0
+        while i < len(b):
+            c = b[i]
+            opts = None
+            if c == "(":
+                j = _close(b, i)
+                inner = b[i + 1:j]
+                if inner.startswith("?:"):
+                    inner = inner[2:]
+                elif inner.startswith("?"):
+                    inner = ""                     # (?i) 따위
+                opts = _alts(inner) or [""]
+                i = j + 1
+            elif c == "[":
+                j = b.index("]", i + 1)
+                opts = _class(b[i + 1:j]) or [""]
+                i = j + 1
+            elif c == "\\":
+                n = b[i + 1] if i + 1 < len(b) else ""
+                opts = [" "] if n == "s" else [""] if n in "bBdDwW" else [n]
+                i += 2
+            elif c in "^$":
+                i += 1; continue
+            elif c == ".":
+                i += 1
+                if i < len(b) and b[i] in "*+?":
+                    i += 1
+                continue
+            elif c == "{":
+                i = b.index("}", i) + 1; continue
+            else:
+                opts = [c]; i += 1
+            # 뒤따르는 수량자: ?·* 는 없어도 된다
+            if i < len(b) and b[i] in "?*+":
+                if b[i] in "?*":
+                    opts = [""] + [o for o in opts if o != ""]
+                i += 1
+                if i < len(b) and b[i] == "?":
+                    i += 1
+            seqs = [a + o for a in seqs for o in opts]
+            if len(seqs) > MAXALT * 4:
+                seqs = seqs[:MAXALT * 4]
+        result.extend(seqs)
+    return result
+
+
+def expand_rule(pat):
+    """판정 규칙 하나를 검색어 후보로 펼친다.
+    - (?!…) (?<!…) '이 말이 있으면 아니다'는 버린다 — 예전엔 이게 조각조각 검색어로 새어
+      가방·커피·모듈 같은 말이 들어갔고, 강원 서버가 '모듈'에 500을 냈다(2026-09-11).
+    - (?=…) '이 말이 있어야 한다'는 따로 펼쳐 더한다 — Tinkercad·교보문고처럼 제품명이
+      거기 들어 있는 규칙이 있다.
+    - (?:A|B)는 괄호 짝을 맞춰 곱해 펼친다 — 예전엔 괄호를 안 보고 '|'로 쪼개 Gamma·네프론·
+      MS Office처럼 괄호 안 첫 갈래가 버려졌다."""
+    main, pos, i = [], [], 0
+    while i < len(pat):
+        if pat.startswith(("(?=", "(?!", "(?<=", "(?<!"), i):
+            j = _close(pat, i)
+            head = 3 if pat[i + 2] in "=!" else 4
+            if pat[i:i + head] == "(?=":
+                pos.append(re.sub(r"^\.\*", "", pat[i + head:j]))
+            i = j + 1
+            continue
+        main.append(pat[i]); i += 1
+    out = []
+    for piece in ["".join(main)] + pos:
+        out.extend(_alts(piece))
+    return out
 
 
 def from_rules():
@@ -58,8 +150,8 @@ def from_rules():
     exec(compile(src[:src.index("rows = list(csv.reader(open(SRC")], "rules", "exec"), ns)
     out = set()
     for _t, pat in ns["SPECIFIC_RULES"]:
-        for alt in re.split(r"\|(?![^\[]*\])", pat):
-            for w in expand(alt):
+        for w in expand_rule(pat):
+            if True:
                 w = re.sub(r"\s+", " ", w).strip()
                 # 판정 규칙에서 온 말은 두 글자여도 살린다 — 캔바·젭처럼 짧은 제품이 있다.
                 # (에듀집 제품·회사 이름은 세 글자부터: 두 글자면 아무 계약에나 걸린다)
@@ -125,6 +217,9 @@ def main():
         k = URL.sub(" ", k)
         k = PAREN.sub(" ", k)
         k = PUNCT.sub(" ", k)
+        # 하이픈은 띄어쓰기와 같이 본다 — 규칙의 [\s\-]?를 펼치면 'Copilot-MS 365'·'Copilot MS 365'가
+        # 따로 생겨 서버에 같은 걸 두 번 묻게 된다.
+        k = k.replace("-", " ")
         k = re.sub(r"\s+", " ", k).strip(" -·")
         words = k.split()
         if trim and len(words) > 3:
@@ -149,7 +244,22 @@ def main():
     # ('AI 디지털 교과서'가 그렇다 — 자료에서 가장 큰 범주다). 특수문자만 다듬는다.
     kw_rules = {c for c in (clean(k, trim=False) for k in rules) if usable(c, generic_ok=True)}
     kw_edzip = {c for c in (clean(k) for k in (prod | comp)) if usable(c)}
-    allk = sorted((kw_rules | kw_edzip) - STOP)
+    pool = sorted((kw_rules | kw_edzip) - STOP)
+    # 띄어쓰기·가운뎃점만 다른 변형은 무리마다 둘만 남긴다 — '다 띄운 것'과 '다 붙인 것'.
+    # 교육청 검색은 글자 그대로 찾아서 변형이 아예 쓸모없진 않지만, 규칙의 \s?를 곱해 펼치면
+    # '11개 시도교육청 공동 구축'이 여덟 갈래로 늘어 같은 걸 여덟 번 묻게 된다(2026-09-11).
+    groups = {}
+    for k in pool:
+        groups.setdefault(re.sub(r"[\s·]+", "", k).lower(), []).append(k)
+    allk = []
+    for vs in groups.values():
+        if len(vs) <= 2:
+            allk.extend(vs)
+            continue
+        spaced = max(vs, key=lambda v: (len(re.findall(r"[\s·]", v)), v))
+        compact = min(vs, key=lambda v: (len(re.findall(r"[\s·]", v)), v))
+        allk.extend({spaced, compact})
+    allk = sorted(allk)
     open(OUT, "w", encoding="utf-8").write("\n".join(allk) + "\n")
     print(f"{OUT} — {len(allk):,}종 "
           f"(규칙 표기 {len(rules):,} · 에듀집 제품 {len(prod):,} · 회사 {len(comp):,})")
