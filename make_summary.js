@@ -93,7 +93,10 @@ const BASE = records.filter(r => !r.dup);
 function homeOf(scope) {
   // 첫 화면은 기본 기간(2026년~)으로 센다 — app.js의 BASE_FROM과 같은 기준이라야
   // 자료가 다 온 뒤 숫자가 바뀌어 보이지 않는다
-  const IN = BASE.filter(r => !r.year || r.year >= 2026);
+  // app.js의 inPeriod와 같은 기준이라야 첫 화면과 자료를 다 받은 화면의 숫자가 같다.
+  // 날짜가 없는 기록은 2026.1~에 든다고 말할 수 없으므로 뺀다 — 예전엔 넣어서, 날짜 없는 기록이
+  // 많은 제품(e알리미)이 첫 화면에서만 1위였다가 자료가 도착하면 2위로 바뀌었다(2026-09-12).
+  const IN = BASE.filter(r => r.ym ? r.ym >= 202601 : (r.year ? r.year >= 2026 : false));
   const RF = scope === "product" ? IN.filter(hasProduct) : IN;
   // 첫 화면 막대도 학교 선택 창과 같은 층으로 — 초·중·고·특수기타
   // (app.js의 LEVELS와 같은 묶음이다. 여기서 다르게 묶으면 자료가 다 온 뒤 막대가 바뀌어 보인다)
