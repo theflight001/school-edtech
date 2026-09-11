@@ -1972,17 +1972,17 @@ function mountMap() {
       }
       map.addImage("pill", ...pillImage("#ffffff", "rgba(15,23,42,0.16)"));
       map.addImage("pill-on", ...pillImage("#4fd49a", "rgba(9,88,60,0.28)"));   // 누른 학교 — 초록
-      const G = "#16a36f", DIM = "#98a2b3", has = [">", ["get", "k"], 0];
+      const G = "#16a36f", DIM = "#98a2b3", has = [">", ["get", "k"], 0];   // G·DIM은 점 색
       map.addSource("sch", {type: "geojson", data: {type: "FeatureCollection", features: feats},
         cluster: true, clusterMaxZoom: 12, clusterRadius: 44,
         clusterProperties: {w: ["+", ["case", has, 1, 0]]}});
-      map.addLayer({id: "cl", type: "circle", source: "sch", filter: ["has", "point_count"], paint: {
-        "circle-color": ["case", [">", ["get", "w"], 0], G, DIM], "circle-opacity": 0.92,
-        "circle-radius": ["step", ["get", "point_count"], 14, 20, 17, 100, 21, 500, 26, 2000, 31],
-        "circle-stroke-width": 3, "circle-stroke-color": "#ffffff"}});
-      map.addLayer({id: "cl-n", type: "symbol", source: "sch", filter: ["has", "point_count"],
-        layout: {"text-field": ["to-string", ["get", "point_count"]], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-allow-overlap": true},
-        paint: {"text-color": "#ffffff"}});
+      // 묶음도 학교 이름표와 같은 흰 딱지로 — 초록 원은 바탕과 따로 놀았다(2026-09-12)
+      map.addLayer({id: "cl", type: "symbol", source: "sch", filter: ["has", "point_count"],
+        layout: {"text-field": ["concat", ["to-string", ["get", "point_count"]], "개교"],
+          "text-font": ["Noto Sans Bold"], "text-size": 12.5,
+          "icon-image": "pill", "icon-text-fit": "width", "icon-text-fit-padding": [0, 0, 0, 0],
+          "icon-allow-overlap": true, "text-allow-overlap": true},
+        paint: {"text-color": "#222222"}});
       map.addLayer({id: "pt", type: "circle", source: "sch", filter: ["!", ["has", "point_count"]], paint: {
         "circle-color": ["case", has, G, DIM], "circle-radius": 4.5, "circle-stroke-width": 2, "circle-stroke-color": "#ffffff"}});
       // 이름표 — 겹치면 기록 많은 학교가 남고, 가려진 학교도 점은 보인다
