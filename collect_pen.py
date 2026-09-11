@@ -2,7 +2,7 @@
 # 사용: python3 collect_pen.py [--office 부산|경북] [--begin 2023-01] [--end 2026-08]
 # 두 시도가 같은 화면(selectPrvcntrInfoList)을 써서 주소만 바꿔 재사용한다.
 # 제약: 공개 기준 100만원 이상, 검색 기간 최대 1개월 → 월 단위로 나눠 조회한다.
-import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
+import argparse, csv, html, json, os, re, time, urllib.error, urllib.parse, urllib.request
 from datetime import date
 
 OFFICES = {
@@ -66,7 +66,9 @@ def fetch(kw, bdt, edt, year, page):
         try:
             return urllib.request.urlopen(req, timeout=60).read().decode("utf-8", "replace")
         except Exception as e:
-            if wait is None:
+            # 400은 서버가 그 검색어를 못 읽는 것이라 다시 물어도 같다 — 기다리지 않고 바로 넘긴다
+            # (2026-09-12 경북: 특수문자 든 검색어마다 5·20·60초를 버렸다)
+            if wait is None or (isinstance(e, urllib.error.HTTPError) and e.code == 400):
                 raise
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
@@ -129,8 +131,18 @@ def main():
             if key in done:
                 continue
             page = 1
+            bad = False
             while True:
-                body = fetch(kw, bdt, edt, year, page)
+                try:
+                    body = fetch(kw, bdt, edt, year, page)
+                except BudgetOut:
+                    raise
+                except Exception as e:
+                    # 특수문자가 든 검색어 하나에 400이 나면 그때까지 받던 것까지 통째로 멈췄다
+                    # (2026-09-12 경북, 1,884회에서 끝). 그 칸만 건너뛰고 '끝냄'으로 적지 않는다.
+                    print(f"  [{kw}] 건너뜀 ({e})", flush=True)
+                    bad = True
+                    break
                 req_n += 1
                 rows = parse(body)
                 for r in rows:
@@ -152,6 +164,8 @@ def main():
                 if page % 10 == 0:
                     print(f"  …{page}페이지째", flush=True)
                 polite()
+            if bad:
+                continue
             done.add(key)
             if len(done) % 6 == 0:
                 print(f"  {bdt[:7]}까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
