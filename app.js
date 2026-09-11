@@ -1888,24 +1888,27 @@ window.clearMapSel = () => {
   if (box) box.innerHTML = "";
   if (MAP && MAP._setSel) MAP._setSel([]);
 };
-// 학교 이름표 — 작고 납작한 둥근 사각 딱지(높이 26·모서리 9·좌우 여백 9, 그림자는 옅게).
-// 처음엔 양끝을 완전한 반원으로 두었더니 높이 40에 통통해 보였다(2026-09-12).
-// 가로만 늘려(icon-text-fit: width) 이름 길이에 맞춘다 — 늘림 구간과 글자 자리를 함께 적어 준다.
-function pillImage(fill) {
-  const r = 2, pad = 4 * r, ph = 26 * r, rad = 9 * r, px = 9 * r;
+// 학교 이름표 — Airbnb 지도의 가격 딱지처럼: 흰 바탕에 옅은 회색 테두리 한 줄, 그림자는 얕게.
+// 높이 24·모서리 8·좌우 여백 10·글자 12.
+// 늘림 구간(stretchX)은 곡선이 끝난 '평평한 가운데'로만 잡는다 — 모서리에 걸치면 늘릴 때 곡선이
+// 눌려 직선과 만나는 자리가 어긋나 보인다(2026-09-12 울릉고등학교).
+function pillImage(fill, line) {
+  const r = 2, pad = 4 * r, ph = 24 * r, rad = 8 * r, px = 10 * r, bw = r;   // bw: 테두리 1px
   const h = ph + pad * 2, w = (px + rad) * 2 + pad * 2;
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const g = c.getContext("2d");
-  g.shadowColor = "rgba(15,23,42,0.18)"; g.shadowBlur = 2.5 * r; g.shadowOffsetY = 1.5 * r;
-  g.beginPath();
-  g.moveTo(pad + rad, pad);
-  g.arcTo(w - pad, pad, w - pad, h - pad, rad);
-  g.arcTo(w - pad, h - pad, pad, h - pad, rad);
-  g.arcTo(pad, h - pad, pad, pad, rad);
-  g.arcTo(pad, pad, w - pad, pad, rad);
-  g.closePath(); g.fillStyle = fill; g.fill();
+  const path = (inset) => {
+    const x0 = pad + inset, y0 = pad + inset, x1 = w - pad - inset, y1 = h - pad - inset, rr = rad - inset;
+    g.beginPath(); g.moveTo(x0 + rr, y0);
+    g.arcTo(x1, y0, x1, y1, rr); g.arcTo(x1, y1, x0, y1, rr);
+    g.arcTo(x0, y1, x0, y0, rr); g.arcTo(x0, y0, x1, y0, rr); g.closePath();
+  };
+  g.shadowColor = "rgba(15,23,42,0.16)"; g.shadowBlur = 2 * r; g.shadowOffsetY = r;
+  path(0); g.fillStyle = fill; g.fill();
+  g.shadowColor = "transparent";
+  if (line) { path(bw / 2); g.lineWidth = bw; g.strokeStyle = line; g.stroke(); }
   return [g.getImageData(0, 0, w, h), {pixelRatio: r,
-    stretchX: [[pad + px + rad * 0.6, w - pad - px - rad * 0.6]],
+    stretchX: [[pad + rad + bw, w - pad - rad - bw]],
     content: [pad + px, pad, w - pad - px, h - pad]}];
 }
 // ⌘(맥)·Ctrl을 누른 채 끌면 좌우로 방향을 돌리고 위아래로 기울인다 — 기울이면 건물이 입체로 선다.
@@ -1967,8 +1970,8 @@ function mountMap() {
         const tf = map.getLayoutProperty(ly.id, "text-field");
         if (tf && JSON.stringify(tf).includes("name")) map.setLayoutProperty(ly.id, "text-field", ["coalesce", ["get", "name:ko"], ["get", "name"]]);
       }
-      map.addImage("pill", ...pillImage("#ffffff"));
-      map.addImage("pill-on", ...pillImage("#4fd49a"));       // 누른 학교 — 초록
+      map.addImage("pill", ...pillImage("#ffffff", "rgba(15,23,42,0.16)"));
+      map.addImage("pill-on", ...pillImage("#4fd49a", "rgba(9,88,60,0.28)"));   // 누른 학교 — 초록
       const G = "#16a36f", DIM = "#98a2b3", has = [">", ["get", "k"], 0];
       map.addSource("sch", {type: "geojson", data: {type: "FeatureCollection", features: feats},
         cluster: true, clusterMaxZoom: 12, clusterRadius: 44,
