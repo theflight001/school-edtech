@@ -1888,13 +1888,12 @@ window.clearMapSel = () => {
   if (box) box.innerHTML = "";
   if (MAP && MAP._setSel) MAP._setSel([]);
 };
-// 학교 이름표 — Airbnb 지도의 가격 딱지처럼: 흰 바탕에 옅은 회색 테두리 한 줄, 그림자는 얕게.
-// 높이 24·모서리 8·좌우 여백 10·글자 12.
-// 늘림 구간(stretchX)은 곡선이 끝난 '평평한 가운데'로만 잡는다 — 모서리에 걸치면 늘릴 때 곡선이
-// 눌려 직선과 만나는 자리가 어긋나 보인다(2026-09-12 울릉고등학교).
+// 학교 이름표·묶음 딱지 — 높이 32, 좌우 여백 12, 끝이 완전히 둥근 알약, 테두리 1px,
+// 그림자 0 2px 4px(검정 20%), 글자 13 굵게. 늘림 구간은 두 반원 사이 평평한 가운데만 —
+// 모서리에 걸치면 늘릴 때 곡선이 눌려 직선과 만나는 자리가 어긋난다(2026-09-12 울릉고등학교).
 function pillImage(fill, line) {
-  const r = 2, pad = 4 * r, ph = 24 * r, rad = 8 * r, px = 10 * r, bw = r;   // bw: 테두리 1px
-  const h = ph + pad * 2, w = (px + rad) * 2 + pad * 2;
+  const r = 2, pad = 6 * r, ph = 32 * r, rad = ph / 2, px = 12 * r, bw = r;
+  const h = ph + pad * 2, w = 2 * (pad + rad) + 4 * r;
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const g = c.getContext("2d");
   const path = (inset) => {
@@ -1903,12 +1902,12 @@ function pillImage(fill, line) {
     g.arcTo(x1, y0, x1, y1, rr); g.arcTo(x1, y1, x0, y1, rr);
     g.arcTo(x0, y1, x0, y0, rr); g.arcTo(x0, y0, x1, y0, rr); g.closePath();
   };
-  g.shadowColor = "rgba(15,23,42,0.16)"; g.shadowBlur = 2 * r; g.shadowOffsetY = r;
+  g.shadowColor = "rgba(0,0,0,0.20)"; g.shadowBlur = 4 * r; g.shadowOffsetY = 2 * r;
   path(0); g.fillStyle = fill; g.fill();
   g.shadowColor = "transparent";
-  if (line) { path(bw / 2); g.lineWidth = bw; g.strokeStyle = line; g.stroke(); }
+  path(bw / 2); g.lineWidth = bw; g.strokeStyle = line; g.stroke();
   return [g.getImageData(0, 0, w, h), {pixelRatio: r,
-    stretchX: [[pad + rad + bw, w - pad - rad - bw]],
+    stretchX: [[pad + rad, w - pad - rad]],
     content: [pad + px, pad, w - pad - px, h - pad]}];
 }
 // ⌘(맥)·Ctrl을 누른 채 끌면 좌우로 방향을 돌리고 위아래로 기울인다 — 기울이면 건물이 입체로 선다.
@@ -1970,8 +1969,9 @@ function mountMap() {
         const tf = map.getLayoutProperty(ly.id, "text-field");
         if (tf && JSON.stringify(tf).includes("name")) map.setLayoutProperty(ly.id, "text-field", ["coalesce", ["get", "name:ko"], ["get", "name"]]);
       }
-      map.addImage("pill", ...pillImage("#ffffff", "rgba(15,23,42,0.16)"));
-      map.addImage("pill-on", ...pillImage("#4fd49a", "rgba(9,88,60,0.28)"));   // 누른 학교 — 초록
+      map.addImage("pill", ...pillImage("#ffffff", "#d4d4d4"));
+      map.addImage("pill-hov", ...pillImage("#ffffff", "#999999"));            // 올려 둔 학교 — 테두리만 진하게
+      map.addImage("pill-on", ...pillImage("#5fd89a", "#5fd89a"));             // 누른 학교 — 초록
       const G = "#16a36f", DIM = "#98a2b3", has = [">", ["get", "k"], 0];   // G·DIM은 점 색
       map.addSource("sch", {type: "geojson", data: {type: "FeatureCollection", features: feats},
         cluster: true, clusterMaxZoom: 12, clusterRadius: 44,
@@ -1979,7 +1979,7 @@ function mountMap() {
       // 묶음도 학교 이름표와 같은 흰 딱지로 — 초록 원은 바탕과 따로 놀았다(2026-09-12)
       map.addLayer({id: "cl", type: "symbol", source: "sch", filter: ["has", "point_count"],
         layout: {"text-field": ["concat", ["to-string", ["get", "point_count"]], "개교"],
-          "text-font": ["Noto Sans Bold"], "text-size": 12.5,
+          "text-font": ["Noto Sans Bold"], "text-size": 13,
           "icon-image": "pill", "icon-text-fit": "width", "icon-text-fit-padding": [0, 0, 0, 0],
           "icon-allow-overlap": true, "text-allow-overlap": true},
         paint: {"text-color": "#222222"}});
@@ -1987,13 +1987,13 @@ function mountMap() {
         "circle-color": ["case", has, G, DIM], "circle-radius": 4.5, "circle-stroke-width": 2, "circle-stroke-color": "#ffffff"}});
       // 이름표 — 겹치면 기록 많은 학교가 남고, 가려진 학교도 점은 보인다
       const pill = (id, icon, extra) => ({id, type: "symbol", source: "sch", filter: ["!", ["has", "point_count"]],
-        layout: {"text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 12,
+        layout: {"text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 13,
           "icon-image": icon, "icon-text-fit": "width", "icon-text-fit-padding": [0, 0, 0, 0],
           "symbol-sort-key": ["-", 0, ["get", "k"]], ...extra},
         paint: {"text-color": ["case", has, "#222222", "#8a8f98"]}});
       map.addLayer(pill("pt-n", "pill", {}));
       // 올려 둔 학교는 조금 크게 — Airbnb처럼 어느 딱지를 가리키는지 바로 보인다
-      map.addLayer({...pill("pt-hov", "pill", {"text-size": 13, "icon-allow-overlap": true, "text-allow-overlap": true}),
+      map.addLayer({...pill("pt-hov", "pill-hov", {"icon-allow-overlap": true, "text-allow-overlap": true}),
         filter: ["==", ["get", "href"], ""]});
       // 한 학교는 한 겹만 그린다 — 고른 학교(초록) 뒤에 올려둔 이름표(조금 큰 흰 딱지)가 깔려
       // 하얀 테두리처럼 보였다(2026-09-12).
@@ -2007,7 +2007,7 @@ function mountMap() {
       };
       map._setSel = hrefs => { selH = hrefs; applyPt(); };
       map.addLayer({...pill("pt-sel", "pill-on", {"icon-allow-overlap": true, "text-allow-overlap": true}),
-        filter: ["==", ["get", "href"], ""]});
+        filter: ["==", ["get", "href"], ""], paint: {"text-color": "#163c2c"}});
       const pick = pt => map.queryRenderedFeatures([[pt.x - 6, pt.y - 6], [pt.x + 6, pt.y + 6]], {layers: ["pt-sel", "pt-hov", "pt-n", "pt"]});
       map.on("click", e => {
         const box = [[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]];
