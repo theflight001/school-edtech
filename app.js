@@ -2112,7 +2112,9 @@ render();
 perfMark("첫 화면 그리기");
 // 요약 파일이 원자료와 어긋나면 첫 화면 수치가 뒤늦게 바뀐다 — ?perf=1일 때 미리 알려 준다
 if (PERF && typeof DB_SUM !== "undefined") {
-  const BASE = R.filter(r => !r.dup);
+  // 요약과 같은 기준으로 세야 진짜 어긋남만 잡는다 — 전 기간으로 세어 늘 경고가 떴고,
+  // 그래서 첫 화면과 자료 화면의 순위가 달라진 것을 잡아 주지 못했다(2026-09-12).
+  const BASE = baseRecs().filter(r => !r.dup);
   const RF = BASE.filter(hasProduct);
   const tp = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const names = tp.map(p => p[0]).filter(t => !GENERIC_TAGS.has(t));
