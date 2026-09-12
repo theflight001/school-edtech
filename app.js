@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912c";
+  s.src = "/data_detail.js?b=20260912d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -474,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912c";
+    s2.src = "/data_detail_old.js?b=20260912d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -486,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912c";
+  s.src = "/data_old.js?b=20260912d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1578,8 +1578,7 @@ function aboutView() {
       </ul>
 
       <div class="example">
-        <b>예)</b>
-        <p class="ex-q">OO초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
+        <p class="ex-q"><b>예)</b> OO초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
         <ul>
           <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 붙습니다.</li>
           <li>같은 제품이라도 표기가 서로 다른 경우가 있습니다(챗GPT · ChatGPT · 챗지피티). 어느 쪽으로 적혀 있든 <b>ChatGPT</b>로 태그를 설정하고, 한글로 검색하든 영문으로 검색하든 동일한 결과를 제공합니다.</li>
