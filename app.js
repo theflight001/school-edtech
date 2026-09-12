@@ -2147,7 +2147,8 @@ function resetView() {
   clearMapSel();
 }
 function go(path) {
-  if (path === location.pathname) return;
+  // 같은 화면이면 맨 위로 올린다 — 첫 화면에서 홈을 눌렀을 때 아무 일도 없어 보였다(2026-09-12)
+  if (path === location.pathname) { window.scrollTo({top: 0, behavior: "smooth"}); return; }
   const q = new URLSearchParams(location.search);
   q.delete("view");                                  // 옮겨 간 화면은 목록부터 보여 준다
   history.pushState(null, "", path + (q.toString() ? "?" + q : ""));
