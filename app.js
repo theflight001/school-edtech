@@ -1692,12 +1692,17 @@ function allSwitch(cur) {
 function recordsView() {
   const recs = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
   const nd = recs.filter(r => !r.dup);
+  // 기록에 나온 학교를 센다. 그중에는 전국 학교 명단에 없는 곳도 있다 — 옛 이름으로 계약했거나
+  // 학교코드가 없는 기록, 집합 항목 등이다. 학교 전체 보기(명단 기준)와 숫자가 다른 이유라 밝혀 둔다.
+  const sKeys = uniq(nd.map(skey));
+  const outside = sKeys.filter(k => !idxByCode.has(k)).length;
   return `
     <div class="crumb"><a href="/">홈</a> › 기록 전체 보기</div>
     ${allSwitch("/records")}
     <div class="pagehead"><h2>기록 전체 보기</h2>
       <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
-        학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 · 조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
+        학교 ${sKeys.length.toLocaleString()}개교${outside ? `(전국 학교 명단에 없는 ${outside.toLocaleString()}곳 포함)` : ""} ·
+        조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
     <div class="card">${recsBlock(recs)}</div>`;
 }
 function productsView() {
