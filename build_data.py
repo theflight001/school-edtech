@@ -1425,6 +1425,11 @@ school_index = []
 _index_keys = []                                    # make_coords.py의 key_of와 같은 열쇠 — 좌표를 붙일 때 쓴다
 for cands in master_by_name.values():
     for s in cands:
+        # NEIS 시험용 항목은 학교급이 초·중·고로 적혀 있어 학교급 기준 제외를 빠져나간다.
+        # 소속이 '재외한국학교교육청'인데 학교급이 국내 학교급인 조합이 그 표식이다
+        # (2026-09-12: AIDT초/중/고 3곳, 주소가 KERIS 자리인 대구 동구 동내로 64).
+        if (s.get("office") or "") == "재외한국학교교육청" and s["level"] in ("초등학교", "중학교", "고등학교"):
+            continue
         if s["level"] and not any(e in s["level"] for e in INDEX_EXCLUDE):
             _index_keys.append((s.get("code") or "").strip() or "local-" + __import__("hashlib").sha1(
                 f"{s['sido']}|{s['name']}|{s['address']}".encode()).hexdigest()[:12])
@@ -1456,10 +1461,16 @@ if __import__("os").path.exists(_geo_path):
 # 데이터 안내가 쓰는 숫자를 여기서 센다 (app.js는 이 값을 받아 쓰기만 한다)
 master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
 _excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0,
-                    "검정고시 등 비학교": 0, "학교급 미기재": 0}
+                    "검정고시 등 비학교": 0, "학교급 미기재": 0,
+                    "NEIS 시험용 항목": 0}
 for _s in master_all:
     _lv = _s.get("level") or ""
-    if not _lv:
+    if (_s.get("office") or "") == "재외한국학교교육청" and _lv in ("초등학교", "중학교", "고등학교"):
+        _excluded_counts["NEIS 시험용 항목"] += 1
+    elif not _lv:
+        # NEIS 시험용 항목 — 소속이 '재외한국학교교육청'인데 학교급은 초·중·고로 적혀 있어
+        # 학교급 기준 제외를 빠져나갔다(2026-09-12 확인: AIDT초/중/고, 주소가 KERIS 자리인
+        # 대구 동구 동내로 64다). 실재하지 않는 학교라 명단에서 뺀다.
         # 학교급 칸이 빈 항목 — 오늘 기준 전북 고입·고졸 검정고시 시행 단위 2곳이다.
         # 시험이지 학교가 아니므로 '분류 불가'가 아니라 '학교가 아님'으로 센다(2026-09-12).
         # 검정고시가 아닌 것이 섞이면 라벨이 어긋나므로 그때는 따로 센다.

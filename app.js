@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912i";
+  s.src = "/data_detail.js?b=20260912j";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -474,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912i";
+    s2.src = "/data_detail_old.js?b=20260912j";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -486,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912i";
+  s.src = "/data_old.js?b=20260912j";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1989,7 +1989,7 @@ function mountMap() {
     }
     const N = v => v.toLocaleString();
     const sum = document.getElementById("mapsum");
-    if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교 · 위치 미확인 ${N(noXY)}개교`
+    if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교${noXY ? ` · 미개교·휴교 ${N(noXY)}개교` : ""}`
       + (spec.unit === "idx" ? ` · 기록 있는 곳 ${N(withRec)}개교(지도 위 ${N(withRecOnMap)}개교)` : "")
       + (spec.lost ? ` · 학교 미특정 기록 ${N(spec.lost)}건` : "")
       + (spec.nrec != null ? ` · 결과 ${N(spec.nrec)}건` : "");
