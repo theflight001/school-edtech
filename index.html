@@ -63,22 +63,12 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .navlinks a { font-size: 16px; font-weight: 600; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
 .navlinks a:hover { text-decoration: none; background: var(--surface); color: var(--ink); }
 .navlinks a.on { color: var(--accent); font-weight: 600; }
-/* 맨 위 '전체 보기' 메뉴 — 전체 목록 다섯 갈래를 한곳에 모은다 */
-.navmenu { position: relative; display: inline-flex; }
-.navmenu button { font: inherit; font-size: 16px; font-weight: 600; color: var(--ink-2); background: none; border: 0;
-  padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
-.navmenu button:hover { background: var(--surface); color: var(--ink); }
-.navmenu button.on { color: var(--accent); }
-.navmenu .caret { font-size: 11px; }
-.navmenu-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; min-width: 260px; padding: 6px;
-  background: var(--plane); border: 1px solid var(--grid); border-radius: 14px; box-shadow: 0 12px 32px rgba(15,23,42,.16); }
-.navmenu-panel a { display: block; padding: 9px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--ink); }
-.navmenu-panel a:hover { background: var(--surface); text-decoration: none; }
-.navmenu-panel a span { display: block; font-size: 12.5px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-@media (max-width: 700px) {
-  .navmenu button { font-size: 14.5px; padding: 6px 10px; }
-  .navmenu-panel { left: 50%; transform: translateX(-50%); min-width: 240px; }
-}
+/* 전체 목록 네 가지를 오가는 줄 — 메뉴를 열고 고르는 대신 화면 안에서 옮겨 다닌다 */
+.allsw { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 12px; }
+.allsw a { font-size: 13.5px; font-weight: 600; color: var(--ink-2); background: var(--plane);
+  border: 1px solid var(--grid); border-radius: 999px; padding: 6px 14px; white-space: nowrap; }
+.allsw a:hover { text-decoration: none; border-color: var(--bar); color: var(--accent); }
+.allsw a.on { background: var(--bar); border-color: var(--bar); color: #fff; }
 @media (max-width: 700px) {
   .topbar-in { height: auto; padding: 8px 14px; flex-direction: column; align-items: center; gap: 8px; }
   .brand img { height: 48px; }
@@ -417,8 +407,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 .map { height: min(70vh, 620px); min-height: 380px; border-radius: 10px; overflow: hidden; background: var(--surface); position: relative; }
 .maploading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
 /* 지도 출처 — 평소엔 ⓘ만, 누르면 펼쳐진다(표기는 빼지 못한다: OSM 자료·OpenFreeMap 조건) */
-.map.attr-min .maplibregl-ctrl-attrib-inner { display: none !important; }
-.map.attr-min .maplibregl-ctrl-attrib { padding: 0 !important; background: transparent !important; box-shadow: none !important; }
+.map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) { padding: 0; background: transparent; box-shadow: none; }
 .map .maplibregl-ctrl-attrib { font-size: 11px; }
 .map .maplibregl-ctrl-attrib-button { opacity: .5; }
 .map .maplibregl-ctrl-attrib-button:hover { opacity: 1; }
@@ -442,16 +431,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
     <a class="brand" href="/" aria-label="공교육 에듀테크 활용 현황 홈"><img src="/logo_stack.png?v=1" width="154" height="62" alt="school edtech"></a>
     <div class="navlinks">
       <a href="/about">데이터 안내</a>
-      <span class="navmenu">
-        <button type="button" id="allBtn" aria-haspopup="true" aria-expanded="false" aria-controls="allMenu">전체 보기 <span class="caret">▾</span></button>
-        <div class="navmenu-panel" id="allMenu" role="menu" hidden>
-          <a href="/records" role="menuitem">기록 전체 보기<span>가진 기록을 한 화면에서</span></a>
-          <a href="/schools" role="menuitem">학교 전체 보기<span>전국 12,543개교</span></a>
-          <a href="/products" role="menuitem">제품 전체 보기<span>제품·제품군 목록</span></a>
-          <a href="/vendors" role="menuitem">공급 기업 전체 보기<span>납품한 회사 목록</span></a>
-          <a href="/regions" role="menuitem">지역별 전체 보기<span>시도별 사례 수</span></a>
-        </div>
-      </span>
+      <a href="/records">전체 보기</a>
       <a href="/contact">정정 요청</a>
     </div>
   </div>
@@ -490,7 +470,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260912s"></script>
+<script src="/data_summary.js?b=20260912t"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -555,7 +535,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260912s", function () { load("/app.js?b=20260912s"); });
+    load("/data.js?b=20260912t", function () { load("/app.js?b=20260912t"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

@@ -1204,6 +1204,7 @@ function vendorsView() {
   const shown = rows;
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업 전체</div>
+    ${allSwitch("/vendors")}
     <div class="pagehead"><h2>공급 기업</h2>
       <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
         이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다<br>
@@ -1647,6 +1648,7 @@ function schoolsView() {
     </div>` : "";
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 전체 보기</div>
+    ${allSwitch("/schools")}
     <div class="pagehead"><h2>학교 전체 보기</h2>
       <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 그중 기록이 있는 곳 ${withRec.toLocaleString()}곳 ·
         이름을 누르면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
@@ -1664,6 +1666,13 @@ function schoolsView() {
     ${pager}`}`;
 }
 
+// 전체 목록 네 가지를 화면 안에서 오간다 — 메뉴를 열고 고르는 대신 바로 들어가 옮겨 다닌다.
+// 지역별은 첫 화면에 이미 있고 화면도 비슷해 여기 두지 않는다.
+const ALL_LISTS = [["/records", "기록"], ["/schools", "학교"], ["/products", "제품"], ["/vendors", "공급 기업"]];
+function allSwitch(cur) {
+  return `<div class="allsw">${ALL_LISTS.map(([href, label]) =>
+    `<a href="${href}"${href === cur ? ' class="on" aria-current="page"' : ""}>${label} 전체 보기</a>`).join("")}</div>`;
+}
 // 가진 기록을 한 화면에서 훑는다 — 제품·학교를 거치지 않고 바로 본다.
 // 조사 기간·지역·계열 조건을 그대로 따르므로 첫 화면 숫자와 이어진다.
 function recordsView() {
@@ -1671,6 +1680,7 @@ function recordsView() {
   const nd = recs.filter(r => !r.dup);
   return `
     <div class="crumb"><a href="/">홈</a> › 기록 전체 보기</div>
+    ${allSwitch("/records")}
     <div class="pagehead"><h2>기록 전체 보기</h2>
       <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
         학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
@@ -1713,6 +1723,7 @@ function productsView() {
   const show = sel === "전체" ? names : groups[sel];
   return `
     <div class="crumb"><a href="/">홈</a> › 제품 전체 보기</div>
+    ${allSwitch("/products")}
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
         이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
@@ -1941,13 +1952,20 @@ function mountMap() {
     const map = MAP = new maplibregl.Map({container: el, center: [127.8, 36.2], zoom: 5.6, minZoom: 5, maxZoom: 18, maxPitch: 70,
       style: "https://tiles.openfreemap.org/styles/liberty", attributionControl: {compact: true}});
     map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), "top-right");
-    // 출처 표기는 빼지 못한다(OpenStreetMap 자료·OpenFreeMap 이용 조건). 대신 평소엔 ⓘ만 두고
-    // 누르면 펼쳐지게 접어 둔다 — 지도 아래를 가로지르던 흰 띠가 사라진다.
-    // 접힘은 우리가 직접 관리한다: 지도가 출처를 갱신할 때마다 제 표시를 다시 붙여 놓기 때문이다.
-    el.classList.add("attr-min");
-    el.addEventListener("click", e => {
-      if (e.target.closest(".maplibregl-ctrl-attrib")) el.classList.toggle("attr-min");
-    });
+    // 출처 표기는 빼지 못한다(OpenStreetMap 자료·OpenFreeMap 이용 조건). 대신 처음엔 ⓘ만 두고
+    // 누르면 펼쳐지게 한다. 여닫기는 지도 기본 동작에 맡기고 우리는 처음 상태만 접는다 —
+    // 접힘을 우리가 따로 관리했더니 누를 때 지도와 서로 상쇄돼 아무 변화가 없었다(2026-09-12).
+    // 지도는 출처를 갱신할 때마다 펼침 표시를 다시 붙이므로, 사용자가 한 번 누르기 전까지 걷어 준다.
+    let attrTouched = false;
+    const collapseAttr = () => {
+      if (attrTouched) return;
+      const at = el.querySelector(".maplibregl-ctrl-attrib");
+      if (at) at.classList.remove("maplibregl-compact-show");
+    };
+    el.addEventListener("click", e => { if (e.target.closest(".maplibregl-ctrl-attrib")) attrTouched = true; });
+    map.on("sourcedata", collapseAttr);
+    map.on("idle", collapseAttr);
+    collapseAttr();
     el.addEventListener("mousedown", e => {
       if (!(e.metaKey || e.ctrlKey) || e.button !== 0) return;
       e.preventDefault(); e.stopPropagation();                  // 끌기(이동)로 넘기지 않는다
@@ -2078,9 +2096,9 @@ function render() {
   // 현재 화면에 해당하는 상단 메뉴 강조
   document.querySelectorAll(".navlinks a").forEach(a =>
     a.classList.toggle("on", a.getAttribute("href") === `/${kind || ""}`));
-  const allBtn = document.getElementById("allBtn");
-  if (allBtn) allBtn.classList.toggle("on", ["records", "schools", "products", "vendors", "regions"].includes(kind));
-  if (allBtn) closeAllMenu();
+  // '전체 보기'는 네 목록 어디에 있어도 켜 둔다
+  const allLink = document.querySelector('.navlinks a[href="/records"]');
+  if (allLink) allLink.classList.toggle("on", ["records", "schools", "products", "vendors"].includes(kind));
   // 히어로는 첫 화면에서만 크게, 하위 화면에서는 접어 둔다
   document.body.classList.toggle("sub-page", !!kind);
   // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
@@ -2120,23 +2138,6 @@ document.addEventListener("click", e => {
   e.preventDefault();
   go(href);
 });
-// 맨 위 '전체 보기' 메뉴 — 누르면 열리고, 바깥을 누르거나 Esc를 누르면 닫힌다
-function closeAllMenu() {
-  const b = document.getElementById("allBtn"), m = document.getElementById("allMenu");
-  if (b && m) { b.setAttribute("aria-expanded", "false"); m.hidden = true; }
-}
-(() => {
-  const b = document.getElementById("allBtn"), m = document.getElementById("allMenu");
-  if (!b || !m) return;
-  b.addEventListener("click", e => {
-    e.stopPropagation();
-    const open = m.hidden;
-    b.setAttribute("aria-expanded", String(open));
-    m.hidden = !open;
-  });
-  document.addEventListener("click", e => { if (!e.target.closest(".navmenu")) closeAllMenu(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closeAllMenu(); });
-})();
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");
