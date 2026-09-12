@@ -1452,6 +1452,43 @@ if __import__("os").path.exists(_geo_path):
         f.write("const SCHOOL_GEO = " + json.dumps(_geo, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(f"학교 좌표: {sum(1 for g in _geo if g):,}/{len(_geo):,}곳 → school_geo.js")
 
+# 데이터 안내가 쓰는 숫자를 여기서 센다 (app.js는 이 값을 받아 쓰기만 한다)
+master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
+_excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0, "학교급 미기재": 0}
+for _s in master_all:
+    _lv = _s.get("level") or ""
+    if not _lv:
+        _excluded_counts["학교급 미기재"] += 1
+    elif "재외한국학교" in _lv:
+        _excluded_counts["재외한국학교"] += 1
+    elif "외국인학교" in _lv or "국제학교" in _lv:
+        _excluded_counts["외국인·국제학교"] += 1
+    elif "공동실습소" in _lv:
+        _excluded_counts["공동실습소"] += 1
+_level_mix = collections.Counter()
+for _r in school_index:
+    _lv = _r["l"]
+    if _lv in ("초등학교", "중학교", "고등학교"):
+        _level_mix["초·중·고"] += 1
+    elif "특수학교" in _lv:
+        _level_mix["특수학교"] += 1
+    elif "각종학교" in _lv:
+        _level_mix["각종학교"] += 1
+    elif "평생학교" in _lv:
+        _level_mix["평생학교"] += 1
+    elif "방송통신" in _lv:
+        _level_mix["방송통신 중·고"] += 1
+    else:
+        _level_mix["고등기술·고등공민학교"] += 1
+_media_n = sum(1 for _r in records
+               if any(_w in (_r.get("sourceType") or "") for _w in ("언론", "홍보", "공식", "홈페이지")))
+_office_n = len({_r["sourceType"].replace("교육청 계약공개", "") for _r in records
+                 if "교육청 계약공개" in (_r.get("sourceType") or "")})
+_bundled = sum(1 for _r in records if re.search(r"외\s*\d+\s*종", _r.get("product") or ""))
+_bundled_pct = round(_bundled / max(1, len(records)) * 100)
+_buried_n = sum(int(_m.group(1)) for _r in records
+                for _m in [re.search(r"외\s*(\d+)\s*종", _r.get("product") or "")] if _m)
+
 import datetime as _dt
 _BASE_YEAR = 2026                                   # app.js의 BASE_FROM과 같은 해라야 한다
 # 자료가 닿는 마지막 달 — 손으로 적어 두면 월 갱신 뒤에도 화면이 옛 달에 멈춘다
@@ -1476,6 +1513,17 @@ meta = {
     # 학교는 학교코드로 센다 — 이름으로 세면 같은 이름의 다른 학교가 한 곳으로 합쳐져
     # 화면(코드 기준)과 숫자가 어긋난다(2026-09-12: 이름 10,691 대 코드 12,122)
     "schools": len({(rec["schoolCode"] or "n:" + rec["school"]) for rec in records}),
+    # ── 데이터 안내 화면이 쓰는 숫자. 손으로 적지 말고 여기서만 만든다(2026-09-12).
+    #    자료가 바뀌면 화면도 같이 바뀌어야 한다 — 그러라고 빌드가 센다.
+    "neisTotal": len(master_all),
+    "idxCount": len(school_index),
+    "excluded": _excluded_counts,
+    "levelMix": _level_mix,
+    "mediaCount": _media_n,
+    "mediaPct": round(_media_n / max(1, len(records)) * 100, 2),
+    "officeCount": _office_n,
+    "bundledPct": _bundled_pct,
+    "buriedProducts": _buried_n,
     # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
     # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
     "coveragePeriod": f"2020.1 ~ {_YM_TXT}",
