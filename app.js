@@ -1068,15 +1068,20 @@ function noteSchoolList(note) {
     <p class="cv">${esc(note.schoolNote || "")}</p></details>`;
 }
 function tagView(tag) {
-  const recs = R.filter(r => r.tags.includes(tag));
-  if (!recs.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `/tag/${encodeURIComponent(c)}`);
+  // 제품 화면도 조사 기간·지역·계열·설립 조건을 따른다 — 첫 화면 숫자와 어긋나면 안 된다(2026-09-12).
+  // 없는 제품인지 조건에 걸려 0건인지는 갈라 말한다.
+  const everything = R.filter(r => r.tags.includes(tag));
+  if (!everything.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `/tag/${encodeURIComponent(c)}`);
+  const recs = baseRecs().filter(r => r.tags.includes(tag));
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
   const bySido = count(recs, r => r.sido);
   return `
     <div class="crumb"><a href="/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
-      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div></div>
+      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div>${filterNote()}</div>
+    ${recs.length ? "" : `<div class="fnote"><span>지금 조건에 맞는 기록이 없습니다 — 전 기간에는 ${everything.filter(r=>!r.dup).length.toLocaleString()}건 있습니다</span>
+      <a href="javascript:void(0)" onclick="openPicker()">조사 기간 넓히기</a></div>`}
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
       <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
@@ -1230,7 +1235,7 @@ function drillTagView(kind, tag, value) {
         </div></div>
       <div class="card">${recsBlock(recs)}</div>`;
   }
-  const recs = R.filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
+  const recs = baseRecs().filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
   return `
@@ -1654,6 +1659,18 @@ function schoolsView() {
     ${pager}`}`;
 }
 
+// 가진 기록을 한 화면에서 훑는다 — 제품·학교를 거치지 않고 바로 본다.
+// 조사 기간·지역·계열 조건을 그대로 따르므로 첫 화면 숫자와 이어진다.
+function recordsView() {
+  const recs = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
+  const nd = recs.filter(r => !r.dup);
+  return `
+    <div class="crumb"><a href="/">홈</a> › 기록 전체 보기</div>
+    <div class="pagehead"><h2>기록 전체 보기</h2>
+      <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
+        학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
+    <div class="card">${recsBlock(recs)}</div>`;
+}
 function productsView() {
   const cnt = {}, sch = {};
   const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
@@ -2043,6 +2060,7 @@ function render() {
   }
   else if (kind === "about") view.innerHTML = aboutView();
   else if (kind === "schools") view.innerHTML = schoolsView();
+  else if (kind === "records") view.innerHTML = recordsView();
   else if (kind === "products") view.innerHTML = productsView();
   else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "vendor") view.innerHTML = vendorView(arg);
@@ -2055,6 +2073,9 @@ function render() {
   // 현재 화면에 해당하는 상단 메뉴 강조
   document.querySelectorAll(".navlinks a").forEach(a =>
     a.classList.toggle("on", a.getAttribute("href") === `/${kind || ""}`));
+  const allBtn = document.getElementById("allBtn");
+  if (allBtn) allBtn.classList.toggle("on", ["records", "schools", "products", "vendors", "regions"].includes(kind));
+  if (allBtn) closeAllMenu();
   // 히어로는 첫 화면에서만 크게, 하위 화면에서는 접어 둔다
   document.body.classList.toggle("sub-page", !!kind);
   // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
@@ -2094,6 +2115,23 @@ document.addEventListener("click", e => {
   e.preventDefault();
   go(href);
 });
+// 맨 위 '전체 보기' 메뉴 — 누르면 열리고, 바깥을 누르거나 Esc를 누르면 닫힌다
+function closeAllMenu() {
+  const b = document.getElementById("allBtn"), m = document.getElementById("allMenu");
+  if (b && m) { b.setAttribute("aria-expanded", "false"); m.hidden = true; }
+}
+(() => {
+  const b = document.getElementById("allBtn"), m = document.getElementById("allMenu");
+  if (!b || !m) return;
+  b.addEventListener("click", e => {
+    e.stopPropagation();
+    const open = m.hidden;
+    b.setAttribute("aria-expanded", String(open));
+    m.hidden = !open;
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".navmenu")) closeAllMenu(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeAllMenu(); });
+})();
 perfMark("화면 코드 준비");
 render();
 perfMark("첫 화면 그리기");
