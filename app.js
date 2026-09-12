@@ -1933,11 +1933,12 @@ function mountMap() {
   if (!el || !spec) return;
   loadMapKit().then(() => {
     if (!el.isConnected || MAP_SPEC !== spec) return;           // 받는 사이 화면이 바뀌었다
-    const feats = []; let noXY = 0, withRec = 0;
+    const feats = []; let noXY = 0, withRec = 0, withRecOnMap = 0;
     for (const {s, k, name} of spec.items) {
+      if (k) withRec++;                                  // 지도에 못 올린 학교도 함께 센다 — 머리글과 같은 기준
       const g = SCHOOL_GEO[IDX_POS.get(s)];
       if (!g) { noXY++; continue; }
-      if (k) withRec++;
+      if (k) withRecOnMap++;
       feats.push({type: "Feature", geometry: {type: "Point", coordinates: [g[1], g[0]]},
         properties: {n: s.n, l: s.h || s.l || "", s: s.s, k, c: s.c,
           href: k ? `/school/${encodeURIComponent(name || s.n)}` : `/code/${s.c}`}});
@@ -1945,7 +1946,7 @@ function mountMap() {
     const N = v => v.toLocaleString();
     const sum = document.getElementById("mapsum");
     if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교 · 위치 미확인 ${N(noXY)}개교`
-      + (spec.unit === "idx" ? ` · 그중 기록 있는 곳 ${N(withRec)}개교` : "")
+      + (spec.unit === "idx" ? ` · 기록 있는 곳 ${N(withRec)}개교(지도 위 ${N(withRecOnMap)}개교)` : "")
       + (spec.lost ? ` · 학교 미특정 기록 ${N(spec.lost)}건` : "")
       + (spec.nrec != null ? ` · 결과 ${N(spec.nrec)}건` : "");
     el.innerHTML = "";
@@ -2042,6 +2043,14 @@ function mountMap() {
           el.onclick = ev => {
             ev.stopPropagation();
             if (many) {
+              // 같은 주소를 쓰는 학교들은 좌표가 같아 확대해도 영영 나뉘지 않는다 — 그때는 목록을 편다
+              const spanX = Math.max(...lngs) - Math.min(...lngs), spanY = Math.max(...lats) - Math.min(...lats);
+              if (Math.max(spanX, spanY) < 0.0004 || map.getZoom() >= 16.5) {
+                selH = c.items.map(f => f.properties.href);
+                showMapSel(spec, c.items.map(f => f.properties).sort((x, y) => y.k - x.k || x.n.localeCompare(y.n, "ko")));
+                paintSel();
+                return;
+              }
               map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
                             {padding: 60, maxZoom: Math.min(17, map.getZoom() + 3), duration: 400});
             } else {
