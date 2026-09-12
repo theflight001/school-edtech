@@ -124,6 +124,15 @@ if [ "${EDTECH_NODEPLOY:-0}" = "1" ]; then
   echo "══ 끝 $(date '+%H:%M')  실패 ${#FAILED[@]}곳 ${FAILED[*]:-없음}"; exit 0
 fi
 
+# 수집에 실패한 곳이 있으면 배포하지 않는다 — 빠진 지역의 학교가 '기록 없음'으로 보이고,
+# 화면의 모든 숫자가 그 지역을 뺀 채로 굳는다. 자료를 빼고 내보내느니 지난 판을 그대로 두는 편이 낫다.
+# 고친 뒤 다시 돌리면 체크포인트가 이어받는다 (2026-09-12 지시).
+if [ ${#FAILED[@]} -gt 0 ]; then
+  echo "── 수집 실패(${FAILED[*]})가 있어 배포하지 않는다 — 원인을 고치고 다시 돌려라"
+  echo "   (만든 자료는 그대로 두었다. 확인 뒤 손으로 올리려면 원인 해결 후 재실행)"
+  echo "══ 끝 $(date '+%H:%M')  실패 ${#FAILED[@]}곳 ${FAILED[*]}"; exit 1
+fi
+
 # ── 4. 캐시 파라미터를 올리고 배포 (data.js가 바뀐 때만)
 if git diff --quiet -- data.js data_old.js data_detail.js data_summary.js; then
   echo "── 자료에 변화가 없어 배포하지 않는다"

@@ -1455,11 +1455,16 @@ if __import__("os").path.exists(_geo_path):
 
 # 데이터 안내가 쓰는 숫자를 여기서 센다 (app.js는 이 값을 받아 쓰기만 한다)
 master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
-_excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0, "학교급 미기재": 0}
+_excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0,
+                    "검정고시 등 비학교": 0, "학교급 미기재": 0}
 for _s in master_all:
     _lv = _s.get("level") or ""
     if not _lv:
-        _excluded_counts["학교급 미기재"] += 1
+        # 학교급 칸이 빈 항목 — 오늘 기준 전북 고입·고졸 검정고시 시행 단위 2곳이다.
+        # 시험이지 학교가 아니므로 '분류 불가'가 아니라 '학교가 아님'으로 센다(2026-09-12).
+        # 검정고시가 아닌 것이 섞이면 라벨이 어긋나므로 그때는 따로 센다.
+        _excluded_counts["검정고시 등 비학교" if "검정고시" in (_s.get("name") or "")
+                         else "학교급 미기재"] += 1
     elif "재외한국학교" in _lv:
         _excluded_counts["재외한국학교"] += 1
     elif "외국인학교" in _lv or "국제학교" in _lv:
