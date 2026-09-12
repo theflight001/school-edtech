@@ -1424,6 +1424,18 @@ const nearNames = (q, min) => namePool().map(p => [p, sim(q, p[3])])
   .filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1]).map(([p]) => p);
 
 function nearMisses(q) {
+  // 이름이 그대로 있는데 기록만 없을 때는, 비슷한 이름을 늘어놓지 않고 그 학교 하나만 보여 준다
+  // (2026-09-12 꿈타래학교: 정확히 넣었는데 엉뚱한 학교들만 제안됐다).
+  const norm = x => (x || "").replace(/\s+/g, "").toLowerCase();
+  const exact = namePool().filter(([nm]) => norm(nm) === norm(q));
+  if (exact.length) {
+    return `<div class="card"><h2>찾으시는 ${exact[0][2].startsWith("학교") ? "학교" : "이름"}</h2>
+      <div class="plist">${exact.slice(0, 4).map(([nm, href, kind]) =>
+        `<a href="${href}">${esc(nm)}<span class="n">${esc(kind)}</span></a>`).join("")}</div>
+      <p class="cv">${exact.some(([, , kind]) => kind.includes("기록 없음"))
+        ? "명단에는 있지만 조달 기록이 아직 없습니다 — 무상 보급이거나 아직 계약이 공개되지 않았을 수 있습니다."
+        : "이 이름으로는 지금 조건에 맞는 기록이 없습니다."}</p></div>`;
+  }
   const near = nearNames(q, 0.4).slice(0, 6);
   if (!near.length) return "";
   return `<div class="card"><h2>혹시 이것을 찾으셨나요</h2>
