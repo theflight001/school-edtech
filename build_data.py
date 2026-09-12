@@ -690,10 +690,28 @@ def tags_of(name, content):
 rows = list(csv.reader(open(SRC, encoding="utf-8-sig")))
 header = rows[2]
 records = []
+# 집계에서 빼는 줄 — 기업 홍보 자료만 근거이고 학교를 특정하지 못한 것, 그리고 교육청이 관내
+# 전체에 제공하는 서비스(학교별 도입이 아니다). 학교 수·계열 통계에 섞이면 도입 학교처럼 읽힌다.
+#   · 젭 퀴즈·프리윌린·튜링(46·47·48): 출처가 기업홍보뿐이고 신뢰도 '하', 학교가 '전국 다수'
+#   · 대구학생전자도서관(79): 대구시교육청 관내 학생·교직원·학부모 전체가 에듀나비 계정으로 쓰는
+#     무상 서비스다(2026-09-12 확인). 제품 화면의 안내로 옮겼다.
+def _skip_row(r):
+    school, src, conf = r[1], r[8], r[10]
+    if "기업홍보" in src and conf == "하" and re.search(r"다수|전국|관내", school):
+        return "기업 홍보 자료뿐 · 학교 미특정"
+    if "대구학생전자도서관" in r[4]:
+        return "교육청이 관내 전체에 제공하는 서비스"
+    return ""
+
+_skipped = []
 for i, r in enumerate(rows[3:]):
     if len(r) < 11 or not r[0].strip():
         continue
     r = [c.strip() for c in r]
+    why = _skip_row(r)
+    if why:
+        _skipped.append(f"{r[0]} {r[4][:28]} — {why}")
+        continue
     m = find_school(r[1], r[3])
     records.append({
         "id": int(r[0]) if r[0].isdigit() else i,
@@ -710,6 +728,9 @@ for i, r in enumerate(rows[3:]):
         "founding": (m.get("founding") or "") if m else "",
         "neisAddress": (m.get("address") or "") if m else "",
     })
+
+if _skipped:
+    print("집계에서 뺀 줄 " + str(len(_skipped)) + "건: " + " · ".join(_skipped))
 
 # 마이스터고 판별: NEIS는 법령대로 특목고로 분류하지만 서비스는 특성화고와 묶음
 MEISTER_EXTRA = {"인천해사고등학교", "합덕제철고등학교", "군산기계공업고등학교"}
