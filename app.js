@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912a";
+  s.src = "/data_detail.js?b=20260912b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -343,7 +343,7 @@ function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   return `<div class="tablewrap"><table${showSchool ? "" : ' class="noschool"'}><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
-      ${showSchool ? `<td><a href="/school/${encodeURIComponent(r.school)}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
+      ${showSchool ? `<td><a href="${r.schoolCode ? `/code/${encodeURIComponent(r.schoolCode)}` : `/school/${encodeURIComponent(r.school)}`}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
@@ -474,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912a";
+    s2.src = "/data_detail_old.js?b=20260912b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -486,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912a";
+  s.src = "/data_old.js?b=20260912b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1022,13 +1022,20 @@ function sim(a, b) {
   return 2 * n / (A.size + B.size);
 }
 
-function schoolView(name) {
-  let all = R.filter(r => r.school === name);
+// 같은 이름의 학교가 전국에 여럿이다(2026-09-12: 665개 교명·1,509곳에 기록이 있다).
+// 이름으로만 고르면 서울 동북초와 전북 동북초의 기록이 한 화면에 섞여 '기록 94건'이 된다.
+// 학교코드를 알면 코드로 고르고, 모르면 어느 학교인지 먼저 고르게 한다.
+function schoolView(name, code) {
+  let all = code ? R.filter(r => r.schoolCode === code) : R.filter(r => r.school === name);
   if (!all.length) {
     // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
     const old = R.find(r => r.origSchool === name);
     if (old) return schoolView(old.school);
     return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
+  }
+  if (!code) {
+    const codes = uniq(all.filter(r => r.schoolCode).map(r => r.schoolCode));
+    if (codes.length > 1) return sameNameView(name, codes);
   }
   const info = fillDetail([all[0]])[0];
   // 기록에 나온 순서대로 두면 기준이 없다 — 제품을 앞에, 제품군을 뒤에 두고
@@ -1058,6 +1065,18 @@ function schoolView(name) {
       <a href="javascript:void(0)" onclick="setSchoolTag('${SCHOOL_TAG.replace(/'/g, "\\'")}')">전체 ${all.length}건 보기</a>
       <a href="/tag/${encodeURIComponent(SCHOOL_TAG)}">다른 학교의 도입 현황 ›</a></div>` : ""}
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
+}
+// 이름이 같은 학교가 여럿일 때 — 합치면 다른 학교 기록이 섞인다. 어느 학교인지 고르게 한다.
+function sameNameView(name, codes) {
+  const rows = codes.map(c => ({c, s: idxByCode.get(c),
+    n: R.filter(r => r.schoolCode === c && !r.dup).length})).sort((x, y) => y.n - x.n);
+  return `
+    <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
+    <div class="pagehead"><h2>${esc(name)}</h2>
+      <div class="sub2">이름이 같은 학교가 ${rows.length}곳입니다 — 어느 학교인지 고르세요</div></div>
+    <div class="card"><div class="plist">${rows.map(({c, s, n}) =>
+      `<a href="/code/${encodeURIComponent(c)}">${esc(name)}<span class="n">${
+        esc(s ? [s.s, s.h || s.l, s.a].filter(Boolean).join(" · ") : "학교 정보 없음")} · ${n.toLocaleString()}건</span></a>`).join("")}</div></div>`;
 }
 // 교육청 등이 무상 보급하는 플랫폼 — 조달 기록에 나타나지 않아 공식 발표로 보완
 const PLATFORM_NOTES = {
@@ -1280,7 +1299,7 @@ function codeView(code) {
   const recs = R.filter(r => r.schoolCode === code);
   if (recs.length) {
     const names = uniq(recs.map(r => r.school));
-    return schoolView(names[0]);
+    return schoolView(names[0], code);
   }
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
@@ -1652,7 +1671,8 @@ function schoolsView() {
   const item = x => {
     const k = n(x);
     // 기록이 있는 학교는 기록 화면으로, 없는 학교는 학교 정보 화면으로
-    const href = k ? `/school/${encodeURIComponent(x.n)}` : `/code/${x.c}`;
+    // 학교코드가 곧 그 학교다 — 이름으로 보내면 동명 학교의 기록이 섞인다
+    const href = x.c ? `/code/${encodeURIComponent(x.c)}` : `/school/${encodeURIComponent(x.n)}`;
     return `<a href="${href}"${k ? "" : ' class="dim"'}>${esc(x.n)}<span class="n">${esc(x.s)} · ${esc(x.h || x.l || "")} · ${k ? k.toLocaleString() + "건" : "기록 없음"}</span></a>`;
   };
   const pager = pages > 1 ? `<div class="alpha pager">
@@ -1965,7 +1985,7 @@ function mountMap() {
       if (k) withRecOnMap++;
       feats.push({type: "Feature", geometry: {type: "Point", coordinates: [g[1], g[0]]},
         properties: {n: s.n, l: s.h || s.l || "", lv: s.l || "", s: s.s, k, c: s.c,
-          href: k ? `/school/${encodeURIComponent(name || s.n)}` : `/code/${s.c}`}});
+          href: s.c ? `/code/${encodeURIComponent(s.c)}` : `/school/${encodeURIComponent(name || s.n)}`}});
     }
     const N = v => v.toLocaleString();
     const sum = document.getElementById("mapsum");
@@ -2014,10 +2034,19 @@ function mountMap() {
       // 묶음은 우리가 직접 짓는다 — 지도 타일이 그려져야만 알 수 있는 방식(querySourceFeatures)은
       // 창이 가려지거나 그리기가 늦으면 아무것도 못 내놓는다(2026-09-12). 화면 좌표 44px 칸에 모아 센다.
       const mk = [];
-      let selH = [], expandKey = null;
+      let selK = [], expandKey = null;
       // 펼친 묶음은 화면을 옮겨도 같은 묶음임을 알아야 한다 — 속한 학교코드로 이름표를 만든다
       const ckey = c => c.items.map(f => f.properties.c || f.properties.n).sort().join("|");
-      const paintSel = () => { for (const m of mk) m._el.classList.toggle("on", selH.includes(m._href)); };
+      // 같은 자리에 선 학교들은 아무리 확대해도 칸이 나뉘지 않아, 누르기 전에는 묶음으로만 보였다.
+      // 충분히 확대하면 누르지 않아도 저절로 편다 — 다만 너무 많으면 화면을 덮으므로 여덟 곳까지만.
+      const autoSplit = c => {
+        if (map.getZoom() < 16.2 || c.items.length > 8) return false;
+        const xs = c.items.map(f => f.geometry.coordinates[0]), ys = c.items.map(f => f.geometry.coordinates[1]);
+        return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) < 0.0004;
+      };
+      // 선택은 학교코드로 가린다 — 주소(/school/이름)로 가렸더니 이름이 같은 다른 학교까지
+      // 함께 물들었다(2026-09-12 "동북초": 서울 도봉구와 전북 부안이 같이 초록이 됐다).
+      const paintSel = () => { for (const m of mk) m._el.classList.toggle("on", selK.includes(m._key)); };
       // 묶는 칸은 멀리서 볼수록 크게 — 44px로 묶었더니 전국 화면에 딱지가 40개 넘게 깔려
       // 어지러웠다(2026-09-12). 칸 크기는 시안이 쓰는 값(180/140/88)을 그대로 쓴다.
       const cellOf = z => z < 11.5 ? 180 : z < 13 ? 140 : 88;
@@ -2058,7 +2087,7 @@ function mountMap() {
         mk.length = 0;
         for (const c of list) {
           const many = c.items.length > 1;
-          if (many && ckey(c) === expandKey) {
+          if (many && (ckey(c) === expandKey || autoSplit(c))) {
             // 펼친 묶음 — 초·중·고 차례로 위에서 아래로 세운다. 각각이 따로 눌리고 따로 물든다.
             const its = c.items.map(f => f.properties).sort(byLevel);
             its.forEach((q, i) => {
@@ -2067,10 +2096,10 @@ function mountMap() {
               b2.className = "mpin" + (q.k > 0 ? "" : " dim");
               b2.textContent = q.n;
               b2.title = `${q.s} · ${q.l} · ${q.k ? q.k.toLocaleString() + "건" : "기록 없음"}`;
-              b2.onclick = ev2 => { ev2.stopPropagation(); selH = [q.href]; showMapSel(spec, [q]); paintSel(); };
+              b2.onclick = ev2 => { ev2.stopPropagation(); selK = [q.c || q.href]; showMapSel(spec, [q]); paintSel(); };
               const m2 = new maplibregl.Marker({element: b2, offset: [0, (i - (its.length - 1) / 2) * 36]})
                 .setLngLat(c.at).addTo(map);
-              m2._el = b2; m2._href = q.href;
+              m2._el = b2; m2._key = q.c || q.href;
               mk.push(m2);
             });
             continue;
@@ -2091,7 +2120,7 @@ function mountMap() {
               if (Math.max(spanX, spanY) < 0.0004 || map.getZoom() >= 16.5) {
                 // 좌표가 같아 확대해도 영영 나뉘지 않는다 — 딱지를 학교별로 펴서 하나씩 고르게 한다
                 expandKey = ckey(c);
-                selH = [];
+                selK = [];
                 showMapSel(spec, c.items.map(f => f.properties).sort(byLevel));
                 draw();
                 return;
@@ -2099,19 +2128,19 @@ function mountMap() {
               map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
                             {padding: 60, maxZoom: Math.min(17, map.getZoom() + 3), duration: 400});
             } else {
-              selH = [p.href];
+              selK = [p.c || p.href];
               showMapSel(spec, [p]);
               paintSel();
             }
           };
           const m = new maplibregl.Marker({element: el}).setLngLat(at).addTo(map);
-          m._el = el; m._href = many ? "" : p.href;
+          m._el = el; m._key = many ? "" : (p.c || p.href);
           mk.push(m);
         }
         paintSel();
       };
-      map._setSel = hrefs => { selH = hrefs; paintSel(); };
-      map.on("click", () => { if (selH.length || expandKey) { expandKey = null; clearMapSel(); draw(); } });   // 빈 곳을 누르면 선택이 풀린다
+      map._setSel = keys => { selK = keys; paintSel(); };
+      map.on("click", () => { if (selK.length || expandKey) { expandKey = null; clearMapSel(); draw(); } });   // 빈 곳을 누르면 선택이 풀린다
       map.on("moveend", draw);
       map.on("zoomend", draw);
       draw();
