@@ -77,14 +77,14 @@ def main():
     _fix = "geo/위치미확인_학교.csv"
     if os.path.exists(_fix):
         _add = {}
-        for r in csv.DictReader(open(_fix, encoding="utf-8-sig")):
-            k, a = (r.get("학교코드") or "").strip(), (r.get("명단주소") or "").strip()
-            if k and a:
-                _add[k] = a
+        for _r in csv.DictReader(open(_fix, encoding="utf-8-sig")):
+            _k, _a = (_r.get("학교코드") or "").strip(), (_r.get("명단주소") or "").strip()
+            if _k and _a:
+                _add[_k] = _a
         _n = 0
-        for s in M:
-            if not (s.get("address") or "").strip() and key_of(s) in _add:
-                s["address"] = _add[key_of(s)]
+        for _s in M:
+            if not (_s.get("address") or "").strip() and key_of(_s) in _add:
+                _s["address"] = _add[key_of(_s)]
                 _n += 1
         if _n:
             print(f"  손으로 찾은 주소로 채운 학교 {_n}곳")

@@ -118,7 +118,9 @@ function homeOf(scope) {
   const sidos = count(RF, r => r.sido).slice(0, 12);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const names = tagPairs.map(([t]) => t).filter(t => scope !== "product" || !isGeneric(t));
-  const schoolsOf = t => new Set(RF.filter(r => r.tags.includes(t)).map(r => r.school)).size;
+  // 학교를 셀 때는 학교코드를 열쇠로 — 이름으로 세면 같은 이름의 다른 학교가 합쳐진다(app.js의 skey와 같은 규칙)
+  const skey = r => r.schoolCode || "n:" + r.school;
+  const schoolsOf = t => new Set(RF.filter(r => r.tags.includes(t)).map(skey)).size;
   const tags = names.slice(0, 12).map(t => [t, schoolsOf(t)]).sort((a, b) => b[1] - a[1]);
   // 공급 기업 상위 12곳 — 온라인몰·조달 대행·제조사는 만든 곳이 아니라 사는 창구라 뺀다
   // (app.js의 CHANNEL/MAKER와 같은 기준. 여기서 다르면 자료가 온 뒤 막대가 바뀌어 보인다)
@@ -134,7 +136,7 @@ function homeOf(scope) {
     if (!k || CHANNEL.test(k) || MAKER.test(k)) continue;
     let e = vm.get(k);
     if (!e) { e = {name: raw, sch: new Set()}; vm.set(k, e); }
-    e.sch.add(r.school);
+    e.sch.add(r.schoolCode || "n:" + r.school);
   }
   const vendors = [...vm.values()].map(e => [e.name, e.sch.size])
     .sort((a, b) => b[1] - a[1]).slice(0, 12);

@@ -131,8 +131,12 @@ const uniq = arr => [...new Set(arr)];
 
 // ---- 인덱스 ----
 const schools = uniq(R.map(r => r.school)).sort();
+// 학교를 셀 때 쓰는 열쇠 — 학교코드가 있으면 그것으로, 없으면 이름으로.
+// 이름으로만 세면 같은 이름을 쓰는 다른 학교가 한 곳으로 합쳐져 적게 나온다
+// (2026-09-12: 같은 조건에서 이름 6,902곳 대 코드 7,316곳).
+const skey = r => r.schoolCode || "n:" + r.school;
 const tags = count(R.flatMap(r => r.tags.map(t => [t])), x => x[0]);
-const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(r => r.school)).length;
+const schoolCountByTag = t => uniq(R.filter(r => r.tags.includes(t)).map(skey)).length;
 // 공급 기업 — 계약 상대자를 그대로 모은다(업체로 제품을 추정하지 않는다).
 // 한 회사가 여러 제품을 팔아도 '이 회사가 어디에 무엇을 팔았나'는 그 자체로 볼 만하다.
 // 계약서에 적힌 회사 이름은 표기가 제각각이다.
@@ -932,7 +936,7 @@ function homeView() {
   const tagNames = tagPairs.map(([t]) => t)
     .filter(t => SCOPE !== "product" || !GENERIC_TAGS.has(t));
   const topTags = tagNames.slice(0, 12)
-    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length])
+    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(skey)).length])
     .sort((a, b) => b[1] - a[1]);
   return `
     <div class="tiles">
@@ -1094,7 +1098,7 @@ function tagView(tag) {
   return `
     <div class="crumb"><a href="/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
-      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(r=>r.school)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div>${filterNote()}</div>
+      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(skey)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div>${filterNote()}</div>
     ${recs.length ? "" : `<div class="fnote"><span>지금 조건에 맞는 기록이 없습니다 — 전 기간에는 ${everything.filter(r=>!r.dup).length.toLocaleString()}건 있습니다</span>
       <a href="javascript:void(0)" onclick="openPicker()">조사 기간 넓히기</a></div>`}
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
@@ -1188,7 +1192,7 @@ function vendorView(key) {
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업</div>
     <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
-      <div class="meta">${kind} · 거래 학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 ·
+      <div class="meta">${kind} · 거래 학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 ·
         기록 ${nd.length.toLocaleString()}건${amt ? ` · 계약금액 합계 ${won(amt)}` : ""}</div>
       ${kind !== "공급 기업" ? `<span class="fnote">여러 회사의 물건을 파는 창구입니다 —
         여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
@@ -1246,14 +1250,14 @@ function drillTagView(kind, tag, value) {
         ${kind === "vt" ? "제품" : kind === "vs" ? "지역" : "계열"} 상세</div>
       <div class="pagehead"><h2>${esc(nm)} · ${kind === "vt" ? tagLabel(value) : esc(value)}</h2>
         <div class="meta">이 회사가 납품한 기록만 봅니다 ·
-          학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 기록 ${nd.length.toLocaleString()}건
+          학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 · 기록 ${nd.length.toLocaleString()}건
           ${kind === "vt" ? `<div class="conf"><a href="/tag/${encodeURIComponent(value)}">${esc(tagName(value))} 전체 보기(다른 회사 포함) ›</a></div>` : ""}
         </div></div>
       <div class="card">${recsBlock(recs)}</div>`;
   }
   const recs = baseRecs().filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
-  const nSchools = uniq(recs.filter(r => !r.dup).map(r => r.school)).length;
+  const nSchools = uniq(recs.filter(r => !r.dup).map(skey)).length;
   return `
     <div class="crumb"><a href="/">홈</a> › <a href="/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
@@ -1290,7 +1294,7 @@ function drillView(kind, value) {
   else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${esc(value)} 지역`; }
   else return `<div class="empty">알 수 없는 조건입니다</div>`;
   const nd = recs.filter(r => !r.dup);
-  const nSchools = uniq(nd.map(r => r.school)).length;
+  const nSchools = uniq(nd.map(skey)).length;
   const conds = [];
   if (periodOn()) conds.push(`기간 ${(PF || "2020-01").replace("-", ".")} ~ ${(PT || YM_TO).replace("-", ".")}`);
   if (SF.size) conds.push(`계열 ${sfLabel()}`);
@@ -1693,7 +1697,7 @@ function recordsView() {
     ${allSwitch("/records")}
     <div class="pagehead"><h2>기록 전체 보기</h2>
       <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
-        학교 ${uniq(nd.map(r => r.school)).length.toLocaleString()}개교 · 조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
+        학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 · 조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
     <div class="card">${recsBlock(recs)}</div>`;
 }
 function productsView() {
@@ -1702,7 +1706,7 @@ function productsView() {
   for (const r of src) for (const t of r.tags) {
     if (SCOPE === "product" && GENERIC_TAGS.has(t)) continue;
     cnt[t] = (cnt[t] || 0) + 1;
-    (sch[t] = sch[t] || new Set()).add(r.school);
+    (sch[t] = sch[t] || new Set()).add(skey(r));
   }
   if (PORIGIN) for (const k of Object.keys(cnt)) if (originOf(k) !== PORIGIN) { delete cnt[k]; delete sch[k]; }
   const names = Object.keys(cnt).sort(PSORT === "count"
@@ -1764,7 +1768,7 @@ function regionsView() {
   const rows = all.filter(([s]) => isSido(s));
   const etc = all.filter(([s]) => !isSido(s));
   const sch = {};
-  for (const r of src) (sch[r.sido] = sch[r.sido] || new Set()).add(r.school);
+  for (const r of src) (sch[r.sido] = sch[r.sido] || new Set()).add(skey(r));
   return `
     <div class="crumb"><a href="/">홈</a> › 지역별 전체</div>
     <div class="pagehead"><h2>지역별 사례 수</h2>
@@ -2169,7 +2173,7 @@ if (PERF && typeof DB_SUM !== "undefined") {
   const tp = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const names = tp.map(p => p[0]).filter(t => !GENERIC_TAGS.has(t));
   const tags = names.slice(0, 12)
-    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(r => r.school)).length])
+    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(skey)).length])
     .sort((a, b) => b[1] - a[1]);
   if (JSON.stringify(tags) !== JSON.stringify(DB_SUM.home.product.tags))
     console.warn("[perf] data_summary.js가 원자료와 다릅니다 — node make_summary.js를 다시 돌리세요");
