@@ -79,6 +79,8 @@ if [ "$COLLECT" = "1" ]; then
   par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
   par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" --keyword-file $KF &
   par_run 전남 month_전남 python3 collect_ice.py --office 전남 --years "$YEARS" --keyword-file $KF &
+  # 전북: 수집기가 오류 페이지만 돌려준다(2026-09-12) — 고친 뒤 되살린다
+  # par_run 전북 month_전북 python3 collect_jbe.py --years "$YEARS" --keyword-file $KF &
   par_run 세종 month_세종 python3 collect_ice.py --office 세종 --years "$YEARS" --keyword-file $KF &
   par_run 부산 month_부산 python3 collect_pen.py --office 부산 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &
   par_run 경북 month_경북 python3 collect_pen.py --office 경북 --begin "$FROM3" --end "$MONTH" --keyword-file $KF &

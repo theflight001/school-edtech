@@ -949,6 +949,7 @@ OFFICE_SOURCES = [
     ("gne_refined.csv", "경남", "경남교육청 계약공개", 1700000),
     ("sen_refined.csv", "서울", "서울교육청 계약공개", 1800000),
     ("sen_edufine_refined.csv", "서울", "서울교육청 계약공개", 1850000),
+    ("jbe_refined.csv", "전북", "전북교육청 계약공개", 1950000),   # 2026-09 추가
     ("nara_bid_refined.csv", "", "나라장터 입찰공고", 1900000),   # 전국 — 시도는 행마다 다르다
 ]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:

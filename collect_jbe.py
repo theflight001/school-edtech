@@ -6,7 +6,7 @@ import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://www.jbe.go.kr"
 MENU = "DOM_000001003001009000"
-PAGE = f"{BASE}/index.jbe?menuCd={MENU}"
+PAGE = f"{BASE}/open/index.jbe?menuCd={MENU}"   # 2026-09 이전: /index.jbe (옮겨졌다)
 ACT = f"{BASE}/open/edufine/eduCntrlist1.jbe"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 SPACING = 1.0
@@ -34,13 +34,16 @@ def opener():
     return _opener
 
 def fetch(keyword, year, page):
-    q = {"menuCd": MENU, "pageIndex": str(page), "inst_clss_div": "5",   # 5 = 학교
-         "fscl_y": year, "cntr_nm": keyword, "cntr_inst_nm": "", "cntr_prtnr_nm": "",
-         "startDate": "", "endDate": "", "cntr_amt": "", "estb_div": "", "cntr_mthd_div_nm": ""}
+    q = {"menuCd": MENU, "pageIndex": str(page), "orderField": "", "eduIn": "N",
+         "inst_clss_div": "2,3,4", "cntr_mthd_div_nm": "1인수의",
+         "fscl_y": year, "cntr_inst_nm": "", "cntr_nm": keyword, "cntr_prtnr_nm": "",
+         "schoolIn": "Y", "_schoolIn": "on",
+         "startDate": "", "endDate": "", "cntr_amt": "0", "estb_div": ""}
     for wait in [5, 20, 60, None]:
         try:
-            return opener().open(ACT + "?" + urllib.parse.urlencode(q), timeout=180)\
-                           .read().decode("utf-8", "replace")
+            req = urllib.request.Request(ACT + "?" + urllib.parse.urlencode(q),
+                                         headers={"User-Agent": UA, "Referer": PAGE})
+            return opener().open(req, timeout=180).read().decode("utf-8", "replace")
         except Exception as e:
             if wait is None:
                 raise
