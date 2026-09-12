@@ -1473,7 +1473,9 @@ meta = {
     # 자동 갱신이 실제로 돌았는지 방문자가 알 수 있어야 한다.
     "builtOn": _dt.date.today().isoformat(),
     "total": len(records),
-    "schools": len({rec["school"] for rec in records}),
+    # 학교는 학교코드로 센다 — 이름으로 세면 같은 이름의 다른 학교가 한 곳으로 합쳐져
+    # 화면(코드 기준)과 숫자가 어긋난다(2026-09-12: 이름 10,691 대 코드 12,122)
+    "schools": len({(rec["schoolCode"] or "n:" + rec["school"]) for rec in records}),
     # 기본 화면은 2023년부터 보여 준다(BASE_FROM). 여기는 자료가 실제로 닿는 범위다 —
     # 2020~2022년은 S2B가 전 시도를 덮고, 시도교육청 계약공개는 시도마다 시작 시점이 다르다.
     "coveragePeriod": f"2020.1 ~ {_YM_TXT}",
