@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912h";
+  s.src = "/data_detail.js?b=20260912i";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -474,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912h";
+    s2.src = "/data_detail_old.js?b=20260912i";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -486,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912h";
+  s.src = "/data_old.js?b=20260912i";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1247,9 +1247,9 @@ function vendorsView() {
     ${allSwitch("/vendors")}
     <div class="pagehead"><h2>공급 기업</h2>
       <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
-        이름을 누르면 그 회사가 어느 학교에 무엇을 팔았는지 볼 수 있습니다<br>
-        온라인몰·조달 대행·대형 제조사 ${dropped.toLocaleString()}곳은 제품을 만든 곳이 아니라
-        사는 창구여서 뺐습니다</div></div>
+        이름을 선택하면 정보를 볼 수 있습니다<br>
+        온라인몰·조달 대행·대형 제조사 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
+        보기 어려워 제외되었습니다</div></div>
 
     <div class="plist">
       ${shown.slice(0, 400).map(v => `<a href="/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
@@ -1685,7 +1685,7 @@ function schoolsView() {
     ${allSwitch("/schools")}
     <div class="pagehead"><h2>학교 전체 보기</h2>
       <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 그중 기록이 있는 곳 ${withRec.toLocaleString()}곳 ·
-        이름을 누르면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
+        이름을 선택하면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
     ${VMODE === "map" ? `<div class="alpha">${modeToggle()}</div>` + mapBox({items: list.map(x => ({s: x, k: n(x)})), lost: 0, unit: "idx", recs: src}) : `
     <div class="alpha">${modeToggle()}<span class="alpha-gap"></span>
       <span class="alab">정렬</span>
@@ -1722,7 +1722,7 @@ function recordsView() {
     <div class="pagehead"><h2>기록 전체 보기</h2>
       <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
         학교 ${sKeys.length.toLocaleString()}개교${outside ? `(전국 학교 명단에 없는 ${outside.toLocaleString()}곳 포함)` : ""} ·
-        조사 기간과 지역·계열 조건을 그대로 따릅니다</div>${filterNote()}</div>
+        조사 기간과 지역·계열 조건이 반영되었습니다</div>${filterNote()}</div>
     <div class="card">${recsBlock(recs)}</div>`;
 }
 function productsView() {
@@ -1765,7 +1765,7 @@ function productsView() {
     ${allSwitch("/products")}
     <div class="pagehead"><h2>제품 전체 보기</h2>
       <div class="sub2">조달 기록에서 확인된 ${SCOPE === "product" ? "제품" : "제품·제품군"} ${names.length}종 ·
-        이름을 누르면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
+        이름을 선택하면 도입 학교를 볼 수 있습니다</div>${filterNote()}</div>
     <div class="alpha">
       <span class="alab">정렬</span>
       <button class="${PSORT === "count" ? "on" : ""}" onclick="setPSort('count')">도입 학교 순</button>
