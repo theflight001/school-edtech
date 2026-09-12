@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912e";
+  s.src = "/data_detail.js?b=20260912f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -474,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912e";
+    s2.src = "/data_detail_old.js?b=20260912f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -486,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912e";
+  s.src = "/data_old.js?b=20260912f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1609,19 +1609,21 @@ function aboutView() {
       </ul>
 
       <h3>기타</h3>
-      <p><b>갱신 주기</b> — 매월 10일 새벽 3시에 자동으로 갱신됩니다.</p>
-      <p><b>전남광주 통합</b> — 2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 통합되면서 교육청도 같은 날
+      <ul>
+        <li><b>갱신 주기</b> — 매월 10일 새벽 3시에 자동으로 갱신됩니다.</li>
+        <li><b>전남광주 통합</b> — 2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 통합되면서 교육청도 같은 날
         <b>전남광주통합특별시교육청</b>으로 변경됐습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
-        2026.3.5. 공포 · 2026.7.1. 시행).</p>
-      <p>나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은 2028년 완전 통합을 목표로
+        2026.3.5. 공포 · 2026.7.1. 시행).
+          <span style="display:block; margin-top:6px">나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은 2028년 완전 통합을 목표로
         단계적으로 개편되므로
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
-        정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</p>
-      <p><b>정정 요청</b> — 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
+        정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</span></li>
+        <li><b>정정 요청</b> — 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
-        <a href="/contact">정정 요청</a>으로 알려 주세요.</p>
+        <a href="/contact">정정 요청</a>으로 알려 주세요.</li>
+      </ul>
     </div>`;
 }
 
