@@ -1414,6 +1414,10 @@ function namePool() {
   for (const v of VENDORS.values()) if (v.n >= 3 && vendorKind(v.key) === "공급 기업")
     NAME_POOL.push([v.name, `/vendor/${encodeURIComponent(v.key)}`, "회사", core(v.name) || v.name]);
   for (const s of schools) NAME_POOL.push([s, `/school/${encodeURIComponent(s)}`, "학교", s]);
+  // 기록이 없는 학교도 후보에 넣는다 — 이름을 정확히 넣어도 못 찾았다(2026-09-12 꿈타래학교).
+  // 조달 기록이 없을 뿐 명단에는 있는 학교이므로, 학교 정보 화면으로 보낸다.
+  const named = new Set(schools);
+  for (const x of IDX) if (x.c && !named.has(x.n)) NAME_POOL.push([x.n, `/code/${x.c}`, "학교 · 기록 없음", x.n]);
   return NAME_POOL;
 }
 const nearNames = (q, min) => namePool().map(p => [p, sim(q, p[3])])
