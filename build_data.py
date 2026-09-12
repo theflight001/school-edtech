@@ -1105,7 +1105,10 @@ print(f"업체가 만드는 제품으로 좁힘: {_narrowed:,}건")
 OPER_GOODS = re.compile(
     r"(?:운영|활동|수업|연수|협의회|공동체|동아리|대회|축제|캠프|교수학습|보상|홍보|"
     r"기반 ?조성|선도학교|체험|학급|부서|멘토링|발표회|부스)"
-    r"[^()]{0,14}?(물품|재료|준비물|다과|간식|소모품)")
+    r"[^()]{0,14}?(물품|재료|준비물|다과|간식|소모품|"
+    # 행사 홍보물 — '디지털교과서 연구학교 운영보고회 현수막 및 배너 구입'처럼 산 것은 현수막이고
+    # 제품 이름은 행사 이름일 뿐이다(2026-09-12). '패널'은 전자칠판 부품을 가리켜 넣지 않는다.
+    r"현수막|배너|홍보용품|기념품|시상품|트로피|족자|어깨띠)")
 OPER_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|사용료|이용료|소프트웨어|플랫폼|S/?W|"
                        r"계정|콘텐츠|설치|재계약|및 ?물품 ?구[입매]")
 SERVICE_TAGS = {
@@ -1183,6 +1186,15 @@ records = [r for r in records
                    and not re.search(r"구[입매]|구독|라이선스|라이센스|납품|제작", r["product"]))]
 if _before_mv - len(records):
     print(f"이전·재설치 비용 제외: {_before_mv - len(records)}건")
+
+# 조사 기간 밖 기록 제외 — 화면은 2020.1~을 조사 기간으로 밝히는데 일부 시도교육청 자료에
+# 2010~2019년분이 섞여 있었다(2026-09-12: 2,712건). 안내와 자료가 어긋나고, 그 시기는 일부
+# 교육청만 있어 연도별 비교도 왜곡된다. 밝힌 기간만 싣는다.
+COVERAGE_FROM = 2020
+_before_yr = len(records)
+records = [r for r in records if not (r.get("year") and r["year"] < COVERAGE_FROM)]
+if _before_yr - len(records):
+    print(f"조사 기간({COVERAGE_FROM}.1~) 밖 기록 제외: {_before_yr - len(records)}건")
 
 # 벽면 장식 시공 제외 (레고월 등)
 _before_wd = len(records)
