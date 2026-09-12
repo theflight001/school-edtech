@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912j";
+  s.src = "/data_detail.js?b=20260912k";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912j";
+    s2.src = "/data_detail_old.js?b=20260912k";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912j";
+  s.src = "/data_old.js?b=20260912k";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1368,6 +1368,8 @@ function confNote(r) {
   if (r.confidence === "하") bits.push("학교를 특정하지 못한 기록");
   if (r.dup) bits.push("조달 기록과 동일 건(1건 집계)");
   if (r.feeOnly) bits.push("결제 수수료(제품 구매액 아님)");
+  // 원본에 계약일이 없어 계약명에서 연도만 읽어 온 기록 — 실제 계약일과 다를 수 있다
+  if (r.yrGuess) bits.push(`시기 추정(계약명의 ${r.year}년 · 원본에 계약일 없음)`);
   return bits.length ? `<div class="conf">${bits.map(esc).join(" · ")}</div>` : "";
 }
 

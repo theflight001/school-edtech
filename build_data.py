@@ -1187,6 +1187,23 @@ records = [r for r in records
 if _before_mv - len(records):
     print(f"이전·재설치 비용 제외: {_before_mv - len(records)}건")
 
+# 계약일이 비어 있는 기록의 연도를 계약명에서 채운다 — 원본에 날짜가 없는 줄이 954건 있고,
+# 시기를 모르니 최신순에서 맨 뒤로 밀려 2026년 계약이 2020년분보다 아래에 놓였다(2026-09-12).
+# 연도 꼬리(학년도·년도·년)가 붙거나 계약명 맨 앞에 오는 4자리만 연도로 읽는다 — 아무 4자리나
+# 집으면 'MS오피스 365'나 제품명 속 숫자를 연도로 잘못 읽는다(느슨한 규칙에서 2002년이 나왔다).
+# 계약일과 다를 수 있으므로(2025년 말에 2026학년도분 계약) 추정임을 yrGuess로 밝힌다.
+YEAR_IN_NAME = re.compile(r"(?:^|[\s\[(])(20[12]\d)\s*(?:학년도|년도|년)|^(20[12]\d)[\s.\-]")
+_yr_filled = 0
+for _r in records:
+    if _r.get("year"):
+        continue
+    _m = YEAR_IN_NAME.search(_r.get("product") or "")
+    if _m:
+        _r["year"] = int(_m.group(1) or _m.group(2))
+        _r["yrGuess"] = 1
+        _yr_filled += 1
+print(f"계약일 없는 기록의 연도를 계약명에서 채움: {_yr_filled}건(추정 표시)")
+
 # 조사 기간 밖 기록 제외 — 화면은 2020.1~을 조사 기간으로 밝히는데 일부 시도교육청 자료에
 # 2010~2019년분이 섞여 있었다(2026-09-12: 2,712건). 안내와 자료가 어긋나고, 그 시기는 일부
 # 교육청만 있어 연도별 비교도 왜곡된다. 밝힌 기간만 싣는다.
@@ -1643,7 +1660,7 @@ print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ct
 # 화면에서 안 쓰는 열(id)은 싣지 않고, 값이 거의 없는 표시 열(dup·feeOnly)은
 # 행마다 null을 적는 대신 '해당하는 행 번호 목록'으로 따로 넘긴다.
 _DROP_COLS = {"id"}
-_SPARSE_COLS = ["dup", "feeOnly"]
+_SPARSE_COLS = ["dup", "feeOnly", "yrGuess"]
 _cols = sorted({k for r in records for k in r} - _DROP_COLS - set(_SPARSE_COLS))
 _DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
               "vendor", "ctpl",
