@@ -18,7 +18,9 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 SPACING = 180        # 초 — 요청이 44번뿐이라 넉넉히 쉬어도 몇 시간이면 끝난다
 OUT = "s2b_all.csv"
 CKPT = ".ckpt_s2b_excel.json"
-FIELDS = ["계약번호", "계약구분", "거래구분", "계약명", "기관명", "공고일", "계약일", "금액", "시도"]
+# 표는 10칸이다: NO·계약구분·거래구분·계약번호·계약명·기관명·견적요청/공고일·계약일·금액·계약대상자
+# 마지막 칸(계약대상자)을 그동안 읽지 않아 '업체는 공개되지 않는다'고 잘못 알고 있었다(2026-09-12).
+FIELDS = ["계약번호", "계약구분", "거래구분", "계약명", "기관명", "공고일", "계약일", "금액", "시도", "업체명"]
 AREAS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원",
          "충북", "충남", "전북", "전남", "경북", "경남", "제주"]
 SCHOOL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교|특수학교|학교)$")
@@ -101,6 +103,16 @@ def main():
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": []}
     done = set(ckpt["done"])
+    # 칸이 늘어난 뒤로는 옛 파일에 덧붙일 수 없다 — 따로 두고 처음부터 다시 받는다
+    if os.path.exists(OUT):
+        with open(OUT, encoding="utf-8-sig") as _f:
+            head = (_f.readline() or "").strip().split(",")
+        if head != FIELDS:
+            keep = OUT.replace(".csv", "_업체명없던판.csv")
+            os.replace(OUT, keep)
+            done = set()
+            json.dump({"done": []}, open(CKPT, "w"), ensure_ascii=False)
+            print(f"칸이 바뀌어 옛 파일을 {keep}로 옮기고 처음부터 다시 받는다", flush=True)
     new_file = not os.path.exists(OUT)
     f = open(OUT, "a", encoding="utf-8-sig", newline="")
     w = csv.DictWriter(f, fieldnames=FIELDS)
@@ -124,7 +136,8 @@ def main():
             n_school += 1
             w.writerow({"계약번호": c[3], "계약구분": c[1], "거래구분": c[2], "계약명": c[4],
                         "기관명": inst, "공고일": c[6], "계약일": c[7],
-                        "금액": (c[8] if len(c) > 8 else "").replace(",", ""), "시도": area})
+                        "금액": (c[8] if len(c) > 8 else "").replace(",", ""), "시도": area,
+                        "업체명": (c[9] if len(c) > 9 else "")})
         f.flush()
         total += n_all
         kept += n_school

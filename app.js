@@ -1527,7 +1527,7 @@ function aboutView() {
       <h3>어디에서 모았나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
-        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · <b>계약 업체는 공개되지 않습니다</b></span></div>
+        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · 계약대상자(공급 업체)도 공개됩니다 — 우리 자료에는 아직 담기지 않아 다시 받고 있습니다</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 수만 원대 소액 구매까지 포함 (17개 시도 전부)</span></div>
         <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 (12,666개교 등재)</span></div>
         <div class="srccard"><b>학교 위치(지도)</b><span>한국교육시설안전원 초중등학교 위치(2026.3 기준)에 주소로 맞춥니다 — 여기 없는 특수·각종학교와 새로 연 학교는 OpenStreetMap·주소 검색으로 찾습니다 · 바탕 지도 OpenFreeMap</span></div>

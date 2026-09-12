@@ -159,7 +159,7 @@ def main():
             out.append({
                 "계약번호": f"S2B-{key}", "구분": r.get("거래구분") or "물품",
                 "계약명": name, "계약일": r.get("계약일", ""), "금액": r.get("금액", ""),
-                "수요기관": school_raw, "학교명": school, "업체명": "",
+                "수요기관": school_raw, "학교명": school, "업체명": (r.get("업체명") or "").strip(),
                 "학교코드": m["code"], "급별": m["level"], "시도": m["sido"], "상세URL": "",
             })
     with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
