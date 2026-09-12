@@ -29,10 +29,13 @@ def build(total, schools, ymin, ymax):
     img.save("og_card.png", optimize=True)
     return True
 
-def rewrite_meta(total):
+def rewrite_meta(total, schools, ymin, ymax):
     s = open("index.html", encoding="utf-8").read()
-    n = f"{total:,}건"
-    s2 = re.sub(r"조달 기록 [\d,]+건", f"조달 기록 {n}", s)
+    s2 = re.sub(r"조달 기록 [\d,]+건", f"조달 기록 {total:,}건", s)
+    # og:image:alt도 건수·학교 수를 적는다 — 여기만 빠뜨려 307,093건·10,502곳이 계속 남아 있었다
+    # (2026-09-12 확인). 화면에 보이는 숫자는 빌드가 만든다는 규칙은 메타태그에도 똑같이 적용된다.
+    s2 = re.sub(r"계약 [\d,]+건, [^,\"]+, 학교 [\d,]+곳",
+                f"계약 {total:,}건, {ymin}~{ymax}, 학교 {schools:,}곳", s2)
     if s2 != s:
         open("index.html", "w", encoding="utf-8").write(s2)
     return s2 != s
@@ -42,5 +45,5 @@ if __name__ == "__main__":
     total, schools = int(a[0]), int(a[1])
     ymin, ymax = (a[2], a[3]) if len(a) > 3 else ("2020", "2026")
     build(total, schools, ymin, ymax)
-    rewrite_meta(total)
+    rewrite_meta(total, schools, ymin, ymax)
     print(f"공유 카드·메타 설명 갱신: {total:,}건 · 학교 {schools:,}곳")

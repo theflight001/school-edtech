@@ -2,7 +2,7 @@
 # 사용: python3 collect_jbe.py [--years 2023,2024,2025,2026]
 # 특징: 폼이 GET 방식이다(POST로 보내면 조건이 통째로 무시된다).
 #       목록의 3번째 칸에 '계약기관+계약명'이 붙어 나와 기관명을 잘라내야 한다.
-import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
+import argparse, csv, html, json, os, re, time, urllib.error, urllib.parse, urllib.request
 
 BASE = "https://www.jbe.go.kr"
 MENU = "DOM_000001003001009000"
@@ -45,7 +45,8 @@ def fetch(keyword, year, page):
                                          headers={"User-Agent": UA, "Referer": PAGE})
             return opener().open(req, timeout=180).read().decode("utf-8", "replace")
         except Exception as e:
-            if wait is None:
+            # 400은 서버가 그 검색어를 못 읽는 것이라 다시 물어도 같다 — 기다리지 않고 바로 넘긴다
+            if wait is None or (isinstance(e, urllib.error.HTTPError) and e.code == 400):
                 raise
             print(f"  재시도({e}) → {wait}초", flush=True)
             time.sleep(wait)
@@ -105,8 +106,16 @@ def main():
             if tag in done:
                 continue
             page = 1
+            bad = False
             while page <= a.max_pages:
-                rows = parse(fetch(q, year, page))
+                try:
+                    rows = parse(fetch(q, year, page))
+                except Exception as e:
+                    # 특수문자가 든 검색어 하나에 400이 나면 그때까지 받던 것까지 통째로 멈췄다
+                    # (2026-09-12 전북, 610회에서 끝). 그 칸만 건너뛰고 '끝냄'으로 적지 않는다.
+                    print(f"  [{kw}] 건너뜀 ({e})", flush=True)
+                    bad = True
+                    break
                 req_n += 1
                 if not rows:
                     break
@@ -130,6 +139,8 @@ def main():
                 if page % 10 == 0:
                     print(f"  …{page}페이지째", flush=True)
                 time.sleep(SPACING)
+            if bad:
+                continue
             done.add(tag)
             ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
             with open(CKPT, "w") as cf:

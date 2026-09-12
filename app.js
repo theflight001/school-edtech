@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260911b";
+  s.src = "/data_detail.js?b=20260912a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -359,9 +359,10 @@ function recordTable(recs, {showSchool = true} = {}) {
 // 첫 화면이 그만큼 늦다 — 기간을 넓힐 때 따로 받는다(withOld).
 const BASE_FROM = "2026-01";
 let PF = BASE_FROM, PT = "";  // "YYYY-MM"
-window.setPF = v => { PF = v; render(); };
-window.setPT = v => { PT = v; render(); };
-window.clearPeriod = () => { PF = BASE_FROM; PT = ""; render(); };
+let PF_TOUCHED = false;   // 기간을 손으로 고른 적이 있는가
+window.setPF = v => { PF = v; PF_TOUCHED = true; render(); };
+window.setPT = v => { PT = v; PF_TOUCHED = true; render(); };
+window.clearPeriod = () => { PF = BASE_FROM; PT = ""; PF_TOUCHED = true; render(); };
 const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
 // 고를 수 있는 마지막 달은 빌드가 알려 준다 — 손으로 적어 두면 월 갱신 뒤에도 옛 달에 멈춘다.
 // 자료가 닿는 마지막 달(ymMax)이 아니라 '온전히 다 받은 달'(ymLabel)까지만 연다 —
@@ -473,7 +474,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260911b";
+    s2.src = "/data_detail_old.js?b=20260912a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -485,7 +486,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260911b";
+  s.src = "/data_old.js?b=20260912a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -494,7 +495,7 @@ window.pkApply = () => {
   if (pkS === null) return;
   const from = ymStr(pkS), to = ymStr(pkE !== null ? pkE : pkS);
   closePicker();
-  withOld(from, () => { PF = from; PT = to; render(); });
+  withOld(from, () => { PF = from; PT = to; PF_TOUCHED = true; render(); });
 };
 // ---- 학교 계열 필터 (부모 6칸 + 세부 잎사귀) ----
 const LEAVES = [
@@ -546,6 +547,12 @@ function spcLeaf(name, detail) {
   return "spc_sci";
 }
 const ETC_LV = /방송통신|각종학교|평생학교|고등기술|고등공민/;
+// NEIS는 '학교 종류'(법적 지위)와 '고등학교 구분'(교육과정)을 다른 칸에 적는다. 각종학교·평생학교처럼
+// 정규 학교가 아닌 종류에 '특성화고'가 나란히 붙으면 두 값이 같은 층의 분류로 읽혀 무엇이 맞는지
+// 헷갈린다(예: 꿈타래학교 = 각종학교(고) + 특성화고). 그때만 구분을 '과정'으로 적어 층을 드러낸다.
+const HS_COURSE = {"특성화고": "특성화 과정", "일반고": "일반 과정", "자율고": "자율 과정",
+  "특목고": "특수목적 과정", "마이스터고": "마이스터 과정"};
+const hsPhrase = (level, hs) => !hs ? "" : ETC_LV.test(level || "") ? (HS_COURSE[hs] || hs) : hs;
 // NEIS 학교유형 값을 다섯 갈래로 가른다 ('각종학교(고)'·'평생학교(초)-4년12학기' 같은 꼴)
 const etcLeaf = lv => /방송통신/.test(lv) ? "alt_b" : /각종학교/.test(lv) ? "alt_v"
   : /평생학교/.test(lv) ? "alt_l" : /고등기술|고등공민/.test(lv) ? "alt_t" : null;
@@ -918,7 +925,7 @@ function filterNote() {
   return `<span class="fnote">${esc(bits.join(" · "))} <a href="/">홈에서 변경</a>${wide}</span>`;
 }
 // 전 기간으로 넓힌다 — 2020~2025년 기록은 따로 있어 그때 받아 온다
-window.showAllPeriod = () => { PF = ""; PT = ""; withOld("", () => render()); };
+window.showAllPeriod = () => { PF = ""; PT = ""; PF_TOUCHED = true; withOld("", () => render()); };
 
 function homeView() {
   const active = periodOn();
@@ -1041,7 +1048,7 @@ function schoolView(name) {
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
         ${OLD_STATE === "done" ? "" : `<div class="conf"><a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a></div>`}
-        ${info.schoolCode ? `<div class="conf">${[info.hsType, info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
+        ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
           onclick="setSchoolTag('${t.replace(/'/g, "\\'")}')"
@@ -1278,7 +1285,7 @@ function codeView(code) {
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(s.n)}</h2>
-      <div class="meta">${esc(s.l)}${s.h ? " · " + esc(s.h) : ""} · ${esc(s.s)}
+      <div class="meta">${esc(s.l)}${hsPhrase(s.l, s.h) ? " · " + esc(hsPhrase(s.l, s.h)) : ""} · ${esc(s.s)}
         <div class="conf">NEIS ${[s.f, s.a, "학교코드 " + s.c].filter(Boolean).map(esc).join(" · ")}</div>
       </div></div>
     <div class="card"><div class="empty">아직 수집된 에듀테크 활용 기록이 없습니다.<br>
@@ -1911,6 +1918,11 @@ function mapBox(spec) {
 }
 // 지도에서 누른 학교의 기록 — 화면을 옮기지 않고 지도 바로 아래에 보인다.
 // 목록 화면의 지도면 그 목록에 든 기록만, 학교 전체 보기면 그 학교의 기록 전부.
+// 같은 자리에 선 학교들은 초·중·고 차례로 세운다 — 학교급이 오르는 순서가 눈에 익다.
+const LV_RANK = p => { const v = p.lv || p.l || "";
+  return /초등|\(초\)/.test(v) ? 0 : /중학|\(중\)/.test(v) ? 1
+    : /고등|\(고\)|고$/.test(v) ? 2 : /특수/.test(v) ? 3 : 4; };
+const byLevel = (x, y) => LV_RANK(x) - LV_RANK(y) || x.n.localeCompare(y.n, "ko");
 function showMapSel(spec, rows) {
   const box = document.getElementById("mapsel");
   if (!box) return;
@@ -1952,7 +1964,7 @@ function mountMap() {
       if (!g) { noXY++; continue; }
       if (k) withRecOnMap++;
       feats.push({type: "Feature", geometry: {type: "Point", coordinates: [g[1], g[0]]},
-        properties: {n: s.n, l: s.h || s.l || "", s: s.s, k, c: s.c,
+        properties: {n: s.n, l: s.h || s.l || "", lv: s.l || "", s: s.s, k, c: s.c,
           href: k ? `/school/${encodeURIComponent(name || s.n)}` : `/code/${s.c}`}});
     }
     const N = v => v.toLocaleString();
@@ -2002,7 +2014,9 @@ function mountMap() {
       // 묶음은 우리가 직접 짓는다 — 지도 타일이 그려져야만 알 수 있는 방식(querySourceFeatures)은
       // 창이 가려지거나 그리기가 늦으면 아무것도 못 내놓는다(2026-09-12). 화면 좌표 44px 칸에 모아 센다.
       const mk = [];
-      let selH = [];
+      let selH = [], expandKey = null;
+      // 펼친 묶음은 화면을 옮겨도 같은 묶음임을 알아야 한다 — 속한 학교코드로 이름표를 만든다
+      const ckey = c => c.items.map(f => f.properties.c || f.properties.n).sort().join("|");
       const paintSel = () => { for (const m of mk) m._el.classList.toggle("on", selH.includes(m._href)); };
       // 묶는 칸은 멀리서 볼수록 크게 — 44px로 묶었더니 전국 화면에 딱지가 40개 넘게 깔려
       // 어지러웠다(2026-09-12). 칸 크기는 시안이 쓰는 값(180/140/88)을 그대로 쓴다.
@@ -2044,6 +2058,23 @@ function mountMap() {
         mk.length = 0;
         for (const c of list) {
           const many = c.items.length > 1;
+          if (many && ckey(c) === expandKey) {
+            // 펼친 묶음 — 초·중·고 차례로 위에서 아래로 세운다. 각각이 따로 눌리고 따로 물든다.
+            const its = c.items.map(f => f.properties).sort(byLevel);
+            its.forEach((q, i) => {
+              const b2 = document.createElement("button");
+              b2.type = "button";
+              b2.className = "mpin" + (q.k > 0 ? "" : " dim");
+              b2.textContent = q.n;
+              b2.title = `${q.s} · ${q.l} · ${q.k ? q.k.toLocaleString() + "건" : "기록 없음"}`;
+              b2.onclick = ev2 => { ev2.stopPropagation(); selH = [q.href]; showMapSel(spec, [q]); paintSel(); };
+              const m2 = new maplibregl.Marker({element: b2, offset: [0, (i - (its.length - 1) / 2) * 36]})
+                .setLngLat(c.at).addTo(map);
+              m2._el = b2; m2._href = q.href;
+              mk.push(m2);
+            });
+            continue;
+          }
           const p = c.items[0].properties;
           const lngs = c.items.map(f => f.geometry.coordinates[0]), lats = c.items.map(f => f.geometry.coordinates[1]);
           const at = c.at;
@@ -2058,9 +2089,11 @@ function mountMap() {
               // 같은 주소를 쓰는 학교들은 좌표가 같아 확대해도 영영 나뉘지 않는다 — 그때는 목록을 편다
               const spanX = Math.max(...lngs) - Math.min(...lngs), spanY = Math.max(...lats) - Math.min(...lats);
               if (Math.max(spanX, spanY) < 0.0004 || map.getZoom() >= 16.5) {
-                selH = c.items.map(f => f.properties.href);
-                showMapSel(spec, c.items.map(f => f.properties).sort((x, y) => y.k - x.k || x.n.localeCompare(y.n, "ko")));
-                paintSel();
+                // 좌표가 같아 확대해도 영영 나뉘지 않는다 — 딱지를 학교별로 펴서 하나씩 고르게 한다
+                expandKey = ckey(c);
+                selH = [];
+                showMapSel(spec, c.items.map(f => f.properties).sort(byLevel));
+                draw();
                 return;
               }
               map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
@@ -2078,7 +2111,7 @@ function mountMap() {
         paintSel();
       };
       map._setSel = hrefs => { selH = hrefs; paintSel(); };
-      map.on("click", () => { if (selH.length) clearMapSel(); });   // 빈 곳을 누르면 선택이 풀린다
+      map.on("click", () => { if (selH.length || expandKey) { expandKey = null; clearMapSel(); draw(); } });   // 빈 곳을 누르면 선택이 풀린다
       map.on("moveend", draw);
       map.on("zoomend", draw);
       draw();
@@ -2103,12 +2136,16 @@ function render() {
     if (OLD_STATE !== "done") withOld("", () => render());
   }
   else if (kind === "about") view.innerHTML = aboutView();
-  else if (kind === "schools") view.innerHTML = schoolsView();
-  else if (kind === "records") view.innerHTML = recordsView();
-  else if (kind === "products") view.innerHTML = productsView();
+  else if (kind === "schools" || kind === "records" || kind === "products" || kind === "vendors") {
+    // '전체 보기'는 가진 것을 다 본다는 뜻이다 — 기간도 전 기간으로 연다(검색과 같은 이유).
+    // 다만 사용자가 기간을 직접 고른 뒤라면 그 선택을 덮지 않는다.
+    if (!PF_TOUCHED && (PF || PT)) { PF = ""; PT = ""; }
+    view.innerHTML = kind === "schools" ? schoolsView() : kind === "records" ? recordsView()
+      : kind === "products" ? productsView() : vendorsView();
+    if (OLD_STATE !== "done") withOld("", () => render());
+  }
   else if (kind === "regions") view.innerHTML = regionsView();
   else if (kind === "vendor") view.innerHTML = vendorView(arg);
-  else if (kind === "vendors") view.innerHTML = vendorsView();
   else if (kind === "contact") view.innerHTML = contactView();
   else {
     view.innerHTML = homeView();
