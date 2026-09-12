@@ -898,14 +898,23 @@ function baseRecs() {
   return _brVal;
 }
 function filterNote() {
-  const bits = [];
-  if (periodOn()) bits.push(`조사 기간 ${(PF || "2020-01").replaceAll("-", ".")} ~ ${(PT || YM_TO).replaceAll("-", ".")}`);
+  // 조사 기간은 조건이 없어도 늘 적는다 — 기본이 2026년부터라, 모르고 보면 그 학교·제품의
+  // 전체 기록으로 읽힌다(2026-09-12).
+  const ym = v => v.replace("-0", ".").replace("-", ".");     // 2026-01 → 2026.1
+  const bits = [`조사 기간 ${ym(PF || "2020-01")} ~ ${ym(PT || YM_TO)}`];
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
-  return bits.length
-    ? `<span class="fnote">${esc(bits.join(" · "))} <a href="/">홈에서 변경</a></span>` : "";
+  // 기간이 걸려 있으면 넓히는 길을 바로 준다 — 기본이 2026년부터라, 모르고 보면 그 학교의
+  // 전체 구매 기록으로 읽힌다(2026-09-12).
+  // 기본 기간(2026.1~)일 때도 넓히는 길을 준다 — 조건을 periodOn()으로 걸었더니 정작 기본 화면에서
+  // 링크가 안 보였다(2026-09-12). 이미 전 기간이면 다시 권하지 않는다.
+  const wide = (PF === "" && !PT) ? ""
+    : ` <a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a>`;
+  return `<span class="fnote">${esc(bits.join(" · "))} <a href="/">홈에서 변경</a>${wide}</span>`;
 }
+// 전 기간으로 넓힌다 — 2020~2025년 기록은 따로 있어 그때 받아 온다
+window.showAllPeriod = () => { PF = ""; PT = ""; withOld("", () => render()); };
 
 function homeView() {
   const active = periodOn();
@@ -1027,6 +1036,7 @@ function schoolView(name) {
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
+        ${OLD_STATE === "done" ? "" : `<div class="conf"><a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a></div>`}
         ${info.schoolCode ? `<div class="conf">${[info.hsType, info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
@@ -1449,7 +1459,7 @@ function searchView(q) {
   return `
     <div class="crumb"><a href="/">홈</a> › 검색 결과</div>
     <div class="pagehead"><h2>“${esc(q)}” 검색 결과</h2><div class="meta">${recs.length.toLocaleString()}건${
-      OLD_STATE === "done" ? ` · <span class="conf">전 기간(${esc((DB_RAW.meta.coveragePeriod || "").replace(/ /g, ""))})에서 찾았습니다</span>`
+      OLD_STATE === "done" ? ` · <span class="conf">전 기간(${esc((DB_RAW.meta.coveragePeriod || "").replace(/ /g, ""))})에서 검색한 결과입니다</span>`
       : ` · <span class="conf">지난 기록을 불러오는 중입니다…</span>`}${fixed ? ` · <b>${esc(fixed[0])}</b>${euRo(fixed[0])} 고쳐 찾았습니다 · <a href="${fixed[1]}">${esc(fixed[0])} 페이지 보기 ›</a>` : words ? ` · 낱말을 나눠 찾았습니다 — ${words.map(esc).join(" · ")}를 모두 담은 기록` : terms.length > 1 ? ` · 유사 표기 포함: ${terms.filter(t => t !== q.toLowerCase()).map(esc).join(", ")}` : ""}${hidden ? ` · <a href="javascript:void(0)" onclick="document.getElementById('inclUnknown').click()">미확인 제품 ${hidden.toLocaleString()}건 더 보기</a>` : ""}</div></div>
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}
       <p class="cv"><a href="/tag/${encodeURIComponent(noteKey)}">${esc(tagName(noteKey))} 페이지 보기 ›</a></p></div>` : ""}

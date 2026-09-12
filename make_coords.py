@@ -71,6 +71,23 @@ def main():
 
     M = [s for s in json.load(open("school_master.json", encoding="utf-8"))["schools"]
          if s["level"] and not any(e in s["level"] for e in EXCLUDE)]
+
+    # 명단에 주소가 없는 학교는 사람이 찾아 적어 둔 주소를 쓴다(geo/위치미확인_학교.csv의 명단주소 칸).
+    # 부산 학력인정 계열 네 곳처럼 NEIS 명단에 주소가 통째로 비어 있는 곳이 있다(2026-09-12).
+    _fix = "geo/위치미확인_학교.csv"
+    if os.path.exists(_fix):
+        _add = {}
+        for r in csv.DictReader(open(_fix, encoding="utf-8-sig")):
+            k, a = (r.get("학교코드") or "").strip(), (r.get("명단주소") or "").strip()
+            if k and a:
+                _add[k] = a
+        _n = 0
+        for s in M:
+            if not (s.get("address") or "").strip() and key_of(s) in _add:
+                s["address"] = _add[key_of(s)]
+                _n += 1
+        if _n:
+            print(f"  손으로 찾은 주소로 채운 학교 {_n}곳")
     assert len(M) == 12543, f"색인이 12,543곳이 아니다: {len(M)}"
 
     z = zipfile.ZipFile(os.path.join(GEO, "school_locations_official_20260320_src.zip"))
