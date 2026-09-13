@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260913e";
+  s.src = "/data_detail.js?b=20260913f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260913e";
+    s2.src = "/data_detail_old.js?b=20260913f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260913e";
+  s.src = "/data_old.js?b=20260913f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1814,39 +1814,34 @@ function regionsView() {
 }
 
 function contactView() {
-  const subj = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청");
+  // 학교·기업을 따로 받던 서식을 하나로 합쳤다 — 물어보는 것이 결국 같고,
+  // 버튼이 둘이면 어느 것을 눌러야 할지 고르는 짐만 지운다(2026-09-13).
+  const subj = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청 · 문의");
   const body = encodeURIComponent(
-    "아래 항목을 채워 보내주시면 확인 후 반영하겠습니다.\n\n" +
-    "1. 학교명:\n2. 해당 기록(제품명 또는 계약명):\n3. 어떤 점이 잘못되었나요:\n4. 올바른 내용:\n5. 근거 자료(있으면):\n6. 회신받을 연락처:\n");
-  // 기업은 물어볼 것이 다르다 — 회사·제품이 먼저 오고, 아예 빠진 기록도 함께 받는다
-  const subjCo = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청 (공급 기업)");
-  const bodyCo = encodeURIComponent(
-    "아래 항목을 채워 보내주시면 계약 원문과 대조해 반영하겠습니다.\n\n" +
-    "1. 회사명:\n2. 제품명(표기해야 할 이름):\n" +
+    "아래 항목을 채워 보내주시면 원본 조달 기록과 대조해 확인하겠습니다.\n\n" +
+    "1. 학교 또는 회사명:\n" +
+    "2. 해당 기록(제품명 또는 계약명의 스크린샷을 주시면 도움이 됩니다):\n" +
     "3. 어떤 점이 잘못되었나요:\n" +
-    "   (예: 다른 회사 제품으로 표시됨 / 제품군으로만 남아 있음 / 납품 기록이 목록에 없음 / 제품명 표기 오류)\n" +
-    "4. 해당 기록(학교명·계약명·계약일) — 목록에 없다면 '없음'이라고 적어 주세요:\n" +
-    "5. 올바른 내용:\n6. 근거 자료(계약서·납품 확인서·조달 공고 번호 등):\n7. 회신받을 담당자·연락처:\n");
+    "4. 올바른 내용:\n" +
+    "5. 근거 자료(필요시):\n" +
+    "6. 담당자 연락처:\n");
   return `
     <div class="crumb"><a href="/">홈</a> › 정정 요청</div>
     <div class="page">
       <h2>정정 요청 · 문의</h2>
-      <p class="lead">정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
-      시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
+      <p class="lead">정보수집 구조의 특성상 실제 발생한 모든 계약을 싣지 못하거나 오기가 있을 수 있습니다.
       <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
       <p class="who">학교·교육청</p>
       <ul>
         <li>우리 학교 기록이 아닌데 실려 있는 경우</li>
-        <li>제품명이 실제와 다르게 표시된 경우</li>
-        <li>학교 이름·지역·계열이 잘못된 경우 (개명·이전 등)</li>
-        <li>이미 종료한 계약이 사용 중인 것처럼 보이는 경우</li>
+        <li>제품명이 다르게 표시된 경우</li>
+        <li>에듀테크 제품이 아닌데 표시된 경우 등</li>
       </ul>
-      <p class="who">제품을 공급하는 기업</p>
+      <p class="who">기업</p>
       <ul>
-        <li>우리 제품인데 <b>다른 회사 제품으로</b> 표시된 경우</li>
-        <li>제품명·회사명 표기가 실제와 다른 경우 (브랜드명 변경·통합 포함)</li>
+        <li>제품명·회사명 표기가 잘못된 경우</li>
         <li>계약명에 제품 이름이 없어 <b>제품군으로만 남아 있는</b> 기록이 우리 제품인 경우</li>
         <li>납품한 학교가 목록에 <b>빠져 있는</b> 경우</li>
       </ul>
@@ -1854,21 +1849,18 @@ function contactView() {
       <h3>처리 방식</h3>
       <ul>
         <li>보내주신 내용은 원본 조달 기록과 대조해 확인합니다.</li>
-        <li>확인되면 해당 기록을 수정하거나 내리고, 다음 갱신에 반영합니다.</li>
-        <li>계약 원문 자체가 잘못된 경우에는 원문을 바꿀 수 없어, 참고 설명을 덧붙이는 방식으로 처리합니다.</li>
-        <li>이 목록은 <b>공개된 조달 기록</b>만을 근거로 삼습니다. 기록에 없는 납품을 새로 넣거나
-          계약명에 없는 제품명을 채우려면 계약서·납품 확인서 같은 근거가 필요합니다.
-          홍보 목적의 등재 요청은 받지 않습니다.</li>
+        <li>확인되면 해당 기록을 수정하여 다음 갱신에 반영합니다.</li>
+        <li>이 목록은 <b>공개된 조달 기록</b>을 근거로 삼습니다. 기록에 없는 내용을 요청하시는 경우
+          계약서·납품 확인서 등의 자료를 첨부해 주시기 바랍니다. 홍보 목적의 등재 요청은 받지 않습니다.</li>
       </ul>
 
       <h3>보내실 곳</h3>
       <div class="cta-row">
         <div>
-          <p>아래 버튼을 누르면 보내는 분에 맞는 서식이 채워진 메일 창이 열립니다.
+          <p>아래 버튼을 누르면 서식이 채워진 메일 창이 열립니다.
           메일 앱이 없으시면 <b>schooledtech.info@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
           <div class="btnrow">
-            <a class="mailbtn" href="mailto:schooledtech.info@gmail.com?subject=${subj}&body=${body}">학교·개인 정정 요청</a>
-            <a class="mailbtn alt" href="mailto:schooledtech.info@gmail.com?subject=${subjCo}&body=${bodyCo}">공급 기업 정정 요청</a>
+            <a class="mailbtn" href="mailto:schooledtech.info@gmail.com?subject=${subj}&body=${body}">정정 요청 · 문의</a>
           </div>
         </div>
         <img src="/contact_person.png?v=1" width="137" height="186" alt="">
