@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260913a";
+  s.src = "/data_detail.js?b=20260913b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260913a";
+    s2.src = "/data_detail_old.js?b=20260913b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260913a";
+  s.src = "/data_old.js?b=20260913b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -949,7 +949,6 @@ function homeView() {
     .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(skey)).length])
     .sort((a, b) => b[1] - a[1]);
   return `
-    <div class="tiles-head">아래 통계를 보는 조건 <span>— 검색은 이 조건과 무관하게 전 기간·전국에서 찾습니다</span></div>
     <div class="tiles">
       <div class="tile clickable" onclick="openRegionPicker()" role="button" aria-label="지역 선택">
         <div class="v">${rgLabel()}</div>

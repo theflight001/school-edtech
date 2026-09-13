@@ -112,11 +112,6 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .srccard b { font-size: 14.5px; }
 .srccard span { word-break: keep-all; display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
 /* 검색바 오른쪽 '미확인 제품명 포함' 토글 — 검색창 안에 얹히므로 테두리 없이 둔다 */
-/* 검색창과 통계 조건은 서로 무관하다 — 붙어 있으면 '검색 조건'으로 읽힌다(2026-09-13) */
-.tiles-head { margin: 30px 0 10px; padding-top: 22px; border-top: 1px solid var(--grid);
-  font-size: 13.5px; font-weight: 700; color: var(--ink-2); }
-.tiles-head span { font-weight: 400; color: var(--muted); }
-@media (max-width: 640px) { .tiles-head span { display: block; margin-top: 3px; } }
 .searchwrap { position: relative; }
 /* 물음표는 토글 오른쪽 끝과 검색칸 세로선 사이의 한가운데 온다 (양쪽 7px) */
 .inclwrap { position: absolute; right: 25.5px; top: 50%; transform: translateY(-50%);
@@ -467,7 +462,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260913a"></script>
+<script src="/data_summary.js?b=20260913b"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -530,7 +525,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260913a", function () { load("/app.js?b=20260913a"); });
+    load("/data.js?b=20260913b", function () { load("/app.js?b=20260913b"); });
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);
