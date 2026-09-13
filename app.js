@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260913c";
+  s.src = "/data_detail.js?b=20260913d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260913c";
+    s2.src = "/data_detail_old.js?b=20260913d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260913c";
+  s.src = "/data_old.js?b=20260913d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1865,10 +1865,10 @@ function contactView() {
       <div class="cta-row">
         <div>
           <p>아래 버튼을 누르면 보내는 분에 맞는 서식이 채워진 메일 창이 열립니다.
-          메일 앱이 없으시면 <b>gklim001@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
+          메일 앱이 없으시면 <b>schooledtech.info@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
           <div class="btnrow">
-            <a class="mailbtn" href="mailto:gklim001@gmail.com?subject=${subj}&body=${body}">학교·개인 정정 요청</a>
-            <a class="mailbtn alt" href="mailto:gklim001@gmail.com?subject=${subjCo}&body=${bodyCo}">공급 기업 정정 요청</a>
+            <a class="mailbtn" href="mailto:schooledtech.info@gmail.com?subject=${subj}&body=${body}">학교·개인 정정 요청</a>
+            <a class="mailbtn alt" href="mailto:schooledtech.info@gmail.com?subject=${subjCo}&body=${bodyCo}">공급 기업 정정 요청</a>
           </div>
         </div>
         <img src="/contact_person.png?v=1" width="137" height="186" alt="">
