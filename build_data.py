@@ -66,7 +66,6 @@ ALIAS = {
     "전통예술고등학교": "국립전통예술고등학교",                 # 문체부 소속 국립학교
     "남인천고등학교": "학력인정남인천고등학교",
     "건양중학교": "건양대학교병설건양중학교",                   # 충남 논산
-    "석천중학교": "김천석천중학교",                            # 경북 김천
     "서울특별시교육청해성여자고등학교": "해성여자고등학교",
     "한국과학기술원부설한국과학영재학교": "한국과학영재학교",
     # 2026-08-02 웹 검증 확정분
@@ -84,8 +83,48 @@ ALIAS = {
     "부일여자중학교": "인천동수중학교",                   # 2023 교명 변경·남녀공학 전환 (인천 부평)
     # 2026-08-04 웹 검증 확정분 (울산 수집 중 발견)
     "울산중앙여자고등학교": "울산가온고등학교",            # 2025.3 교명 변경·남녀공학 전환
-    "명덕여자중학교": "명덕중학교",                       # 2026.3 교명 변경·남녀공학 전환 (울산 동구)
+    # 2026-09-13 웹 검증 확정분 (학교 미특정 334건 점검에서 발견)
+    "동일여자상업고등학교": "서울매그넷고등학교",           # 2022.3 교명 변경 (서울 금천)
+    "세종하이텍고등학교": "세종미래고등학교",              # 2023.3 학과 개편·교명 변경 (세종 부강)
+    "금호공업고등학교": "경북휴먼테크고등학교",            # 교명 변경 (경북 영천). 광주에는 동명교 없음
+    "송강고등학교": "솔가람고등학교",                     # 2024.3 교명 변경 (전남 담양 공립대안학교)
+    "전주교대부설초등학교": "전주교육대학교전주부설초등학교",  # NEIS 등재명 차이 (전북 전주)
 }
+
+# 같은 이름이 다른 시도에도 있어 이름만으로는 잇지 못하는 개명·표기 차이 — (시도 앞 두 글자, DB 표기) → NEIS 학교코드
+# 2026-09-13 웹 검증 확정분
+ALIAS_SCOPED = {
+    ("대구", "대구여자상업고등학교"): "7240516",   # 2026.3 대명고등학교로 교명 변경 (경기 안양에 경기대명고가 따로 있다)
+    ("경기", "구미중학교"): "7551333",            # NEIS 등재명은 '분당구미중학교' (성남 분당). 경북 구미시 구미중과 다른 학교
+    ("경북", "석천중학교"): "8781096",   # NEIS 등재명 '김천석천중학교'. 경기 부천·강원에도 석천중이 있어 시도 한정
+    ("울산", "명덕여자중학교"): "7491254",  # 2026.3 명덕중학교로 교명 변경 (울산 동구). 서울 명덕여중은 별개 학교
+    ("서울", "금호여자중학교"): "7061183",  # 2026.3 남녀공학 전환·금호중학교로 재개교 (서울 성동). 경북 영천 금호여중은 별개
+    ("전남", "영광여자중학교"): "8682041",  # 2024.3 남녀공학 전환·영광옥당중학교로 교명 변경. 경북 영주 영광여중은 별개
+    ("경북", "영주고등학교"): "8750831",   # 한국철도고등학교로 교명 변경 (경북 영주). 제주 영주고는 별개
+}
+
+# 폐교로 확인된 학교 — 현행 NEIS 명단에 없어 코드를 붙일 수 없다. 옛 계약은 학교 미특정으로 남긴다.
+# (통폐합 후신교로 옮기면 그 학교가 산 것처럼 보이므로 잇지 않는다)
+CLOSED_SCHOOLS = {
+    "서울화양초등학교",   # 2023.2 폐교 (서울 광진)
+    "능산초등학교",       # 2023.2 폐교, 삼성초등학교와 통합 (충북 음성)
+    "주덕고등학교",       # 2022.3 폐교 (충북 충주)
+}
+# 같은 이름이 다른 시도에 살아 있는 폐교 — (시도, 교명)
+CLOSED_SCOPED = {
+    ("충북", "산외초등학교"),   # 2025.3 폐교, 동광초와 통합 (보은). 전북 정읍·경남 밀양 산외초는 별개
+    ("대구", "교동중학교"),     # 2023.3 폐교, 관음중·칠곡중으로 통합 (대구 북구). 인천 강화 교동중은 별개
+}
+
+def sido2(s):
+    """시도 표기를 두 글자로 — '경상북도'·'경북'·'경상북도교육청' → '경북', '전남광주통합특별시(광주)' → '광주'"""
+    s = s or ""
+    if "(광주)" in s: return "광주"
+    if "(전남)" in s: return "전남"
+    for k, v in (("충청북", "충북"), ("충청남", "충남"), ("전라북", "전북"), ("전라남", "전남"),
+                 ("경상북", "경북"), ("경상남", "경남")):
+        if s.startswith(k): return v
+    return s[:2]
 
 SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
                "대전": "대전", "울산": "울산", "세종": "세종", "경기": "경기", "강원": "강원",
@@ -94,18 +133,46 @@ SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인�
 
 master_by_name = collections.defaultdict(list)
 master_by_nkey = collections.defaultdict(list)
+master_by_code = {}
 # 띄어쓰기·기호만 다른 표기를 함께 찾는다 ('경화여자EnglishBusiness고' ↔ '경화여자English Business고')
 def _nkey(n):
-    return re.sub(r"[\s·ㆍ\-_()（）]", "", n or "")
+    # 가운뎃점은 표기가 넷이다: · (U+00B7) ㆍ (U+318D) ・ (U+30FB, NEIS 등재명) ‧ (U+2027)
+    return re.sub(r"[\s·ㆍ・‧•∙\-_()（）]", "", n or "")
 if os.path.exists(MASTER):
     for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
+        s["name"] = s["name"].strip()       # NEIS 원자료에 '세종중학교 '처럼 끝 공백이 남은 교명이 있다
         master_by_name[s["name"]].append(s)
         master_by_nkey[_nkey(s["name"])].append(s)
+        master_by_code[s["code"]] = s
 
 # 시도 접두어가 붙거나 빠진 표기 ('인천재능고' ↔ '재능고', '담방초' ↔ '인천담방초').
 # 다른 시도에 같은 이름이 있을 수 있으니 후보가 딱 하나일 때만 인정한다.
 _SIDO_PFX = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
              "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]
+def scoped_alias(name, sido):
+    """시도 한정 별칭 — (시도 앞 두 글자, 교명)으로 학교코드를 바로 찾는다. 없으면 None."""
+    if not name or not sido:
+        return None
+    key = (sido2(sido), name)
+    if key in ALIAS_SCOPED:
+        return master_by_code.get(ALIAS_SCOPED[key])
+    return None
+
+_SIGUN = re.compile(r"([가-힣]{1,4}?)(시|군|구)(?=\s|$)")
+def pick_by_title_place(cands, *texts):
+    """같은 시도의 동명 학교를 계약명·수요기관에 적힌 시·군 이름으로 가른다.
+    후보 주소에서 시·군 이름을 뽑아('경산시'→'경산') 본문에 그 지명이 있는 후보가 딱 하나일 때만 고른다."""
+    body = " ".join(t for t in texts if t)
+    if not body:
+        return cands
+    hit = []
+    for c in cands:
+        addr = c.get("address") or ""
+        places = {m.group(1) for m in _SIGUN.finditer(addr) if len(m.group(1)) >= 2}
+        if any(pl in body for pl in places):
+            hit.append(c)
+    return hit if len(hit) == 1 else cands
+
 def lookup_school(name):
     """교명 하나로 마스터에서 찾는다 — 정확 일치 → 띄어쓰기 무시 → 시도 접두어 가감"""
     nm = ALIAS.get(name, name)
@@ -154,6 +221,13 @@ def resolve_school(row):
     org = (row.get("수요기관") or "").strip()
     toks = org.split()
     head = toks[0] if toks else ""            # 예: '경기도교육청' — 광역 단위가 확실한 토큰
+    if name in CLOSED_SCHOOLS or (sido2(row.get("시도") or head), name) in CLOSED_SCOPED:   # 폐교 — 잇지 않는다
+        return row
+    sc = scoped_alias(name, row.get("시도") or head)
+    if sc:                                    # 시도 한정 별칭 — 이름만으로는 다른 시도 학교와 섞이는 것
+        row["학교명"], row["학교코드"] = sc["name"], sc["code"]
+        row["급별"], row["시도"] = sc["level"], sc["sido"]
+        return row
     name = ALIAS.get(name, name)              # 개명 학교 반영
     cands = _by_name.get(name, [])
     if not cands and len(toks) > 1:
@@ -214,6 +288,9 @@ def resolve_school(row):
             f = [c for c in cands if mid in (c.get("address") or "")]
             if len(f) == 1:
                 cands = f
+    if len(cands) > 1:
+        # 수요기관에 교육지원청이 없으면('경상북도교육청 남산초등학교') 계약명에 적힌 시·군 이름으로 가른다
+        cands = pick_by_title_place(cands, row.get("계약명"), org)
     if len(cands) == 1:
         c = cands[0]
         row["학교명"], row["학교코드"] = name, c["code"]
@@ -228,9 +305,10 @@ SPECIFIC_RULES = [
     ("ChatGPT",            # '겟지피티(GetGPT)'는 유한책임회사 워드브릭스의 딴 제품이다 — 에듀집에 따로 등록돼 있다.
                            # 이름이 닮았다고 ChatGPT로 묶으면 안 된다(46건이 그랬다).
                            r"Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇][\s\-]?지피티|GPT[- ]?[45]|OpenAI"),
-    # Google AI Pro/Ultra는 2025년 개편된 구글 AI 구독 요금제 공식 명칭(구 Gemini Advanced·Google One AI Premium)
-    ("Google AI Pro",       r"구글 ?AI ?(?:PRO|프로|Ultra|울트라)|Google ?AI ?(?:Pro|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
-    ("Gemini",             r"Gemini|제미나이"),
+    # Google AI Plus/Pro/Ultra는 Gemini 구독 요금제 이름이다(구 Gemini Advanced·Google One AI Premium).
+    # 요금제 이름으로 산 것도 제품은 Gemini이므로 한 태그로 모은다(2026-09-13).
+    ("Gemini",             r"Gemini|제미나이|구글 ?AI ?(?:PRO|프로|Plus|플러스|Ultra|울트라)|"
+                           r"Google ?AI ?(?:Pro|Plus|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드"),
         # 클로드 모네 미술품·책이 걸렸다(2건)
     ("Claude",              r"Claude(?!\s*Monet)|클로드(?!\s*모네)"),
     ("Replit",             r"\bReplit\b"),   # 한글 '리플릿'은 인쇄물을 뜻해 오탐
@@ -809,6 +887,10 @@ def _switch(row, target):
 
 def reattribute(row):
     # 개명 학교 별칭 적용 (미매칭 파일럿 기록)
+    sc = scoped_alias(row.get("학교명"), row.get("시도"))
+    if sc and not row.get("학교코드"):
+        row = _switch(row, sc["name"]) if len(master_by_name.get(sc["name"], [])) == 1 else dict(
+            row, 학교명=sc["name"], 학교코드=sc["code"], 급별=sc["level"], 시도=sc["sido"], _원학교명=row["학교명"])
     if row["학교명"] in ALIAS:
         row = _switch(row, ALIAS[row["학교명"]])
     for org, real in REATTR_PAIRS:
@@ -909,6 +991,8 @@ for r in records:
 s2b_count, s2b_dup = 0, 0
 if os.path.exists("s2b_refined.csv"):
     for row in csv.DictReader(open("s2b_refined.csv", encoding="utf-8-sig")):
+        if not row.get("학교코드"):
+            row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue
@@ -987,6 +1071,8 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             _idx.setdefault((r["school"], _norm_title(r["product"])), []).append(
                 (r["ym"] // 100) * 12 + r["ym"] % 100)
     for row in csv.DictReader(open(_src, encoding="utf-8-sig")):
+        if not row.get("학교코드"):
+            row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue
@@ -1302,6 +1388,12 @@ if _meet_drop:
 # 괄호 안에만 단서가 있는 계약이다. 규칙을 넓히면 진짜 도입까지 지워 목록으로 둔다.
 # 다음 달 새 기록에는 적용되지 않는다 — 같은 꼴이 또 들어오면 다시 판정해야 한다.
 MANUAL_DROP = {
+    # 시도 전체 학교를 한 줄로 적은 집합 기록 — 개별 학교 계약이 아니어서 학교도 못 정하고 '기타·미분류'로만 남는다.
+    # 사용자 판정으로 뺀다(2026-09-13). 교육청 일괄 도입은 계약공개 기록(officeBuy)이 따로 다룬다.
+    ("경기도 관내 초·중·고 2,640교(직업계고 포함)", "하이러닝(Hi-Learning)"),
+    ("전북 관내 초·중·고(특성화고 포함)", "네이버 웨일 스페이스"),
+    ("전국 고1(과학고·특성화고 포함)", "AI 디지털교과서(공통영어·공통수학·정보)"),
+    ("전남 관내 초·중·고(과학고·직업계고 포함)", "전남메타스쿨 학생 평가 솔루션"),
     ("화담고등학교", "[원인][카드] 에듀테크(하이러닝) 수업 관리 프로그램(U-Class) 설치 협의회"),
     ("덕현중학교", "2026 학교로 찾아가는 '하이러닝 AI 서논술형 평가 연수' 협의회 음"),
     ("부산동성고등학교", "부산동성고등학교 AIDT기반 교수학습모델 개발 워크샵 행사 대관 및 식비 견적요청"),
@@ -1428,6 +1520,7 @@ if AI_CLS:
 # 같은 제품이 영문·한글, 옛 이름·새 이름으로 갈려 메뉴와 통계가 둘로 나뉜다.
 # 대표 이름 하나로 모은다 (에듀집에 올라온 표기를 대표로 삼는다).
 TAG_ALIAS = {
+    "Google AI Pro": "Gemini",     # 요금제 이름 → 제품 이름 (2026-09-13). 옛 규칙·수동 보정에 남은 표기용
     "Typecast": "타입캐스트",
     "타임리": "타임리GPT",
     "홈런": "아이스크림 홈런",

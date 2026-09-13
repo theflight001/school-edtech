@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260913f";
+  s.src = "/data_detail.js?b=20260913g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260913f";
+    s2.src = "/data_detail_old.js?b=20260913g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260913f";
+  s.src = "/data_old.js?b=20260913g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1570,8 +1570,8 @@ function aboutView() {
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · 계약대상자(공급 업체)도 공개됩니다 — 우리 자료에는 아직 담기지 않아 다시 받고 있습니다</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함 (${n(m.officeCount, 16)}개 시도교육청${(m.officeCount || 16) < 17 ? " · 전북은 아직 수집 전" : ""})</span></div>
         <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시)를 빼고 ${n(m.idxCount, 12543)}개교를 싣습니다</span></div>
-        <div class="srccard"><b>학교 위치(지도)</b><span>한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — ${n(m.mediaCount, 44)}건(${m.mediaPct == null ? "0.01" : m.mediaPct}%)</span></div>
+        <div class="srccard aux"><b>학교 위치(지도)</b><span>계약 자료가 아니라 지도 표시용 — 한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
       </div>
 
       <h3>어떻게 판단하나</h3>
@@ -1597,8 +1597,8 @@ function aboutView() {
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
         <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 포함되지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
-        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이런 형태이고, 그 안에 <b>${n(m.buriedProducts, 90653)}개</b>의 제품이 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
-        <li>시도교육청이 관내 학교에 <b>한꺼번에 보급한 제품</b>(AI 디지털교과서 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
+        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이런 형태이고, 그 안에 <b>10만 개 가까운</b> 제품이 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
+        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
       </ul>
 
       <h3>수록 범위</h3>
@@ -1819,7 +1819,7 @@ function contactView() {
   const subj = encodeURIComponent("[공교육 에듀테크 활용 현황] 정정 요청 · 문의");
   const body = encodeURIComponent(
     "아래 항목을 채워 보내주시면 원본 조달 기록과 대조해 확인하겠습니다.\n\n" +
-    "1. 학교 또는 회사명:\n" +
+    "1. 기관, 학교 또는 회사명:\n" +
     "2. 해당 기록(제품명 또는 계약명의 스크린샷을 주시면 도움이 됩니다):\n" +
     "3. 어떤 점이 잘못되었나요:\n" +
     "4. 올바른 내용:\n" +
@@ -1833,7 +1833,7 @@ function contactView() {
       <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
-      <p class="who">학교·교육청</p>
+      <p class="who">교육청·학교</p>
       <ul>
         <li>우리 학교 기록이 아닌데 실려 있는 경우</li>
         <li>제품명이 다르게 표시된 경우</li>
@@ -1844,6 +1844,11 @@ function contactView() {
         <li>제품명·회사명 표기가 잘못된 경우</li>
         <li>계약명에 제품 이름이 없어 <b>제품군으로만 남아 있는</b> 기록이 우리 제품인 경우</li>
         <li>납품한 학교가 목록에 <b>빠져 있는</b> 경우</li>
+      </ul>
+      <p class="who">기타</p>
+      <ul>
+        <li>서비스에 표시된 내용이 잘못된 것을 발견했을 경우</li>
+        <li>운영과 관련된 개선사항이나 제언 등 메시지 전달을 하시고자 할 경우</li>
       </ul>
 
       <h3>처리 방식</h3>
