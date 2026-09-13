@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260912k";
+  s.src = "/data_detail.js?b=20260913a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260912k";
+    s2.src = "/data_detail_old.js?b=20260913a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260912k";
+  s.src = "/data_old.js?b=20260913a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -941,14 +941,15 @@ function homeView() {
   // 학교 선택 창이 초·중·고로 바뀌었으니 이 막대도 같은 층으로 보인다.
   // 고등학교는 눌러 들어가면 유형(일반고·특성화고·특목고·자율고)으로 나뉜다.
   const byType = count(RF, r => levelLabelOf(r));
-  const bySido = count(RF, r => r.sido).slice(0, 12);
+  const bySido = count(RF, r => r.sido).slice(0, 10);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const tagNames = tagPairs.map(([t]) => t)
     .filter(t => SCOPE !== "product" || !GENERIC_TAGS.has(t));
-  const topTags = tagNames.slice(0, 12)
+  const topTags = tagNames.slice(0, 10)
     .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(skey)).length])
     .sort((a, b) => b[1] - a[1]);
   return `
+    <div class="tiles-head">아래 통계를 보는 조건 <span>— 검색은 이 조건과 무관하게 전 기간·전국에서 찾습니다</span></div>
     <div class="tiles">
       <div class="tile clickable" onclick="openRegionPicker()" role="button" aria-label="지역 선택">
         <div class="v">${rgLabel()}</div>
@@ -1994,7 +1995,7 @@ function mountMap() {
     }
     const N = v => v.toLocaleString();
     const sum = document.getElementById("mapsum");
-    if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교${noXY ? ` · 미개교·휴교 ${N(noXY)}개교` : ""}`
+    if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교${noXY ? ` · 위치 미확인 ${N(noXY)}개교` : ""}`
       + (spec.unit === "idx" ? ` · 기록 있는 곳 ${N(withRec)}개교(지도 위 ${N(withRecOnMap)}개교)` : "")
       + (spec.lost ? ` · 학교 미특정 기록 ${N(spec.lost)}건` : "")
       + (spec.nrec != null ? ` · 결과 ${N(spec.nrec)}건` : "");
