@@ -988,6 +988,14 @@ for r in records:
         _nara_titles.setdefault((r["school"], _norm_title(r["product"])), []).append(
             (r["ym"] // 100) * 12 + r["ym"] % 100)
 
+def _s2b_amt(v):
+    """S2B 금액 칸 → 숫자. 2026-09 재수집분부터 들어온다(그전 판에는 칸이 없었다)."""
+    try:
+        n = int(float(str(v or "").replace(",", "").strip() or 0))
+        return n or None
+    except (TypeError, ValueError):
+        return None
+
 s2b_count, s2b_dup = 0, 0
 if os.path.exists("s2b_refined.csv"):
     for row in csv.DictReader(open("s2b_refined.csv", encoding="utf-8-sig")):
@@ -1022,11 +1030,12 @@ if os.path.exists("s2b_refined.csv"):
             "region": s_short, "sido": s_short,
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
-            "amt": None, "ym": ym,
-            "content": f"S2B 학교장터 수의계약({row['구분']})",   # 공고가 아니라 체결분 — 계약일·금액이 있다
+            "amt": _s2b_amt(row.get("금액")), "ym": ym,
+            "content": f"S2B 학교장터 수의계약({row['구분']})",
             "sourceType": "S2B 학교장터",
             "url": "", "confidence": "중",
-            "note": "S2B 자동수집분 — 공고 기준(금액·계약업체 미표시)",
+            "vendor": (row.get("업체명") or "").strip() or None,
+            "note": "S2B 자동수집분",
             "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], ""),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
