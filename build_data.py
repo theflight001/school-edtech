@@ -1895,7 +1895,8 @@ try:
     _sc = meta["schools"]        # 기록이 하나라도 있는 학교 수
     _yrs = sorted({r["year"] for r in records if r.get("year")})
     _og.build(len(records), _sc, _yrs[0] if _yrs else 2020, _yrs[-1] if _yrs else 2026)
-    _og.rewrite_meta(len(records))
+    _og.rewrite_meta(len(records), _sc,
+                     str(_yrs[0] if _yrs else 2020), str(_yrs[-1] if _yrs else 2026))
     print(f"공유 카드·메타 설명 갱신: {len(records):,}건 · 학교 {_sc:,}곳")
 except Exception as _e:
     print(f"! 공유 카드를 갱신하지 못했습니다 ({type(_e).__name__}: {_e})")
