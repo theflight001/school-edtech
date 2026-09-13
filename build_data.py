@@ -1223,6 +1223,11 @@ BOOK_ONLY = re.compile(r"(?:연구도서|도서|문헌|서적|교재|워크북|�
 # 전자책·온라인 독서·학술DB처럼 '도서'라는 말이 붙어도 서비스 자체가 온라인인 것,
 # 교구·로봇처럼 본체와 교재를 함께 사는 것, 사용권과 도서를 같이 적은 것,
 # 그리고 업체명으로 제품이 확인되는 것(툰스퀘어→투닝)이 여기 든다.
+BOOK_GENERIC = GENERIC_SET | {
+    "SW·플랫폼", "SW·플랫폼(제품명 미상)", "코스웨어(기타)",
+    "운영 부대구매", "운영 부대구매(제품 미상)",
+}
+
 BOOK_TAG_KEEP = {
     "교보문고 전자도서관", "리딩게이트", "리딩앤", "DBpia",      # 전자책·온라인 독서·학술DB
     "레고 에듀케이션", "뚜루뚜루", "핑퐁로봇", "로보마스터",        # 교구·로봇 — 본체와 교재를 함께 산다
@@ -1232,17 +1237,26 @@ BOOK_TAG_KEEP = {
 }
 
 BOOK_KEEP = re.compile(r"교구|키트|기자재|본체|장비|라이선스|라이센스|구독|이용권|이용료|사용료|"
-                       r"계정|플랫폼|소프트웨어|S/?W\b|태블릿|노트북", re.I)
+                       r"계정|플랫폼|소프트웨어|S/?W\b|태블릿|노트북|세트|"
+                       # '마이크로비트 및 교재 구입'처럼 제품과 교재를 함께 산 것은 제품 구매다
+                       r"및 ?(?:교재|도서)|(?:교재|도서) ?및", re.I)
 _book_cut = 0
+_book_drop = []
 for _r in records:
     if not BOOK_ONLY.search(_r["product"]) or BOOK_KEEP.search(_r["product"]):
         continue
-    _keep = [t for t in _r["tags"] if t in GENERIC_SET or t in BOOK_TAG_KEEP]
+    _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or t in BOOK_TAG_KEEP]
     if len(_keep) != len(_r["tags"]):
         _book_cut += 1
         _r["tags"] = _keep
+        if not _keep:
+            _book_drop.append(_r)       # 남는 태그가 없으면 순수 도서 구매다 — 기록째 뺀다
 if _book_cut:
-    print(f"도서만 산 계약에서 제품 태그 제거: {_book_cut}건")
+    print(f"도서만 산 계약에서 제품 태그 제거: {_book_cut}건"
+          f"(그중 {len(_book_drop)}건은 남는 태그가 없어 기록째 제외)")
+if _book_drop:
+    _drop_ids = {id(r) for r in _book_drop}
+    records = [r for r in records if id(r) not in _drop_ids]
 
 # 조사 기간 밖 기록 제외 — 화면은 2020.1~을 조사 기간으로 밝히는데 일부 시도교육청 자료에
 # 2010~2019년분이 섞여 있었다(2026-09-12: 2,712건). 안내와 자료가 어긋나고, 그 시기는 일부
