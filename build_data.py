@@ -1913,6 +1913,59 @@ for r in records:
 if _vr_n:
     print(f"업체명=제품명 규칙 적용: {_vr_n}건")
 
+# ── 공급사 명부(vendors.csv) — 에듀테크 제조·개발사 (2026-09-15 사용자 결정: A·B 명단 그대로)
+# 기록에 적힌 업체가 명부에 있으면 정식 회사명(maker)을 붙인다. 화면은 이 이름으로 회사를 한데 모은다.
+# '제품 태그' 칸이 채워진 회사는 제품 하나만 파는 곳(태그 있는 기록의 90% 이상이 한 제품)이라,
+# 계약명에 제품이 없는 기록에 그 제품 태그를 붙인다 — 데이터 안내의 "회사명이 제품명인 경우" 규칙이 이것이다.
+# 여러 제품을 파는 회사(아이스크림미디어·천재교과서·전자칠판 제조사 등)는 회사명만 붙이고 제품은 추정하지 않는다.
+# 한글 회사명은 정규화한 표기가 정확히 같을 때만, 해외 서비스(ASCII)는 결제 표기가 앞뒤에 붙어 오므로 포함으로 본다.
+VENDOR_BOOK = {}                       # 정규화 표기 → (정식명, 구분, 제품 태그)
+if os.path.exists("vendors.csv"):
+    for _vb in csv.DictReader(open("vendors.csv", encoding="utf-8-sig")):
+        for _sp in _vb["표기"].split(" / "):
+            if _sp.strip():
+                VENDOR_BOOK[_vnorm(_sp)] = (_vb["정식명"].strip(), _vb["구분"].strip(), (_vb.get("제품 태그") or "").strip())
+_VB_ASCII = [(k, v) for k, v in VENDOR_BOOK.items() if k.isascii() and len(k) >= 4]
+_vb_cache = {}
+def _maker_of(raw):
+    nv = _vnorm(raw)
+    if nv in _vb_cache:
+        return _vb_cache[nv]
+    hit = VENDOR_BOOK.get(nv)
+    if hit is None and nv.isascii():
+        for k, v in _VB_ASCII:
+            if k in nv:
+                hit = v
+                break
+    _vb_cache[nv] = hit
+    return hit
+_GENERIC_SW = {"SW·플랫폼", "SW·플랫폼(제품명 미상)", "코스웨어", "코스웨어(기타)"}
+_mk_n = _mk_tag = 0
+_mk_companies, _mk_tag_companies = set(), set()
+for r in records:
+    # 교육청 계약공개 기록은 이 단계에서 업체가 내용 문구 끝('· 계약업체: …')에만 있다.
+    # _vendor_of의 정규식은 ')'에서 끊겨 '(주)아이스크림미디어'를 '(주'로 뽑으므로 출력 단계와 같은 식을 쓴다.
+    _m = re.search(r"계약업체[:：]\s*(.+?)\s*$", r.get("content") or "")
+    _v = (r.get("vendor") or (_m.group(1).strip() if _m else "")).strip()
+    if not _v:
+        continue
+    hit = _maker_of(_v)
+    if not hit:
+        continue
+    name, kind, tag = hit
+    r["maker"] = name
+    _mk_n += 1
+    _mk_companies.add(name)
+    if tag and not [t for t in r["tags"] if t not in BOOK_GENERIC]:
+        r["tags"] = sorted((set(r["tags"]) | {tag}) - _GENERIC_SW)
+        r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체명이 제품명({tag})"
+        _mk_tag += 1
+        _mk_tag_companies.add(name)
+print(f"공급사 명부: 회사 {len(_mk_companies)}곳 · 기록 {_mk_n:,}건에 정식명 · 단일 제품 회사 {len(_mk_tag_companies)}곳의 {_mk_tag:,}건에 제품 태그")
+_makers = [{"n": _vb["정식명"].strip(), "k": _vb["구분"].strip(), "t": (_vb.get("제품 태그") or "").strip(),
+            "s": [x for x in _vb["표기"].split(" / ") if x.strip()]}
+           for _vb in (csv.DictReader(open("vendors.csv", encoding="utf-8-sig")) if os.path.exists("vendors.csv") else [])]
+
 # 업체 기반 통계 추론(어떤 업체의 계약 다수가 한 제품이면 나머지도 그 제품으로 봄)은 폐기했다.
 # 근거: 데이터 안내에 "업체명으로 제품을 추정하지 않는다"고 공개해 온 원칙과 어긋나고,
 #       실제로 계약명에 다른 제품이 적힌 건까지 덮어썼다
@@ -2277,11 +2330,14 @@ print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ct
 # 화면 쪽 코드는 그대로 두기 위해 index.html이 읽는 시점에 원래 모양으로 되돌린다.
 # 화면에서 안 쓰는 열(id)은 싣지 않고, 값이 거의 없는 표시 열(dup·feeOnly)은
 # 행마다 null을 적는 대신 '해당하는 행 번호 목록'으로 따로 넘긴다.
+meta["makerCompanies"] = len(_mk_companies)          # 공급사 명부에 올라 기록이 있는 회사 수
+meta["makerTagCompanies"] = len(_mk_tag_companies)   # 그중 회사명이 곧 제품명이라 제품 태그를 채운 회사 수
+meta["makerTagged"] = _mk_tag                         # 그렇게 제품 태그가 채워진 기록 수
 _DROP_COLS = {"id"}
 _SPARSE_COLS = ["dup", "feeOnly", "yrGuess"]
 _cols = sorted({k for r in records for k in r} - _DROP_COLS - set(_SPARSE_COLS))
 _DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
-              "vendor", "ctpl",
+              "vendor", "ctpl", "maker",
               "hsType", "founding", "confidence", "period",
               # 학교 관련 값은 그 학교의 기록 수만큼 되풀이된다
               "neisAddress", "school", "schoolName", "schoolCode"]
@@ -2376,7 +2432,7 @@ with open(OUT, "w", encoding="utf-8") as f:
     f.write("const DB_RAW = JSON.parse(")
     f.write(_js_literal({"meta": meta, "cols": _core_cols,
                          "dict": {c: sorted(d, key=d.get) for c, d in _core_dict.items()},
-                         "tagList": _tag_list, "origin": _origin, "officeBuy": _office_buy,
+                         "tagList": _tag_list, "origin": _origin, "officeBuy": _office_buy, "makers": _makers,
                          "sparse": _sparse_base, "rows": _core_rows[:_NB],
                          "schoolIndex": school_index}))
     f.write(");\n")

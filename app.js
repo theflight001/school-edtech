@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260915a";
+  s.src = "/data_detail.js?b=20260915b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -245,6 +245,15 @@ const VMERGE = new Map();
 }
 const vkey = n => { const k = vnorm(n); return VMERGE.get(k) || k; };
 const vendorRecs = key => R.filter(r => vkey(r.vendor) === key);
+// 공급사 명부(vendors.csv) — 에듀테크 제조·개발사. 빌드가 기록마다 정식 회사명(maker)을 붙여 보낸다.
+// 표기가 여럿인 회사(아이스크림미디어 7가지)는 정식명으로 한데 모은다. '제품 태그'(t)가 있는 회사는
+// 제품 하나만 파는 곳이라 계약명에 제품이 없는 기록도 빌드가 그 제품으로 붙였다(데이터 안내 참조).
+const MAKERS = new Map((DB_RAW.makers || []).map(m => [m.n, m]));      // 정식명 → {n, k, t, s}
+const MAKER_KEY = new Map();                                            // 업체 키 → 정식명
+for (const m of MAKERS.values()) for (const sp of (m.s || [])) MAKER_KEY.set(vkey(sp), m.n);
+for (const r of R) if (r.maker && r.vendor) MAKER_KEY.set(vkey(r.vendor), r.maker);
+const makerOf = key => MAKER_KEY.get(key) || null;
+const makerRecs = name => R.filter(r => r.maker === name);
 // 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
 // '이웃닷컴'은 온라인몰이 아니라 e알리미를 만드는 회사다(에듀집: e알리미 = 주식회사 이웃닷컴).
 // 이름이 닷컴으로 끝난다고 창구로 보면 만든 회사가 공급 기업에서 통째로 빠진다.
@@ -478,7 +487,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260915a";
+    s2.src = "/data_detail_old.js?b=20260915b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -490,7 +499,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260915a";
+  s.src = "/data_old.js?b=20260915b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1200,7 +1209,8 @@ function vendorsOfTag(recs) {
 }
 function vendorView(key) {
   const e = VENDORS.get(key);
-  const recs = vendorRecs(key);
+  const maker = makerOf(key) ? MAKERS.get(makerOf(key)) : null;
+  const recs = maker ? makerRecs(maker.n) : vendorRecs(key);   // 명부 회사는 표기가 달라도 정식명으로 모은다
   if (!recs.length) return notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
                                     c => `/vendor/${encodeURIComponent(vkey(c))}`);
   const nd = recs.filter(r => !r.dup);
@@ -1221,9 +1231,13 @@ function vendorView(key) {
   const amt = nd.reduce((a, r) => a + (r.amt || 0), 0);
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업</div>
-    <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
-      <div class="meta">${kind} · 거래 학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 ·
+    <div class="pagehead"><h2>${esc(maker ? maker.n : (e ? e.name : key))}</h2>
+      <div class="meta">${maker ? "에듀테크 " + esc(maker.k) : kind} · 거래 학교 ${uniq(nd.map(skey)).length.toLocaleString()}개교 ·
         기록 ${nd.length.toLocaleString()}건${amt ? ` · 계약금액 합계 ${won(amt)}` : ""}</div>
+      ${maker && maker.t ? `<span class="fnote">회사명이 곧 제품명(${esc(maker.t)})인 회사입니다 —
+        계약명에 제품이 적히지 않은 기록도 ${esc(maker.t)}로 보았습니다</span>` : ""}
+      ${maker && !maker.t ? `<span class="fnote">여러 제품을 만드는 회사입니다 —
+        계약명에 제품이 없는 기록은 제품군으로만 남기고 회사명으로 추정하지 않았습니다</span>` : ""}
       ${kind !== "공급 기업" ? `<span class="fnote">여러 회사의 물건을 파는 창구입니다 —
         여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
     </div>
@@ -1243,8 +1257,14 @@ function vendorView(key) {
 function vendorsView() {
   // 온라인몰·조달 대행·대형 제조사는 공급사가 아니라 사는 창구라 목록에서 뺀다
   const all = [...VENDORS.values()].filter(v => v.n >= 5).map(v => ({...v, kind: vendorKind(v.key)}));
-  const rows = all.filter(v => v.kind === "공급 기업").sort((a, b) => b.n - a.n);
-  const dropped = all.length - rows.length;
+  // 명부에 오른 제조·개발사는 정식명으로 묶어 맨 위에 따로 보인다 — 아래 일반 목록에서는 뺀다
+  const makerRows = [...MAKERS.values()].map(m => {
+    const recs = makerRecs(m.n).filter(r => !r.dup);
+    const key = [...MAKER_KEY.entries()].find(([k, n]) => n === m.n && VENDORS.has(k));
+    return {n: m.n, t: m.t, cnt: recs.length, sch: uniq(recs.map(skey)).length, key: key ? key[0] : vkey(m.n)};
+  }).filter(m => m.cnt).sort((a, b) => b.cnt - a.cnt);
+  const rows = all.filter(v => v.kind === "공급 기업" && !MAKER_KEY.has(v.key)).sort((a, b) => b.n - a.n);
+  const dropped = all.length - rows.length - makerRows.length;
   const shown = rows;
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업 전체</div>
@@ -1255,6 +1275,12 @@ function vendorsView() {
         온라인몰·조달 대행·대형 제조사 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
         보기 어려워 제외되었습니다</div></div>
 
+    ${makerRows.length ? `<div class="card"><h2>에듀테크 제조·개발사<span class="note">명부에 오른 ${makerRows.length}곳 · 표기가 달라도 한 회사로 모았습니다</span></h2>
+      <div class="plist">${makerRows.map(m => `<a href="/vendor/${encodeURIComponent(m.key)}">${esc(m.n)}
+        <span class="n">${m.cnt.toLocaleString()}건 · ${m.sch.toLocaleString()}개교</span></a>`).join("")}</div>
+      <p class="sub2" style="margin-top:10px">회사명이 곧 제품명인 ${makerRows.filter(m => m.t).length}곳은 계약명에 제품이 없는 기록도 그 제품으로 보았습니다.
+        나머지는 여러 제품을 만드는 회사라 제품을 추정하지 않았습니다.</p></div>
+    <h2 style="margin:18px 0 8px">그 밖의 계약 상대자</h2>` : ""}
     <div class="plist">
       ${shown.slice(0, 400).map(v => `<a href="/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
         <span class="n">${v.n.toLocaleString()}건</span></a>`).join("")}
@@ -1594,7 +1620,10 @@ function aboutView() {
       <h3>어떻게 판단하나</h3>
       <p>계약명 원문에서 제품명을 찾아 태그를 붙입니다.</p>
       <ul>
-        <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 판단하였습니다.</li>
+        <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 판단하였습니다.
+          공급사 명부에 오른 제조·개발사 ${(DB.meta.makerCompanies || 0).toLocaleString()}곳 중
+          ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 그런 회사이며, 이 규칙으로 제품이 정해진 기록은
+          ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명부는 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
         <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
         <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외하였습니다.</li>
         <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
