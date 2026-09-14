@@ -1992,11 +1992,14 @@ if _seed_dup:
     records = [r for r in records if id(r) not in _drop_ids]
     print(f"씨앗-자동수집 동일 계약 정리: {_seed_dup}건 (계약명 원문 쪽을 남김)")
 
-# 완전 중복 제거: 학교+제품명+시기+내용(금액 포함)이 모두 같으면 이중 등재로 보고 첫 건만 유지
+# 완전 중복 제거: 학교+제품명+시기+내용+금액+업체가 모두 같으면 이중 등재로 보고 첫 건만 유지
+# S2B는 내용 문구에 금액이 없어, 한 번의 견적 요청을 업체별로 나눠 맺은 별개 계약(계약번호가 다르다)이
+# 첫 건만 남고 지워졌다 — 서울천동초 '갤럭시탭 케이스 외 6종' 3개 업체(2026-09-14, 약 2만 1천 건).
+# 금액과 업체를 키에 넣는다(사용자 판정).
 seen_exact = set()
 deduped = []
 for rec in records:
-    key = (rec["school"], rec["product"], rec["period"], rec["content"])
+    key = (rec["school"], rec["product"], rec["period"], rec["content"], rec.get("amt"), rec.get("vendor"))
     if key in seen_exact:
         continue
     seen_exact.add(key)
