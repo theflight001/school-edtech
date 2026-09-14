@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260914e";
+  s.src = "/data_detail.js?b=20260914f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -477,7 +477,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260914e";
+    s2.src = "/data_detail_old.js?b=20260914f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +489,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260914e";
+  s.src = "/data_old.js?b=20260914f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1546,7 +1546,7 @@ function aboutView() {
   // 숫자는 빌드가 센 값(meta)에서만 가져온다 — 손으로 적으면 자료가 바뀌어도 옛 값으로 남는다
   const n = (v, d) => (v == null ? d : v).toLocaleString();
   const exc = m.excluded || {"재외한국학교": 79, "외국인·국제학교": 33, "공동실습소": 9,
-                             "검정고시 등 비학교": 2, "학교급 미기재": 0};
+                             "검정고시 등 비학교": 2, "학교급 미기재": 0, "NEIS 시험용 항목": 3};
   const excSum = Object.values(exc).reduce((a, b) => a + b, 0);
   const mix = m.levelMix || {"초·중·고": 12078, "특수학교": 202, "각종학교": 116, "평생학교": 73,
                              "방송통신 중·고": 66, "고등기술·고등공민학교": 8};
@@ -1569,7 +1569,7 @@ function aboutView() {
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수 (입찰분 미포함) · 계약대상자(공급 업체)와 계약 금액을 함께 싣습니다</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함 (${n(m.officeCount, 16)}개 시도교육청${(m.officeCount || 16) < 17 ? " · 전북은 아직 수집 전" : ""})</span></div>
-        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시)를 빼고 ${n(m.idxCount, 12543)}개교를 싣습니다</span></div>
+        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 빼고 ${n(m.idxCount, 12540)}개교를 싣습니다</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — ${n(m.mediaCount, 44)}건(${m.mediaPct == null ? "0.01" : m.mediaPct}%)</span></div>
         <div class="srccard aux"><b>학교 위치(지도)</b><span>계약 자료가 아니라 지도 표시용 — 한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
       </div>
@@ -1607,11 +1607,11 @@ function aboutView() {
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 제공됩니다.
           <b>조사 기간</b>에서 2020년 1월부터 선택할 수 있습니다.` : ""}</li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b> <span class="cv">(전 기간 기준 — 첫 화면 숫자는 조사 기간에 따라 달라집니다)</span></li>
-        <li>검색 가능 학교: <b>${n(m.idxCount, 12543)}개교</b> — 국내 공교육 전체</li>
+        <li>검색 가능 학교: <b>${n(m.idxCount, 12540)}개교</b> — 국내 공교육 전체</li>
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 ${n(mix["초·중·고"], 12078)}개교에 더해
           ${mixText}를 포함합니다.
           등재된 ${n(m.neisTotal, 12666)}개교 중 <b>재외한국학교 ${n(exc["재외한국학교"], 79)}개교, 외국인·국제학교 ${n(exc["외국인·국제학교"], 33)}개교</b>는 국내 공교육이 아니어서,
-          <b>공동실습소 ${n(exc["공동실습소"], 9)}곳과 검정고시 시행 단위 ${n(exc["검정고시 등 비학교"], 2)}곳</b>은 학교가 아니어서 제외하였습니다.</li>
+          <b>공동실습소 ${n(exc["공동실습소"], 9)}곳, 검정고시 시행 단위 ${n(exc["검정고시 등 비학교"], 2)}곳${exc["NEIS 시험용 항목"] ? `, NEIS에 시험용으로 등록된 항목 ${n(exc["NEIS 시험용 항목"], 0)}곳(AIDT초·중·고)` : ""}</b>은 학교가 아니어서 제외하였습니다.</li>
       </ul>
 
       <h3>기타</h3>
