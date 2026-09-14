@@ -34,6 +34,29 @@ def main():
         "운영 부대구매", "운영 부대구매(제품 미상)"}
 
     rows = list(csv.DictReader(open(SRC, encoding="utf-8-sig")))
+    # 나라장터는 계약을 바꿀 때마다 새 계약번호로 한 줄을 더 올린다 — 상세 주소의 ctrtNo는 같고
+    # 변경 차수(ctrtChgOrd)만 다르다. 따로 세면 한 계약이 두세 건이 된다(2026-09-14: 3,291행).
+    # 가장 늦은 변경 차수를 남긴다(금액이 최종 계약 금액이다). 날짜가 비면 앞 차수의 날짜를 쓴다.
+    by_ctrt, rest = collections.OrderedDict(), []
+    for r in rows:
+        m = re.search(r"ctrtNo=([^&]+)", r.get("상세URL") or "")
+        if not m:
+            rest.append(r)
+            continue
+        by_ctrt.setdefault((r["수요기관"], m.group(1)), []).append(r)
+    merged = 0
+    for grp in by_ctrt.values():
+        chg = lambda x: int((re.search(r"ctrtChgOrd=(\d+)", x.get("상세URL") or "") or [0, 0])[1])
+        grp.sort(key=chg)
+        last = dict(grp[-1])
+        if not last.get("계약일"):
+            last["계약일"] = next((x["계약일"] for x in reversed(grp) if x.get("계약일")), "")
+        if not last.get("금액") or last["금액"] == "0":
+            last["금액"] = next((x["금액"] for x in reversed(grp) if x.get("금액") not in ("", "0")), last.get("금액", ""))
+        rest.append(last)
+        merged += len(grp) - 1
+    print(f"변경 계약을 한 건으로 합침: {merged:,}행")
+    rows = rest
     out, drop_fac, drop_no = [], 0, 0
     for r in rows:
         name = (r["계약명"] or "").strip()

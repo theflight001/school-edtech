@@ -343,7 +343,9 @@ SPECIFIC_RULES = [
                            r"운영체제|라이선스|라이센스|업그레이드|패키지|정품|DSP|COEM|FPP)|"
                            r"(?:MS|Microsoft|마이크로소프트)[\s\-]*(?:윈도우|Windows))"),
     # '코파일럿 PC'는 노트북 상표라 기기 쪽이다 — 구독·라이선스로 산 것만 제품으로 본다.
-    ("Microsoft Copilot",  r"(?!.*(?:노트북|갤럭시 ?북|서피스|Surface|키보드|슬림펜))^.*"
+    # '깃허브 GitHub (프로, 코파일럿 프로)'는 GitHub의 코딩 도우미다 — Microsoft 365 Copilot이 아니다
+    ("GitHub Copilot",     r"(?:깃허브|GitHub)[^/]{0,24}(?:코파일럿|Copilot)|GitHub ?Copilot"),
+    ("Microsoft Copilot",  r"(?!.*(?:노트북|갤럭시 ?북|서피스|Surface|키보드|슬림펜|깃허브|GitHub))^.*"
                            r"(?:(?:Microsoft|MS|마이크로소프트)[\s\-]*(?:365 )?(?:Copilot|코파일럿)|"
                            r"Copilot[\s\-]*(?:MS ?365|For Microsoft|Pro|프로)|"
                            r"코파일럿[\s\-]*(?:퍼스널|프리미엄|프로|라이선스|라이센스))"),
@@ -1070,15 +1072,34 @@ OFFICE_SOURCES = [
     ("jbe_refined.csv", "전북", "전북교육청 계약공개", 1950000),   # 2026-09 추가
     ("nara_bid_refined.csv", "", "나라장터 입찰공고", 1900000),   # 전국 — 시도는 행마다 다르다
 ]
+# 같은 계약이 S2B와 시도교육청 계약공개에 한 번씩 실린다. S2B는 품목명('패들렛 플래티넘 Padlet Platinum'),
+# 교육청은 사업명('디지털 선도학교 AI코스웨어 구입(패들렛 플래티넘)')을 적어 계약명 대조로는 거의 걸리지 않았다
+# (2026-09-14: 같은 학교·금액·업체·2개월 이내 쌍이 약 1만 7천 건). 금액과 업체가 같으면 같은 계약으로 본다.
+# 매달 같은 금액을 내는 구독료가 서로 엉키지 않도록 한 기록에는 한 줄만 짝짓고, 가까운 달부터 짝짓는다.
+def _norm_vendor(v):
+    v = re.sub(r"주식회[사서]|유한(?:책임)?회사|\(주\)|㈜|\(유\)|[\s\W_]", "", v or "")
+    return v.lower()
+
+def _vendor_of(r):
+    if r.get("vendor"):
+        return r["vendor"]
+    m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
+    return m.group(1).strip() if m else ""
+
+_office_dup_amt = 0
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):
         continue
     office_count, office_dup = 0, 0
     _idx = {}
+    _amt_idx = collections.defaultdict(list)     # (학교, 금액, 업체) → 아직 짝이 없는 기록
     for r in records:
         if r.get("ym"):
             _idx.setdefault((r["school"], _norm_title(r["product"])), []).append(
                 (r["ym"] // 100) * 12 + r["ym"] % 100)
+            _v = _norm_vendor(_vendor_of(r))
+            if r.get("amt") and len(_v) >= 2 and not r.get("_paired"):
+                _amt_idx[(r["school"], r["amt"], _v)].append(r)
     for row in csv.DictReader(open(_src, encoding="utf-8-sig")):
         if not row.get("학교코드"):
             row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
@@ -1093,6 +1114,25 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             if any(abs(mm - pm) <= 2 for pm in _idx.get((row["학교명"], _norm_title(row["계약명"])), [])):
                 office_dup += 1
                 continue
+            _v = _norm_vendor(row.get("업체명"))
+            _amt0 = int(row["금액"] or 0)
+            if _amt0 and len(_v) >= 2:
+                _cands = [c for c in _amt_idx.get((row["학교명"], _amt0, _v), [])
+                          if not c.get("_paired") and abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100)) <= 2]
+                if _cands:
+                    _c = min(_cands, key=lambda c: abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100)))
+                    _c["_paired"] = 1
+                    # 교육청 쪽 계약명이 제품을 특정하고 이미 실린 쪽이 못 했으면 그 태그를 옮겨 온다
+                    _ot = refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""),
+                                      row["계약명"], row.get("업체명", ""))
+                    _osp = [t for t in _ot if t not in GENERIC_SET and t not in ("SW·플랫폼", "코스웨어", "운영 부대구매")]
+                    if _osp and not [t for t in _c["tags"] if t not in GENERIC_SET
+                                     and t not in ("SW·플랫폼", "코스웨어", "운영 부대구매")]:
+                        _c["tags"] = sorted(set(_osp))
+                    _c["note"] = (_c["note"] + " · " if _c.get("note") else "") + f"{_label}에도 같은 계약"
+                    office_dup += 1
+                    _office_dup_amt += 1
+                    continue
         m = master_by_code.get(row["학교코드"])
         level = row["급별"]
         if level == "고등학교":
@@ -1130,6 +1170,9 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         })
         office_count += 1
     print(f"{_label} 병합: {office_count}건 (중복 제외 {office_dup}건)")
+for r in records:
+    r.pop("_paired", None)
+print(f"금액·업체로 찾은 교육청 계약공개 중복: {_office_dup_amt:,}건")
 
 # ── 이름이 겹치는 상위·하위 제품 정리 ────────────────────────────────
 # '물품(실과로봇 네오봇에듀 스마트) 구입'은 '네오봇 에듀 스마트'와 '네오봇'이 함께 걸린다.
@@ -1355,10 +1398,26 @@ BOOK_KEEP = re.compile(r"교구|키트|기자재|본체|장비|라이선스|라�
                        r"계정|플랫폼|소프트웨어|S/?W\b|태블릿|노트북|세트|"
                        # '마이크로비트 및 교재 구입'처럼 제품과 교재를 함께 산 것은 제품 구매다
                        r"및 ?(?:교재|도서)|(?:교재|도서) ?및", re.I)
+# BOOK_ONLY는 '교재 구입'처럼 뒤에 구매 동사가 붙을 때만 잡아 '모두의 마이크로비트 교재',
+# '핑퐁로봇 엔트리 코딩 (교재)', '챗GPT 교사 마스터플랜'이 제품 도입으로 남았다(2026-09-14 전수검사).
+# 책이라는 말이 있고 본체·이용권을 함께 산 신호가 없으면 책을 산 것으로 본다.
+# '도서관·도서실·도서출판'은 책을 산 게 아니다 — 도서관 전자칠판, 도서실 PC 복구, (주)도서출판 길벗 AIDT.
+BOOK_WORD = re.compile(r"교재(?! ?연구)|도서(?!관|실|검색|대출|반납|출판|정보)|워크북|입문서|책자|배움책|공책|코딩 ?도서")
+BOOK_WITH = re.compile(r"포함|대여|선택 ?가능|사용권|애플리케이션|어플|전자 ?책|오디오북|전자 ?도서|e-?book|"
+                       r"프로그램(?:\s*\([^)]*\))?\s*구[입매]|스쿨 ?패키지|스쿨팩|풀패키지|기본 ?패키지|스타터|"
+                       r"허스키렌즈|동글|보관함|"
+                       r"(?:봇|키트|보드|센서|스마트|smart|로봇)\s*(?:및|와|과)|외 ?(?:도서|교재)", re.I)
+# 방과후·늘봄 수업의 교재비·재료비·강사비는 책 구매와 성격이 달라 여기서 다루지 않는다
+BOOK_AFTER_SCHOOL = re.compile(r"방과후|늘봄|선택형 ?교육|특기적성|돌봄|재료비|강사|교재비")
+def _book_only(p):
+    if BOOK_ONLY.search(p):
+        return True
+    return bool(BOOK_WORD.search(p)) and not BOOK_WITH.search(p) and not BOOK_AFTER_SCHOOL.search(p)
+
 _book_cut = 0
 _book_drop = []
 for _r in records:
-    if not BOOK_ONLY.search(_r["product"]) or BOOK_KEEP.search(_r["product"]):
+    if not _book_only(_r["product"]) or BOOK_KEEP.search(_r["product"]):
         continue
     _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or t in BOOK_TAG_KEEP]
     if len(_keep) != len(_r["tags"]):
@@ -1391,6 +1450,45 @@ if _meet_cut:
 if _meet_drop:
     _mid = {id(r) for r in _meet_drop}
     records = [r for r in records if id(r) not in _mid]
+
+# AI·디지털 교육자료(AIDT)가 사업·연수 이름일 뿐인 계약에서 AIDT 태그를 뗀다.
+# 'AIDT 준비학교 운영 물품(이어폰)', 'AIDT 연수 거점학교 비품(노트북)', 'AIDT 수학 챌린지 상품',
+# 'AIDT 도입 대비 원격연수원 수강료', '디벗(디지털교과서) 키보드 수리비' — 산 것은 교과서가 아니다
+# (2026-09-14 전수검사, 398건). 기기를 샀으면 기기로 남기고, 아무것도 남지 않으면 뺀다.
+AIDT_NOT_BUY = re.compile(r"상품|시상|물품|용품|소모품|배터리|밧데리|충전|비품|케이블|클리어파일|제본|공책|"
+                          r"연수비|연수 ?지원|수강료|워크숍|워크샵|차량|식사|식비|대관|다과|강사|특강|"
+                          r"체험비|체험전|교육비|협의회|토론회|책자|영상 ?만들기|수리|파손|보험")
+AIDT_BUY = re.compile(r"교육자료\s*(?:\([^)]*\))?\s*(?:및\s*)?(?:구[입매]|구독|계약|이용|사용)|"
+                      r"AIDT\s*(?:\([^)]*\))?\s*(?:교육자료|구독|사용|이용|계정)|"
+                      r"디지털 ?교과서\s*(?:\([^)]*\))?\s*(?:구[입매]|구독|계약|이용|사용|서비스)|"
+                      r"코스웨어|라이선스|라이센스|이용권", re.I)
+AIDT_PHRASE = re.compile(r"AIDT|AI ?[·:]? ?디지털 ?(?:교과서|교육자료)|디지털 ?교과서|디벗", re.I)
+_aidt_cut, _aidt_drop = 0, []
+for _r in records:
+    _a = [t for t in _r["tags"] if t.endswith(AIDT_TAG)]
+    if not _a or not AIDT_NOT_BUY.search(_r["product"]) or AIDT_BUY.search(_r["product"]):
+        continue
+    _rest = [t for t in _r["tags"] if t not in _a]
+    if not _rest:
+        _rest = [t for t in tags_of(AIDT_PHRASE.sub(" ", _r["product"]), "") if not t.endswith(AIDT_TAG)
+                 and t not in ("SW·플랫폼", "운영 부대구매")]
+    _r["tags"] = sorted(_rest)
+    _aidt_cut += 1
+    if not _rest:
+        _aidt_drop.append(_r)
+# 다른 제품 이름이 적힌 계약에서 'AI 디지털 교육자료'는 제품이 아니라 분류 이름이다
+# — 'AI 디지털 교육자료(클로드) 구입', 'AIDT 준비학교 운영 프로그램(챗GPT PLUS)'.
+_AIDT_GENERIC_KEEP = BOOK_GENERIC | {AIDT_TAG}
+for _r in records:
+    if AIDT_TAG in _r["tags"] and any(t not in _AIDT_GENERIC_KEEP and not t.endswith(AIDT_TAG) for t in _r["tags"]):
+        _r["tags"] = [t for t in _r["tags"] if t != AIDT_TAG]
+        _aidt_cut += 1
+if _aidt_cut:
+    print(f"AIDT가 사업 이름일 뿐인 계약에서 AIDT 태그 제거: {_aidt_cut}건"
+          f"(그중 {len(_aidt_drop)}건은 남는 태그가 없어 기록째 제외)")
+if _aidt_drop:
+    _aid = {id(r) for r in _aidt_drop}
+    records = [r for r in records if id(r) not in _aid]
 
 # 사람이 하나씩 판정해 뺀 기록 — 규칙으로는 가릴 수 없는 것들이다(2026-09-13).
 # '협의회 실시'처럼 동사가 없거나, '도서(…외 20종)'처럼 구입으로 끝나지 않거나,
@@ -1435,6 +1533,12 @@ MANUAL_DROP = {
     ("이수중학교", "[연구학교]2025학년도 1학기 부별 협의회 및 AIDT 연구학교 협의회(3학년부) 지급"),
     ("서울신중초등학교", "2022학년도 신입생 예비소집 Zoom 안내 정문 현수막 추가 제작"),
     ("인왕중학교", "행정실 사무용품(줌회의용소모품) 구입비 지출"),
+    # '힐링스쿨'은 두드림학교 학생 집단상담 프로그램이다 — 링스쿨 플랫폼이 아니고 소프트웨어도 아니다(2026-09-14 전수검사)
+    ("행정초등학교", "2020학년도 두드림 맞춤형 학력향상 힐링스쿨 학생집단상담 프로그램 재 ..."),
+    ("용성중학교", "[원인]맞춤형 기초학력 향상 프로그램(교과학습발전반, 힐링스쿨) 교재 ..."),
+    ("행정초등학교", "2021학년도 맞춤형 학력향상을 위한 두드림학교 힐링스쿨 프로그램 재료 ..."),
+    ("행정초등학교", "2021학년도 두드림 맞춤형 학력향상을 위한 힐링스쿨 집단상담 프로그램 ..."),
+    ("행정초등학교", "2022 힐링스쿨 학생집단상담 프로그램 재료비 지급"),
 }
 _md_before = len(records)
 records = [r for r in records
@@ -1583,6 +1687,10 @@ for r in records:
     m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
     if not m:
         continue
+    # '이베이코리아(G마켓, 옥션,PADLET,ZOOM…)'처럼 한 칸에 여러 가맹점이 적히면 무엇을 샀는지 알 수 없다
+    _vhits = [tag for pat, tag in VENDOR_RULES if re.search(pat, m.group(1), re.I)]
+    if len(_vhits) > 1 or re.search(r"G ?마켓|지마켓|옥션|이베이|쿠팡|11번가|네이버", m.group(1)):
+        continue
     for pat, tag in VENDOR_RULES:
         if re.search(pat, m.group(1), re.I) and tag not in r["tags"]:
             r["tags"] = sorted((set(r["tags"]) | {tag}) - {"SW·플랫폼", "코스웨어"})
@@ -1653,6 +1761,14 @@ for r in records:
         elif r.get("year") and r["year"] != a2.get("year"):
             continue      # 씨앗에 월이 없으면 연도만 대조 (금액이 원 단위로 같아 충돌 위험은 낮다)
         gained = sorted(set(r["tags"]) - set(a2["tags"]) - {"SW·플랫폼", "코스웨어"})
+        # 씨앗 한 줄에는 그 학교가 산 여러 계약의 제품이 함께 적혀 있다 — '마인크래프트×체더스 318.5만·
+        # 노션 47만·카훗 77.8만…'. 금액이 같은 계약 하나에 전부 옮기면 'Adobe 라이선스'에 ChatGPT,
+        # '씨마스 AIDT'에 지학사가 붙는다(2026-09-14, 38건). 씨앗의 제품이 하나이고 자동수집 쪽이
+        # 제품을 특정하지 못했을 때만 옮긴다.
+        _seed_sp = [t for t in r["tags"] if t not in BOOK_GENERIC]
+        _auto_sp = [t for t in a2["tags"] if t not in BOOK_GENERIC]
+        if len(_seed_sp) != 1 or _auto_sp:
+            gained = []
         if gained:
             a2["tags"] = sorted((set(a2["tags"]) | set(gained)) - {"SW·플랫폼", "코스웨어"})
             a2["note"] = (a2["note"] + " · " if a2.get("note") else "") + "제품 확인 완료"
@@ -1674,6 +1790,40 @@ for rec in records:
     deduped.append(rec)
 print(f"완전 중복 제거: {len(records) - len(deduped)}건")
 records = deduped
+
+# 나라장터는 계약을 바꿀 때마다 새 계약번호로 한 줄을 더 올린다 — 상세 주소의 ctrtNo는 같고
+# ctrtChgOrd(변경 차수)만 00·01·02로 달라진다. 이것을 따로 세면 한 계약이 두세 건이 된다
+# (2026-09-14: 1,023개 계약에서 1,152건이 더 세어졌다). 처음 계약의 이름·날짜를 남기고
+# 금액은 마지막 변경 계약의 것을 쓴다(변경 계약의 금액이 최종 계약 금액이다).
+_CTRT = re.compile(r"ctrtNo=([^&]+)")
+_CHG = re.compile(r"ctrtChgOrd=(\d+)")
+_by_ctrt = collections.defaultdict(list)
+for rec in records:
+    _m = _CTRT.search(rec.get("url") or "")
+    if _m:
+        _by_ctrt[(rec["school"], _m.group(1))].append(rec)
+_chg_drop = set()
+for _grp in _by_ctrt.values():
+    if len(_grp) < 2:
+        continue
+    _ord = lambda x: int(_CHG.search(x["url"]).group(1)) if _CHG.search(x["url"]) else 0
+    _grp.sort(key=lambda x: (_ord(x), 0 if x.get("ym") else 1))
+    _first, _last = _grp[0], _grp[-1]
+    for _x in _grp:
+        if _x.get("ym") and not _first.get("ym"):
+            _first = _x
+    _amt = next((x["amt"] for x in reversed(_grp) if x.get("amt")), _first.get("amt"))
+    if _amt and _amt != _first.get("amt"):
+        _first["amt"] = _amt
+        _first["note"] = (_first["note"] + " · " if _first.get("note") else "") + "변경 계약 금액 반영"
+    _u = set().union(*(set(x["tags"]) for x in _grp))
+    if _u - BOOK_GENERIC:                       # 제품이 특정되면 제품군 딱지는 떼어 낸다
+        _u -= {"SW·플랫폼", "코스웨어", "운영 부대구매"}
+    _first["tags"] = sorted(_u)
+    _chg_drop.update(id(x) for x in _grp if x is not _first)
+if _chg_drop:
+    records = [r for r in records if id(r) not in _chg_drop]
+    print(f"변경 계약을 원계약에 합침: {len(_chg_drop):,}건")
 
 # 태깅 커버리지 리포트
 tagged = sum(1 for rec in records if rec["tags"])
