@@ -157,9 +157,10 @@ def main():
                 uniq.append(p)
         posts = uniq
         ckpt["posts"] = posts
-        with open(CKPT, "w") as cf:
+        with open(CKPT + ".tmp", "w") as cf:
             json.dump({**ckpt, "done": sorted(done), "seen": [list(k) for k in seen]},
                       cf, ensure_ascii=False)
+        os.replace(CKPT + ".tmp", CKPT)
     print(f"학교 게시물 {len(posts):,}건 (남은 것 {len(posts) - len(done):,}건)", flush=True)
 
     # 2단계 — 학교마다 전 기간을 받는다 (게시물이 아니라 학교 단위)
@@ -207,13 +208,15 @@ def main():
         f.flush()
         if i % 20 == 0:
             ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
-            with open(CKPT, "w") as cf:
+            with open(CKPT + ".tmp", "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
+            os.replace(CKPT + ".tmp", CKPT)
             print(f"[{i}/{len(schools)}] {sc['name']} · 누적 {kept:,}건 (요청 {req_n:,}회)", flush=True)
         time.sleep(SPACING)
     ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
-    with open(CKPT, "w") as cf:
+    with open(CKPT + ".tmp", "w") as cf:
         json.dump(ckpt, cf, ensure_ascii=False)
+    os.replace(CKPT + ".tmp", CKPT)
     f.close()
     print(f"\n완료 — 요청 {req_n:,}회, 학교 계약 {kept:,}건 → {OUT}")
 

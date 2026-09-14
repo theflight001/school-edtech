@@ -107,8 +107,9 @@ def main():
                 time.sleep(SPACING)
             done.add(tag)
             ckpt["done"] = sorted(done)
-            with open(CKPT, "w") as cf:
+            with open(CKPT + ".tmp", "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
+            os.replace(CKPT + ".tmp", CKPT)
             print(f"[{bdt}~{edt} {label}] 전체 {total:,}건 중 학교 공고 누적 {kept:,}건 (API {api}회)", flush=True)
             time.sleep(SPACING)
     f.close()

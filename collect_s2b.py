@@ -182,8 +182,9 @@ def main():
             done.add(key)
             ckpt["done"] = [list(d) for d in done]
             ckpt["seen"] = [list(k) for k in seen]
-            with open(CKPT, "w") as f:
+            with open(CKPT + ".tmp", "w") as f:
                 json.dump(ckpt, f, ensure_ascii=False)
+            os.replace(CKPT + ".tmp", CKPT)
             print(f"[{kw}] {wb}~{we}: {last}페이지, 누적 수집 {kept}건 (요청 {total_req}회)", flush=True)
     fout.close()
     print(f"\n완료 — 요청 {total_req}회, 학교 공고 {kept}건 → {OUT}")

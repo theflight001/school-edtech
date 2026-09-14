@@ -196,8 +196,9 @@ def main():
                 polite()
             done.add((kw, y, m))
             ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
-            with open(CKPT, "w") as cf:
+            with open(CKPT + ".tmp", "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
+            os.replace(CKPT + ".tmp", CKPT)
             polite()
         print(f"[{kw}] 완료 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()

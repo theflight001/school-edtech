@@ -90,8 +90,9 @@ def main():
         f.flush()
         done.add(year)
         ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
-        with open(CKPT, "w") as cf:
+        with open(CKPT + ".tmp", "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
+        os.replace(CKPT + ".tmp", CKPT)
         print(f"[{year}] 전체 {n:,}행 → 누적 {kept:,}건", flush=True)
         time.sleep(SPACING)
     f.close()

@@ -170,12 +170,14 @@ def main():
             if len(done) % 6 == 0:
                 print(f"  {bdt[:7]}까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
             ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
-            with open(CKPT, "w") as cf:
+            with open(CKPT + ".tmp", "w") as cf:
                 json.dump(ckpt, cf, ensure_ascii=False)
+            os.replace(CKPT + ".tmp", CKPT)
             polite()
         ckpt["done"], ckpt["seen"] = [list(d) for d in done], [list(k) for k in seen]
-        with open(CKPT, "w") as cf:
+        with open(CKPT + ".tmp", "w") as cf:
             json.dump(ckpt, cf, ensure_ascii=False)
+        os.replace(CKPT + ".tmp", CKPT)
         print(f"[{kw or '전수'}] 완료 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
