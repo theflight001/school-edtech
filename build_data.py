@@ -1805,6 +1805,9 @@ TAG_ALIAS = {
     "타임리": "타임리GPT",
     "홈런": "아이스크림 홈런",
     "페더": "페더 에듀",
+    # 햄스터S는 햄스터로봇의 모델이다 — 따로 두면 같은 로봇이 제품 순위에 두 번 오른다(사용자 판정 2026-09-14).
+    # 계약명의 30~60%는 '햄스터봇'이라고만 적어 S인지 이전 모델인지 가릴 수 없어, 두 모델을 아우르는 이름으로 모은다.
+    "햄스터S": "햄스터로봇",
 }
 _aliased = 0
 for r in records:
@@ -1838,7 +1841,7 @@ VENDOR_RULES = [
     (r"투핸즈인터랙티브", "디딤"),
     # 해외 구독은 카드 결제 표기가 그대로 업체명 칸에 들어온다 — 'OPENAI *CHATGPT SUBSCR'처럼
     # 업체명이 곧 제품명이라 추론이 아니다. 계약명에는 '에듀테크 소프트웨어 구입'만 적혀 있다.
-    (r"chat ?gpt|챗지피티|openai", "ChatGPT"),
+    (r"chat ?gpt|[챗쳇] ?지피티|[챗쳇] ?gpt|openai", "ChatGPT"),
     (r"^\s*(?:\(주\)|주식회사)?\s*adobe|어도비", "Adobe"),
     (r"padlet|패들렛", "Padlet"),
     (r"kahoot|카훗", "카훗"),
@@ -1854,9 +1857,10 @@ for r in records:
     m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
     if not m:
         continue
-    # '이베이코리아(G마켓, 옥션,PADLET,ZOOM…)'처럼 한 칸에 여러 가맹점이 적히면 무엇을 샀는지 알 수 없다
-    _vhits = [tag for pat, tag in VENDOR_RULES if re.search(pat, m.group(1), re.I)]
-    if len(_vhits) > 1 or re.search(r"G ?마켓|지마켓|옥션|이베이|쿠팡|11번가|네이버", m.group(1)):
+    # '이베이코리아(G마켓, 옥션,PADLET,ZOOM…)'처럼 오픈마켓 이름이 섞이면 무엇을 샀는지 알 수 없다.
+    # 반면 'NICE_통신판매, 쳇지피티, 패들렛'은 카드 결제 가맹점을 나열한 것 — 적힌 제품을 모두 산 것이다
+    # (2026-09-14 화수고: Padlet만 붙고 ChatGPT가 빠졌다).
+    if re.search(r"G ?마켓|지마켓|옥션|이베이|쿠팡|11번가|네이버", m.group(1)):
         continue
     for pat, tag in VENDOR_RULES:
         if re.search(pat, m.group(1), re.I) and tag not in r["tags"]:
