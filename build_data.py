@@ -1203,6 +1203,22 @@ def _norm_vendor(v):
     v = re.sub(r"주식회[사서]|유한(?:책임)?회사|\(주\)|㈜|\(유\)|[\s\W_]", "", v or "")
     return v.lower()
 
+# 교육청 계약공개의 업체 칸에는 공급 업체 대신 결제 창구가 적히기도 한다 — '한국교직원공제회 S2B',
+# 'S2B 학교장터', 'KCP-결제 S2B'. 이런 이름은 업체를 알려 주지 않으므로 '업체 없음'으로 본다(2026-09-14:
+# 이 때문에 같은 계약 1,520쌍이 합쳐지지 않았다).
+_PAY_CHANNEL = re.compile(r"한국교직원공제회|교직원공제회|학교장터|S2B|KCP|NICE|나이스페이|KG ?이니시스|이니시스|"
+                          r"토스페이|결제|통신판매|카드", re.I)
+def _real_vendor(v):
+    return "" if len(_norm_vendor(_PAY_CHANNEL.sub("", v or ""))) < 2 else _norm_vendor(v)
+
+_BIGRAM_DROP = re.compile(r"20\d\d|학년도|구입|구매|계약|견적|요청|지급|지출|비용|대금|원인|카드|S2B|학교장터|[\W\d_]+", re.I)
+def _bigrams(t):
+    t = _BIGRAM_DROP.sub("", t or "").lower()
+    return {t[i:i + 2] for i in range(len(t) - 1)}
+def _title_alike(a, b):
+    A, B = _bigrams(a), _bigrams(b)
+    return bool(A and B) and len(A & B) / len(A | B) >= 0.3
+
 def _vendor_of(r):
     if r.get("vendor"):
         return r["vendor"]
@@ -1210,19 +1226,19 @@ def _vendor_of(r):
     return m.group(1).strip() if m else ""
 
 _office_dup_amt = 0
+_dup_uid = [0]
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):
         continue
     office_count, office_dup = 0, 0
     _idx = {}
-    _amt_idx = collections.defaultdict(list)     # (학교, 금액, 업체) → 아직 짝이 없는 기록
+    _amt_idx = collections.defaultdict(list)     # (학교, 금액) → 이미 실린 기록
     for r in records:
         if r.get("ym"):
             _idx.setdefault((r["school"], _norm_title(r["product"])), []).append(
                 (r["ym"] // 100) * 12 + r["ym"] % 100)
-            _v = _norm_vendor(_vendor_of(r))
-            if r.get("amt") and len(_v) >= 2 and not r.get("_paired"):
-                _amt_idx[(r["school"], r["amt"], _v)].append(r)
+            if r.get("amt"):
+                _amt_idx[(r["school"], r["amt"])].append(r)
     for row in csv.DictReader(open(_src, encoding="utf-8-sig")):
         if not row.get("학교코드"):
             row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
@@ -1230,6 +1246,7 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         if key in seen_pilot:
             continue
         seen_pilot.add(key)
+        _dup_partner = None
         ym = int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None
         # 나라장터·S2B에 이미 있는 계약이면 중복 (같은 학교·같은 계약명·±2개월)
         if ym:
@@ -1237,29 +1254,49 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             if any(abs(mm - pm) <= 2 for pm in _idx.get((row["학교명"], _norm_title(row["계약명"])), [])):
                 office_dup += 1
                 continue
-            _v = _norm_vendor(row.get("업체명"))
+            _v = _real_vendor(row.get("업체명"))
             _amt0 = int(row["금액"] or 0)
-            if _amt0 and len(_v) >= 2:
-                _cands = [c for c in _amt_idx.get((row["학교명"], _amt0, _v), [])
-                          if not c.get("_paired") and abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100)) <= 2]
+            _gen = ("SW·플랫폼", "코스웨어", "운영 부대구매")
+            _mon = lambda c: abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100))
+            _c = None
+            if _amt0:
+                _pool = [c for c in _amt_idx.get((row["학교명"], _amt0), []) if _mon(c) <= 2]
+                # ① 업체가 같다 — 짝이 없는 기록부터, 없으면 같은 달에 이미 짝지은 기록(교육청 자료 안의 중복)
+                _same = [c for c in _pool if _v and _real_vendor(_vendor_of(c)) == _v]
+                _cands = [c for c in _same if not c.get("_paired")] or [c for c in _same if _mon(c) == 0]
+                if not _cands:
+                    # ② 한쪽이 업체를 모른다(빈칸·결제 창구) — 금액이 우연히 같은 다른 계약을 막으려고
+                    #    1개월 이내이고, 두 계약명에서 같은 제품이 확인되거나 계약명이 닮았을 때만 짝짓는다.
+                    #    양쪽 모두 실제 업체가 적혔는데 다르면 판매처가 다른 계약일 수 있어 합치지 않는다.
+                    _ot0 = refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""),
+                                       row["계약명"], row.get("업체명", ""))
+                    _osp0 = {t for t in _ot0 if t not in GENERIC_SET and t not in _gen}
+                    _cands = [c for c in _pool if not c.get("_paired") and _mon(c) <= 1
+                              and not (_v and _real_vendor(_vendor_of(c)))
+                              and ((_osp0 & {t for t in c["tags"] if t not in GENERIC_SET and t not in _gen})
+                                   or _title_alike(strip_school(row["계약명"], row["학교명"]),
+                                                   strip_school(c["product"], c["school"])))]
                 if _cands:
-                    _c = min(_cands, key=lambda c: abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100)))
+                    _c = min(_cands, key=_mon)
                     _c["_paired"] = 1
                     # 같은 계약을 두 곳이 서로 다르게 적었다 — 양쪽 계약명에서 찾은 제품을 모두 싣는다.
                     # S2B '소프트웨어(패들랫, 북, 젭퀴즈)' ↔ 교육청 '소프트웨어(패들렛 스쿨, 북 크리에이터, 젭'
                     # (2026-09-14: 남는 쪽에 제품이 하나라도 있으면 옮기지 않아 북크리에이터가 빠졌다)
                     _ot = refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""),
                                       row["계약명"], row.get("업체명", ""))
-                    _gen = ("SW·플랫폼", "코스웨어", "운영 부대구매")
                     _osp = [t for t in _ot if t not in GENERIC_SET and t not in _gen]
                     if _osp:
                         _c["tags"] = sorted((set(_c["tags"]) | set(_osp)) - set(_gen) - GENERIC_SET
                                             | {t for t in _c["tags"] if t in GENERIC_SET and not
                                                [u for u in set(_c["tags"]) | set(_osp) if u not in GENERIC_SET and u not in _gen]})
                     _c["note"] = (_c["note"] + " · " if _c.get("note") else "") + f"{_label}에도 같은 계약"
-                    office_dup += 1
-                    _office_dup_amt += 1
-                    continue
+                    # 여기서 바로 버리지 않는다 — 짝이 뒤의 규칙(태그 없음·도서·용역 등)으로 빠지면 둘 다 사라진다
+                    # (2026-09-14: 업체를 모르는 짝을 찾게 하자 광주진흥중 ChatGPT 399.5만 원 등 43건이 사라졌다).
+                    # 모든 규칙을 거친 뒤 짝이 남아 있을 때만 뺀다.
+                    if "_uid" not in _c:
+                        _dup_uid[0] += 1
+                        _c["_uid"] = _dup_uid[0]
+                    _dup_partner = _c
         m = master_by_code.get(row["학교코드"])
         level = row["급별"]
         if level == "고등학교":
@@ -1295,7 +1332,12 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             "founding": (m.get("founding") or "") if m else "",
             "neisAddress": (m.get("address") or "") if m else "",
         })
-        office_count += 1
+        if _dup_partner is not None:
+            records[-1]["_dup_of"] = _dup_partner["_uid"]
+            office_dup += 1
+            _office_dup_amt += 1
+        else:
+            office_count += 1
     print(f"{_label} 병합: {office_count}건 (중복 제외 {office_dup}건)")
 for r in records:
     r.pop("_paired", None)
@@ -1995,6 +2037,18 @@ for _grp in _by_ctrt.values():
 if _chg_drop:
     records = [r for r in records if id(r) not in _chg_drop]
     print(f"변경 계약을 원계약에 합침: {len(_chg_drop):,}건")
+
+# S2B·나라장터와 같은 계약으로 짝지은 교육청 계약공개 줄 — 짝이 모든 규칙을 거쳐 남았을 때만 뺀다.
+# 짝이 빠졌으면 교육청 줄을 남긴다(그 줄도 자기 계약명으로 같은 규칙을 이미 거쳤다).
+# 완전 중복 제거·변경 계약 합치기 뒤에 둔다 — 짝이 그 단계에서 지워져도 교육청 줄을 잃지 않게.
+_alive_uid = {r["_uid"] for r in records if r.get("_uid")}
+_before_pair = len(records)
+_orphan = sum(1 for r in records if r.get("_dup_of") and r["_dup_of"] not in _alive_uid)
+records = [r for r in records if not (r.get("_dup_of") and r["_dup_of"] in _alive_uid)]
+for r in records:
+    r.pop("_dup_of", None); r.pop("_uid", None)
+print(f"S2B·나라장터와 같은 계약인 교육청 줄 뺌: {_before_pair - len(records):,}건 (짝이 빠져 남긴 것 {_orphan:,}건)")
+
 
 # 태깅 커버리지 리포트
 tagged = sum(1 for rec in records if rec["tags"])
