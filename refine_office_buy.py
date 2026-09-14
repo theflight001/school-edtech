@@ -14,6 +14,10 @@ FIELDS = ["시도", "수요기관", "계약명", "계약일", "금액", "업체�
 FACILITY = re.compile(r"관급자재|냉난방|공기순환|전기공사|통신공사|소방|승강기|방수|석면|창호|"
                       r"화장실|증개축|신축공사|개축|리모델링|외벽|지붕|바닥|급배수|보일러|"
                       r"태양광|CCTV|정수기|책걸상|사물함|교과용도서|복사용지")
+# 교육청·교육지원청 직원이 행정에 쓰는 소프트웨어 — 본청 업무용 MS·한컴 라이선스, 시설과 AutoCAD,
+# 서버 접속권(CAL), 홈페이지 DBMS, 직원 대상 연수. 학교 수업에 쓰는 에듀테크가 아니다(사용자 판정 2026-09-14).
+OFFICE_ADMIN = re.compile(r"행정|업무용|본청|시설|도면|설계|서버|CAL|DBMS|홈페이지|예산|전산실|네트워크|보안|"
+                          r"백업|그룹웨어|청사|직원|교육전문직")
 
 
 def load_rules():
@@ -60,7 +64,7 @@ def main():
     out, drop_fac, drop_no = [], 0, 0
     for r in rows:
         name = (r["계약명"] or "").strip()
-        if not name or FACILITY.search(name) or EXCLUDE_EVENT.search(name):
+        if not name or FACILITY.search(name) or EXCLUDE_EVENT.search(name) or OFFICE_ADMIN.search(name):
             drop_fac += 1
             continue
         tags = refine_aidt(tags_of(name, ""), name, r.get("업체명", ""))
