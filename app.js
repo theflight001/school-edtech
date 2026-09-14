@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260914j";
+  s.src = "/data_detail.js?b=20260915a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -478,7 +478,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260914j";
+    s2.src = "/data_detail_old.js?b=20260915a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -490,7 +490,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260914j";
+  s.src = "/data_old.js?b=20260915a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1734,7 +1734,7 @@ function allSwitch(cur) {
 function recordsView() {
   const recs = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
   const nd = recs.filter(r => !r.dup);
-  // 기록에 나온 학교를 센다. 그중에는 전국 학교 명단에 없는 곳도 있다 — 옛 이름으로 계약했거나
+  // 기록에 나온 학교를 센다. 그중에는 어느 학교인지 특정하지 못한 곳도 있다(대부분 명단에는 있다) — 옛 이름으로 계약했거나
   // 학교코드가 없는 기록, 집합 항목 등이다. 학교 전체 보기(명단 기준)와 숫자가 다른 이유라 밝혀 둔다.
   const sKeys = uniq(nd.map(skey));
   const outside = sKeys.filter(k => !idxByCode.has(k)).length;
@@ -1743,7 +1743,7 @@ function recordsView() {
     ${allSwitch("/records")}
     <div class="pagehead"><h2>기록 전체 보기</h2>
       <div class="sub2">${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} ${nd.length.toLocaleString()}건 ·
-        학교 ${sKeys.length.toLocaleString()}개교${outside ? `(전국 학교 명단에 없는 ${outside.toLocaleString()}곳 포함)` : ""} ·
+        학교 ${sKeys.length.toLocaleString()}개교${outside ? `(어느 학교인지 특정하지 못한 ${outside.toLocaleString()}곳 포함)` : ""} ·
         조사 기간과 지역·계열 조건이 반영되었습니다</div>${filterNote()}</div>
     <div class="card">${recsBlock(recs)}</div>`;
 }
