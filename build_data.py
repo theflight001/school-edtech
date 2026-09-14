@@ -300,6 +300,34 @@ def resolve_school(row):
 # 주요 브랜드/제품군 태깅 규칙: (태그명, 정규식) — 제품/서비스명 + 내용 필드에서 탐지
 # 제품명 태그 (제품/서비스명 + 내용에서 탐지) — 제품명을 그대로 태그로, 회사명 괄호 없이
 SPECIFIC_RULES = [
+    # ── 제품 사전에 없던 제품 (2026-09-14 태그 누락 전수검사) ──────────────────────
+    # 계약명에 제품이 적혀 있는데 사전에 없어 '코스웨어'·'SW·플랫폼'으로만 남던 것들이다.
+    # 보통명사와 겹치는 이름(옥수수·비누·런웨이·리플릿)은 구매 문맥이 함께 있을 때만 잡는다.
+    ("오조봇",              r"오조봇|Ozobot"),
+    ("네오씽카",            r"네오 ?씽카"),
+    ("비상 옥수수",         r"비상(?:교육)? ?옥수수|(?=.*(?:코스웨어|프로그램|소프트웨어|에듀테크|수학|\bAI\b|이용권|구독|라이선스|라이센스))(?!.*(?:급식|식재료|농산물|간식|찰옥수수|옥수수 ?(?:차|수염|빵|콘|알갱이)))^.*옥수수"),
+    ("Blooket(블루킷)",     r"블루[킷켓]|Blooket"),
+    ("수학대왕",            r"수학 ?대왕"),
+    ("코스페이시스(CoSpaces)", r"코스페이시스|코스페이스 ?에듀|CoSpaces|딜라이텍스|Delightex"),
+    ("컴시간",              r"컴시간"),
+    ("클라썸",              r"클라썸|CLASSUM"),
+    ("Lovable",             r"러버블|\bLovable\b"),
+    ("Runway",              r"(?=.*(?:\bAI\b|동영상|영상|라이선스|라이센스|구독))(?!.*(?:패션|워킹|모델))^.*(?:런웨이|\bRunway\b)"),
+    ("스마트리",            r"스마트리(?![가-힣])"),
+    ("Filmora",             r"필모라|Filmora"),
+    ("풀리수학",            r"풀리 ?수학"),
+    ("Midjourney",          r"미드[저져]니|Midjourney"),
+    ("VINU",                r"\bVINU\b|프로보 ?비누|비누 ?(?:AI|로봇|코딩)"),
+    ("밀리의서재",          r"밀리의 ?서재"),
+    ("왓퀴즈",              r"왓 ?퀴즈|WhatQuiz"),
+    ("Meshy AI",            r"메쉬 ?AI|Meshy"),
+    ("Wolfram Alpha",       r"울프람 ?알파|Wolfram ?Alpha"),
+    ("Google Colab",        r"구글 ?코랩|\bColab\b"),
+    ("SolidCAM",            r"Solid ?CAM|솔리드캠"),
+    ("CATIA",               r"\bCATIA\b|카티아"),
+    ("위로미",              r"위로미"),
+    # 'DocZoom Pro'가 Zoom으로 잡혔다 — 원격수업 콘텐츠 저작 도구로 Zoom과 다른 제품이다
+    ("DocZoom",             r"DocZoom|닥줌"),
     # '챗지피티'처럼 한글로 옮겨 적은 표기가 많다. 다만 GPT킬러·MonoGPT·타임리 GPT처럼
     # 다른 제품에 GPT가 붙는 경우가 있어, GPT 단독은 잡지 않는다.
     ("ChatGPT",            # '겟지피티(GetGPT)'는 유한책임회사 워드브릭스의 딴 제품이다 — 에듀집에 따로 등록돼 있다.
@@ -319,7 +347,7 @@ SPECIFIC_RULES = [
     # '진로 체험의 날(일러스트레이터)', '직업인 특강(메디컬 일러스트레이터)'의 일러스트레이터는 직업 이름이다
     ("Adobe",              r"Adobe|어도비|포토샵|Photoshop|^(?!.*(?:진로|직업|체험)).*일러스트레이터|Illustrator|"
                             r"\bPremiere\b(?!.*(?:프로젝터|빔|DLP|레이저|시리즈))|프리미어 ?프로"),
-    ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI[·:]? ?디지털 ?교육자료"),
+    ("AI·디지털 교육자료", r"AIDT|AI ?디지털 ?교과서|디지털교과서|AI ?[·:.]? ?디지털 ?교육자료"),
     ("리로스쿨",            r"리로스쿨|riroschool"),
     # '학교종이 땡땡땡'은 공연·도서 시리즈다 — 학교 알림장 앱 '학교종이'와 다른 것이다
     # (2026-09-13 전수검사: 공연비·배너·도서 구입 3건이 앱 도입으로 잡혀 있었다)
@@ -355,8 +383,8 @@ SPECIFIC_RULES = [
     ("Notion",             r"노션|Notion"),
         # ZOOM은 오디오 장비 상표이기도 하다 — 녹음기·믹서·렌즈가 걸렸다(21건)
         # '줌 라이선스'·'줌 X 체더스'가 안 잡혔다(14건)
-    ("Zoom",                r"(?<!Air )(?<!에어 )(?<!매빅2 줌 )(?<!Mavic2 )\bZoom\b(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
-                            r"줌\s*(?:유료|연간|1년|정품)?\s*(?:프로|라이선스|라이센스|미팅|회의|계정|구독|사용료)(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
+    ("Zoom",                r"(?<!Air )(?<!에어 )(?<!매빅2 줌 )(?<!Mavic2 )(?<![A-Za-z])Zoom(?![A-Za-z])(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
+                            r"(?<!닥)줌\s*(?:유료|연간|1년|정품)?\s*(?:프로|라이선스|라이센스|미팅|회의|계정|구독|사용료)(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
                             r"줌\s?X\s?체더스"),
     ("미리캔버스",          r"미리캔버스"),
     ("Padlet",             r"Padlet|패들렛"),
@@ -535,6 +563,8 @@ SPECIFIC_RULES = [
     ("e알리미",             r"e[\s\-]?알리미|(?<!아)이[\s\-]?알리미"),
 ]
 
+_BUILD_RULE_TAGS = [t for t, _ in SPECIFIC_RULES]
+
 # 에듀집 등록 제품 중 조달 기록으로 실사용이 확인된 제품 — edzip_rules.csv에서 자동 로드
 # (제품 단위 전수조사 결과: 나라장터 전수 140만 건 × 에듀집 2,490종 대조)
 # 자동 발굴 규칙 — mine_products.py가 에듀집 사전과 대조해 확정한 제품명(A등급)
@@ -570,8 +600,88 @@ if os.path.exists("mined_rules.csv"):
     for _row in csv.DictReader(open("mined_rules.csv", encoding="utf-8-sig")):
         if (_row.get("문맥필요") or "").strip() == "Y":
             CTX_REQUIRED.add(_row["태그"])
+
+# 에듀집·자동 발굴 규칙은 제품명을 붙여 쓴 글자 그대로 갖고 있어 '클래스 카드', '포켓 터틀',
+# '토도 한글', '카미봇 파이 AI', 'GV CNC'를 놓쳤다(2026-09-14 전수검사 — 계약명에는 있는데 태그가 없던
+# 기록 919건의 대부분). 이름이 글자·숫자만으로 된 단순 규칙에 한해 한글 글자 사이, 한글과 영문 사이,
+# 하이픈·밑줄 자리에 띄어쓰기를 허용한다. 한글과 숫자 사이는 열지 않는다('클래스5' ↔ '클래스 5개').
+_SIMPLE_RULE = re.compile(r"^(?:[가-힣A-Za-z0-9]|\\-|_|\[\\s·\\-\]\*|\|)+$")
+def _space_tolerant(pat):
+    if not _SIMPLE_RULE.match(pat):
+        return pat
+    out = []
+    for alt in pat.split("|"):
+        body = alt.replace("[\\s·\\-]*", " ").replace("\\-", " ").replace("_", " ")
+        chars = [c for c in body]
+        if len([c for c in chars if c != " "]) < 4:
+            out.append(alt)
+            continue
+        buf = ""
+        for i, c in enumerate(chars):
+            if c == " ":
+                buf += "[\\s·\\-_]?"
+                continue
+            buf += re.escape(c)
+            nxt = chars[i + 1] if i + 1 < len(chars) else ""
+            if nxt and nxt != " ":
+                ha, hb = "가" <= c <= "힣", "가" <= nxt <= "힣"
+                if (ha and hb) or (ha != hb and not c.isdigit() and not nxt.isdigit()):
+                    buf += "[\\s·\\-]?"
+        out.append(buf)
+    return "|".join(out)
+# 띄어쓰기를 열면 다른 뜻과 겹치는 이름은 그대로 둔다(2026-09-14 미리보기에서 확인):
+#  · 햄스터S — '햄스터 S로봇'이 햄스터로봇의 모델로 따로 잡혀 같은 제품이 두 번 세어진다(상하위, 670건)
+#  · 소프트웨어야놀자 — '소프트웨어야 놀자반' 동아리 이름 / 진학관리프로그램 — '진로진학관리 프로그램(리로스쿨)'
+#  · 코딩스쿨 — '코딩 스쿨패키지' / 인공지능자격증 — '인공지능 자격증 프로그램 교재'
+#  · AIEP — '교수 학습 플랫폼 운영 물품' / M-AI 코딩 — 'STEAM AI코딩키트'
+_NO_SPACE_TOLERANT = {"햄스터S", "소프트웨어야놀자", "진학관리프로그램", "코딩스쿨", "인공지능자격증(AILC)",
+                      "인공지능 맞춤형 교수학습 플랫폼(11개 시도교육청 공동 구축)", "M-AI 코딩"}
+_BUILD_RULE_TAGS = set(_BUILD_RULE_TAGS) | _NO_SPACE_TOLERANT
+SPECIFIC_RULES = [(t, p if t in _BUILD_RULE_TAGS else _space_tolerant(p)) for t, p in SPECIFIC_RULES]
+
+# 사람이 읽으면 같은 제품인 별칭·오타 — 규칙 본문에 OR로 덧붙인다(2026-09-14 전수검사에서 확인한 표기)
+ALIAS_EXTRA = {
+    "Ghost":        r"(?=.*(?:소프트웨어|프로그램|라이선스|라이센스|S/?W|알툴즈|정품|복구))"
+                    r"(?!.*(?:하우스|체험|의상|분장|가면|파티|할로윈|핼러윈|게임|인형|피규어))^.*고스트",
+    "메타퀘스트":    r"오큘러스 ?퀘스트|Oculus ?Quest",
+    "키위티-키위런": r"키위티|키위런|KEEwiT",
+    "AI로봇 아티보": r"아티보",
+    "CLASSVR":      r"CLASS ?VR|클래스 ?VR",
+    "북크리에이터(Bookcreator)": r"북 ?크리에이터|Book ?Creator",
+    "Padlet":       r"페들렛|패들릿|패들겟|패들랫",
+    "네오쏘코":      r"NEO ?SOCO",
+    "쿨메신저":      r"쿨 ?메신[저져]",
+    "토도한글":      r"토토 ?한글",
+    "Gemini":       r"재미나이|재미니|(?<![가-힣])제미니(?! ?레이크)",
+    "NE_Times":     r"NE ?Times|엔이 ?타임즈",
+    "퀴즈앤":        r"퀴즈엔",
+    "AI아크수학":    r"아크 ?수학",
+    "하드보안관":     r"하드 ?보안관",
+    "마이크로비트":   r"마이크로 비트",
+    "미리캔버스":     r"미리 캔버스",
+    "알툴즈":        r"알 PDF|알 툴즈",
+    "넷클래스":       r"넷 클래스",
+    "OrCAD":        r"(?<![A-Za-z])Or[\s\-]?CAD(?![A-Za-z])",
+    "곰믹스":        r"곰 믹스",
+    "클래스룸.클라우드(classroom.cloud)": r"클래스룸 ?클라우드",
+    "DBpia":        r"\bDB ?pia\b",
+    "ChatGPT":      r"CHAT\.GPT",
+    "e알리미":       r"\bE_알리미",
+    "Adobe":        r"아크로뱃|Acrobat",
+    "리로스쿨":       r"리로 스쿨",
+    "코딩로봇 네오스파이더": r"네오 ?스파이더",
+    "올리브AI":      r"올리브 AI",
+    "엠봇2":         r"엠봇 2(?!\d)",
+    "M-AI 코딩":     r"(?<![A-Za-z])M[\s\-]?AI ?코딩",
+    "Replit":       r"(?=.*(?:구독|라이선스|라이센스|코딩|플랫폼|소프트웨어))(?!.*(?:제작|인쇄|출력|홍보|안내))^.*리플릿",
+}
+_rules_d = dict(SPECIFIC_RULES)
+SPECIFIC_RULES = [(t, f"(?:{p})|(?:{ALIAS_EXTRA[t]})" if t in ALIAS_EXTRA else p) for t, p in SPECIFIC_RULES]
 # 소프트웨어·서비스 도입임을 알려주는 신호 / 시설·공사임을 알려주는 신호
-SW_CTX = re.compile(r"구독|라이선스|라이센스|이용권|이용료|사용료|사용 ?계약|플랫폼|프로그램|"
+# 코딩 로봇·교구 제품(포켓터틀·네오쏘코·큐로AI·스카티고)은 소프트웨어 낱말 대신 '코딩로봇·교구·키트'로
+# 문맥이 드러난다 — 없으면 '포켓 터틀로봇 코딩로봇 10인용 세트'가 문맥 없음으로 떨어진다(2026-09-14)
+SW_CTX = re.compile(r"코딩|로봇|교구|키트|"
+                    r"구독|라이선스|라이센스|이용권|이용료|사용료|사용 ?계약|플랫폼|프로그램|"
                     r"소프트웨어|\bSW\b|S/W|계정|어플|\b앱\b|콘텐츠|코스웨어|에듀테크|"
                     r"인공지능|\bAI\b|디지털|학습|수업|교육자료", re.I)
 FACILITY_CTX = re.compile(r"공사|설비|보수|조성|정비|철거|배관|전기|도색|방수|제초|살포|청소|"
@@ -593,9 +703,17 @@ def refine_aidt(tags, name, vendor):
         return tags
     if AIDT_ACCESSORY.search(name or ""):
         return [("기기(PC·태블릿·전자칠판 등)" if t == AIDT_TAG else t) for t in tags]
-    for label, pat in AIDT_PUBLISHERS:
-        if re.search(pat, vendor or "", re.I):
-            return [(f"{label} {AIDT_TAG}" if t == AIDT_TAG else t) for t in tags]
+    # 발행처는 계약 상대 업체로 가린다. 판매대행 업체와 맺은 계약은 계약명에 적힌 출판사로 가린다
+    # ('천재교과서 AIDT 교육자료 (초등학교)' — 2026-09-14 전수검사에서 321건이 발행처 없이 남았다).
+    # 계약명에 출판사가 둘 이상이면(여러 과목 묶음) 모두 인정한다.
+    named = [label for label, pat in AIDT_PUBLISHERS if re.search(pat, name or "", re.I)]
+    by_vendor = [label for label, pat in AIDT_PUBLISHERS if re.search(pat, vendor or "", re.I)][:1]
+    # '천재교과서 AIDT 교육자료 외 2종'을 동아출판과 계약했으면 나머지 품목이 동아출판 것이다 — 둘 다 인정한다
+    if not named or (by_vendor and by_vendor[0] not in named and re.search(r"외 ?\d+ ?종", name or "")):
+        named = named + [b for b in by_vendor if b not in named]
+    if named:
+        out = [t for t in tags if t != AIDT_TAG]
+        return out + [f"{label} {AIDT_TAG}" for label in named]
     return tags
 
 # 행사·캠프 용역, 비제품 계약(버스 임대 등)은 수록 제외 — 제품 도입이 아닌 활동성 계약
@@ -1042,7 +1160,8 @@ if os.path.exists("s2b_refined.csv"):
             "url": "", "confidence": "중",
             "vendor": (row.get("업체명") or "").strip() or None,
             "note": "S2B 자동수집분",
-            "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"], ""),
+            "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"],
+                                (row.get("업체명") or "")),
             "schoolCode": row["학교코드"] or None,
             "schoolName": m["name"] if m else row["학교명"],
             "hsType": (m.get("hsType") or "") if m else "",
@@ -1126,13 +1245,17 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
                 if _cands:
                     _c = min(_cands, key=lambda c: abs(mm - ((c["ym"] // 100) * 12 + c["ym"] % 100)))
                     _c["_paired"] = 1
-                    # 교육청 쪽 계약명이 제품을 특정하고 이미 실린 쪽이 못 했으면 그 태그를 옮겨 온다
+                    # 같은 계약을 두 곳이 서로 다르게 적었다 — 양쪽 계약명에서 찾은 제품을 모두 싣는다.
+                    # S2B '소프트웨어(패들랫, 북, 젭퀴즈)' ↔ 교육청 '소프트웨어(패들렛 스쿨, 북 크리에이터, 젭'
+                    # (2026-09-14: 남는 쪽에 제품이 하나라도 있으면 옮기지 않아 북크리에이터가 빠졌다)
                     _ot = refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""),
                                       row["계약명"], row.get("업체명", ""))
-                    _osp = [t for t in _ot if t not in GENERIC_SET and t not in ("SW·플랫폼", "코스웨어", "운영 부대구매")]
-                    if _osp and not [t for t in _c["tags"] if t not in GENERIC_SET
-                                     and t not in ("SW·플랫폼", "코스웨어", "운영 부대구매")]:
-                        _c["tags"] = sorted(set(_osp))
+                    _gen = ("SW·플랫폼", "코스웨어", "운영 부대구매")
+                    _osp = [t for t in _ot if t not in GENERIC_SET and t not in _gen]
+                    if _osp:
+                        _c["tags"] = sorted((set(_c["tags"]) | set(_osp)) - set(_gen) - GENERIC_SET
+                                            | {t for t in _c["tags"] if t in GENERIC_SET and not
+                                               [u for u in set(_c["tags"]) | set(_osp) if u not in GENERIC_SET and u not in _gen]})
                     _c["note"] = (_c["note"] + " · " if _c.get("note") else "") + f"{_label}에도 같은 계약"
                     office_dup += 1
                     _office_dup_amt += 1
@@ -1237,6 +1360,19 @@ for _p in ("edzip_company.csv",):
 def _vnorm(x):
     x = re.sub(r"\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사", "", x or "")
     return re.sub(r"[\s.,·\-_*/&'\"()]+", "", x).lower()
+# 다만 아이스크림미디어처럼 자기 제품(띵커벨)도 만들고 다른 회사 제품(아트봉봉스쿨·클래스카드·라포라포)도
+# 파는 업체의 계약에서는 이 좁히기가 진짜 구매 제품을 지웠다(2026-09-14 전수검사: '띵커벨, 라포라포,
+# 클래스카드'에 띵커벨만 남음). 그 업체가 남의 회사 제품 하나만 적힌 계약을 맺은 적이 있으면
+# 판매대행도 하는 업체로 보고 좁히지 않는다 — 추정이 아니라 수집된 계약이 근거다.
+_RESELLER = set()
+for r in records:
+    _sp = [t for t in r["tags"] if t not in GENERIC_SET]
+    if len(_sp) != 1 or not _EDZIP_MAKER.get(_sp[0]):
+        continue
+    _m = re.search(r"계약업체: (.+?)$", r.get("content") or "")
+    _v = (r.get("vendor") or (_m.group(1).strip() if _m else ""))
+    if _v and _vnorm(_EDZIP_MAKER[_sp[0]]) != _vnorm(_v) and _vnorm(_sp[0]) not in _vnorm(_v):
+        _RESELLER.add(_vnorm(_v))
 _narrowed = 0
 for r in records:
     _spec = [t for t in r["tags"] if t not in GENERIC_SET]
@@ -1247,6 +1383,8 @@ for r in records:
     if not vend:
         continue
     vn = _vnorm(vend)
+    if vn in _RESELLER:
+        continue
     # 지울 근거가 있는 것만 지운다 — 에듀집에 회사가 적혀 있는데 그 회사가 아닌 제품.
     # 회사를 모르는 제품(리딩앤·오르조 …)은 건드리지 않는다. 같은 회사의 형제 제품일 수 있다.
     def _mine(t):

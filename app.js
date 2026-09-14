@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260914f";
+  s.src = "/data_detail.js?b=20260914g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -474,10 +474,11 @@ function withOld(from, then) {
       for (const r of more) R.push(r);
       _brKey = null;                          // 걸러 둔 것을 버린다
       NAME_POOL = null;
+      TAG_NOSPACE = null;
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260914f";
+    s2.src = "/data_detail_old.js?b=20260914g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -489,7 +490,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260914f";
+  s.src = "/data_old.js?b=20260914g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1349,8 +1350,20 @@ const ALIAS_GROUPS = [
   ["하이러닝", "hi-learning", "hilearning"], ["니어팟", "nearpod"], ["젭", "zep"],
   ["아이스크림", "i-scream", "iscream"], ["커서", "cursor"], ["엘리스", "elice"], ["클래스팅", "classting"],
 ];
+// '클래스 카드'처럼 제품 이름을 띄어 쓰면 태그 이름('클래스카드')과 어긋나 계약명에 띄어 적힌 기록만 걸렸다.
+// 띄어쓰기를 뺀 검색어가 제품 이름과 같으면 붙여 쓴 이름으로도 찾는다(2026-09-14).
+// 학교 이름('서울 초등학교')까지 붙여 찾으면 낱말별 검색을 건너뛰게 되므로 제품 이름일 때만 쓴다.
+let TAG_NOSPACE = null;
 function queryTerms(q) {
   const terms = new Set([q]);
+  if (/\s/.test(q)) {
+    if (!TAG_NOSPACE) {
+      TAG_NOSPACE = new Map();
+      for (const r of R) for (const t of r.tags) TAG_NOSPACE.set(t.toLowerCase().replace(/\s+/g, ""), t.toLowerCase());
+    }
+    const k = q.replace(/\s+/g, "");
+    for (const [ns, t] of TAG_NOSPACE) if (ns === k || ns.startsWith(k + "(")) terms.add(t.startsWith(k) ? k : t);
+  }
   for (const g of ALIAS_GROUPS) {
     for (const m of g) {
       if (q.includes(m)) g.forEach(o => { if (o !== m) terms.add(q.replace(m, o)); });
@@ -1386,12 +1399,16 @@ const hayOf = r => [r.product, contentOf(r), r.tags.join(" "), r.vendor || ""].j
 
 // 한글 검색어가 다른 한글에 붙어 있으면 다른 낱말이다.
 // ('러닝스파크'로 찾을 때 'AI로봇러닝스파크 교구'가 걸리던 것 — 수업 이름이 우연히 겹쳤을 뿐이다)
+// 다만 계약명은 띄어쓰기를 자주 빼먹는다 — '코스웨어 구입아트봉봉 디지털드로잉'의 아트봉봉을 놓쳤다
+// (2026-09-14 태그 누락 검사). 앞말이 '구입·구매·구독·계약·및·외·용'처럼 계약명에서 제품 앞에 오는
+// 말로 끝나면 띄어쓰기가 빠진 것으로 보고 찾는다.
+const WORD_BEFORE = "(?:(?<![가-힣])|(?<=(?:구입|구매|구독|계약|지급|지출|사용|이용|설치|도입|및|외|용)))";
 const WORD_RE = new Map();
 function hasWord(hay, term) {
   if (!/^[가-힣]{3,}$/.test(term)) return hay.includes(term);
   let re = WORD_RE.get(term);
   if (!re) {
-    re = new RegExp("(?<![가-힣])" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    re = new RegExp(WORD_BEFORE + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     WORD_RE.set(term, re);
   }
   return re.test(hay);
