@@ -1132,8 +1132,14 @@ def _s2b_amt(v):
         return None
 
 s2b_count, s2b_dup = 0, 0
-if os.path.exists("s2b_refined.csv"):
-    for row in csv.DictReader(open("s2b_refined.csv", encoding="utf-8-sig")):
+# 수의계약(s2b_refined.csv)과 입찰(s2b_bid_refined.csv, 2026-09-15 추가)을 같은 규칙으로 싣는다.
+# 입찰은 collect_s2b_bid.py가 받는다 — 계약 내역이 있으면 '입찰(계약)', 낙찰만 있으면 '입찰(낙찰)'.
+for _s2b_src, _s2b_label, _s2b_idbase in [("s2b_refined.csv", "S2B 학교장터", 200000),
+                                          ("s2b_bid_refined.csv", "S2B 학교장터(입찰)", 1850000)]:
+    _s2b_n0 = s2b_count
+    for row in (csv.DictReader(open(_s2b_src, encoding="utf-8-sig")) if os.path.exists(_s2b_src) else []):
+        _bid_stage = (row.get("계약구분") or "")            # '입찰(계약)'·'입찰(낙찰)'·''(수의계약)
+        _s2b_kind = ("입찰 낙찰" if "낙찰" in _bid_stage else "입찰 계약") if _bid_stage.startswith("입찰") else "수의계약"
         if not row.get("학교코드"):
             row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
         key = (row["계약번호"], row["학교명"])
@@ -1160,20 +1166,20 @@ if os.path.exists("s2b_refined.csv"):
                                    if _nm.endswith(lv)), None) or "미확정"
         s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
         records.append({
-            "id": 200000 + s2b_count,
+            "id": _s2b_idbase + s2b_count,
             "school": row["학교명"], "type": stype,
             "region": s_short, "sido": s_short,
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": _s2b_amt(row.get("금액")), "ym": ym,
             # 금액·업체를 내용에 적는다 — 전에는 '수의계약(물품)'뿐이라 표에 금액이 안 보였다(2026-09-15 구조검증 S07)
-            "content": f"S2B 학교장터 수의계약({row['구분']})"
+            "content": f"S2B 학교장터 {_s2b_kind}({row['구분']})"
                 + ((lambda a: f" ({a/10000:,.0f}만원)" if a >= 10000 else f" ({a:,}원)")(_s2b_amt(row.get("금액"))) if _s2b_amt(row.get("금액")) else "")
                 + (f" · 계약업체: {(row.get('업체명') or '').strip()}" if (row.get("업체명") or "").strip() else ""),
-            "sourceType": "S2B 학교장터",
+            "sourceType": _s2b_label,
             "url": "", "confidence": "중",
             "vendor": (row.get("업체명") or "").strip() or None,
-            "note": "S2B 자동수집분",
+            "note": "S2B 자동수집분" + (" · 낙찰 결과 — 계약 체결 전" if _s2b_kind == "입찰 낙찰" else ""),
             "tags": refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""), row["계약명"],
                                 (row.get("업체명") or "")),
             "schoolCode": row["학교코드"] or None,
@@ -1183,7 +1189,7 @@ if os.path.exists("s2b_refined.csv"):
             "neisAddress": (m.get("address") or "") if m else "",
         })
         s2b_count += 1
-    print(f"S2B 학교장터 병합: {s2b_count}건 (나라장터 중복 제외 {s2b_dup}건)")
+    print(f"{_s2b_label} 병합: {s2b_count - _s2b_n0}건 (나라장터 중복 제외 누계 {s2b_dup}건)")
 
 # --- 시도교육청 계약공개 수집분 병합 (소액 구매 포함) ---
 # 시도를 늘릴 때는 이 표에 한 줄만 추가한다 (정제 스크립트가 같은 스키마를 내보내므로)
@@ -1870,6 +1876,8 @@ TAG_ALIAS = {
     # 햄스터S는 햄스터로봇의 모델이다 — 따로 두면 같은 로봇이 제품 순위에 두 번 오른다(사용자 판정 2026-09-14).
     # 계약명의 30~60%는 '햄스터봇'이라고만 적어 S인지 이전 모델인지 가릴 수 없어, 두 모델을 아우르는 이름으로 모은다.
     "햄스터S": "햄스터로봇",
+    # 스쿨톡 학교전화녹음을 스쿨톡으로 모은 것과 같은 이유 — 회사 하나의 서비스 셋을 한 이름으로(사용자 판정 2026-09-15).
+    "스쿨톡 교원안심번호": "스쿨톡",
 }
 _aliased = 0
 for r in records:

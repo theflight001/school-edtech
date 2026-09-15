@@ -82,7 +82,8 @@ if [ "$COLLECT" = "1" ]; then
   # 나라장터·S2B도 남의 서버다. 한 곳이 응답을 안 해도 나머지가 기다리지 않게 함께 돌린다.
   par_run 나라장터 month_나라장터 python3 collect_nara_full.py --begin "$BEGIN" --end "$END" &
   par_run 나라장터입찰 month_나라장터입찰 python3 collect_nara_bid.py --begin "$BEGIN" --end "$END" &
-  par_run S2B month_S2B python3 collect_s2b_excel.py --begin "$FROM3" --end "$MONTH" &
+  # S2B는 한 서버라 수의계약 엑셀을 받은 뒤 같은 자물쇠 안에서 입찰(계약·낙찰)을 이어 받는다(2026-09-15)
+  par_run S2B month_S2B sh -c "python3 collect_s2b_excel.py --begin '$FROM3' --end '$MONTH' && python3 collect_s2b_bid.py --begin '$FROM3' --end '$MONTH'" &
   par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
   par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF &
   par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
@@ -115,6 +116,7 @@ COLLECT=1
 run "나라장터 추림"   python3 extract_edtech.py
 run "시도 정제"      python3 refine_office.py
 run "S2B 정제"       python3 refine_s2b.py
+run "S2B 입찰 정제"  python3 refine_s2b.py --src s2b_bid_all.csv --out s2b_bid_refined.csv
 run "교육청 일괄"    python3 collect_nara_office.py --begin "$BEGIN" --end "$END"
 run "중복 걷어내기"  python3 dedup_office.py
 run "입찰 정제"      python3 refine_nara_bid.py

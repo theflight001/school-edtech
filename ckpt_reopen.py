@@ -21,7 +21,7 @@ import argparse, glob, json, os, re, shutil, time
 MONTHLY = [".ckpt_강원.json", ".ckpt_use.json", ".ckpt_ice.json", ".ckpt_충북.json", ".ckpt_전남.json",
            ".ckpt_세종.json", ".ckpt_dje.json", ".ckpt_충남.json", ".ckpt_경남.json", ".ckpt_gen.json",
            ".ckpt_경기.json", ".ckpt_pen.json", ".ckpt_경북.json", ".ckpt_dge.json", ".ckpt_제주.json",
-           ".ckpt_s2b_excel.json", ".ckpt_nara_bid.json", ".ckpt_nara_office.json"]
+           ".ckpt_s2b_excel.json", ".ckpt_s2b_bid.json", ".ckpt_nara_bid.json", ".ckpt_nara_office.json"]
 NO_PERIOD = {".ckpt_강원.json", ".ckpt_use.json"}
 
 
@@ -33,6 +33,9 @@ def span(x):
         m = re.match(r"(\d{4})/(\d{2})", str(x[1]))
         return (int(m[1]) * 100 + int(m[2]),) * 2 if m else None
     s = str(x)
+    # '20250101|20250331' · 'list04|20250101|20250331'(S2B 입찰) — 창 전체를 기간으로 본다(2026-09-15)
+    if m := re.fullmatch(r"(?:[A-Za-z0-9_]+\|)?(\d{4})(\d{2})\d{2}\|(\d{4})(\d{2})\d{2}", s):
+        return (int(m[1]) * 100 + int(m[2]), int(m[3]) * 100 + int(m[4]))
     if m := re.fullmatch(r"(\d{4})(\d{2})\d{2}\|.*", s):
         return (int(m[1]) * 100 + int(m[2]),) * 2
     if m := re.fullmatch(r".*\|(\d{4})\|([01])", s):

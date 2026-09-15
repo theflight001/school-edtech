@@ -39,7 +39,7 @@ _SIDO_MAP = {"서울": "서울", "부산": "부산", "대구": "대구", "인천
              "경남": "경상남", "제주": "제주"}
 
 FIELDS = ["계약번호", "구분", "계약명", "계약일", "금액", "수요기관", "학교명",
-          "업체명", "학교코드", "급별", "시도", "상세URL"]
+          "업체명", "학교코드", "급별", "시도", "상세URL", "계약구분"]
 
 def expand_abbrev(name):
     """사대부고 등 관용 약칭 → NEIS 정식 명칭"""
@@ -161,6 +161,7 @@ def main():
                 "계약명": name, "계약일": r.get("계약일", ""), "금액": r.get("금액", ""),
                 "수요기관": school_raw, "학교명": school, "업체명": (r.get("업체명") or "").strip(),
                 "학교코드": m["code"], "급별": m["level"], "시도": m["sido"], "상세URL": "",
+                "계약구분": (r.get("계약구분") or "") if (r.get("계약구분") or "").startswith("입찰") else "",   # 입찰 단계(계약/낙찰). 수의계약은 빈 값
             })
     with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
