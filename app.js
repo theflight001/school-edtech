@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260915b";
+  s.src = "/data_detail.js?b=20260915c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -128,6 +128,9 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const count = (arr, key) => { const m = new Map(); for (const x of arr) { const k = key(x); if (!k) continue; m.set(k, (m.get(k)||0)+1); } return [...m.entries()].sort((a,b)=>b[1]-a[1]); };
 const uniq = arr => [...new Set(arr)];
+// 통계에 세는 기록 — 다른 근거와 같은 건(dup)과 낙찰 전 입찰 공고(bid)는 목록에만 두고 학교 수·기록 수에서 뺀다
+// (2026-09-15 구조검증 S09: 공고·재공고가 도입으로 집계됐다)
+const isCounted = r => !r.dup && !r.bid;
 
 // ---- 인덱스 ----
 const schools = uniq(R.map(r => r.school)).sort();
@@ -165,7 +168,10 @@ const vnorm = n => (canonOf(n) ? canonOf(n) : (n || "")
   // 사이에 낀 기호와 대소문자 차이로 갈라지던 것을 모은다
   //   S2B / s2b · Padlet / PADLET · 지마켓옥션 / 지마켓-옥션 / 지마켓&옥션
   .replace(/[\s.,·\-_*/&'"]+/g, "")).toLowerCase().trim();
-const VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
+// 옛 기록(2020~2025)을 붙이면 다시 만든다 — 전에는 처음 한 번만 만들어 목록·자동완성이 최근 자료에 머물렀다(2026-09-15 구조검증 S05)
+let VENDORS, VMERGE;
+function buildVendorIndex() {
+VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
 for (const r of R) {
   const v = vnorm(r.vendor);
   if (!v) continue;
@@ -180,7 +186,7 @@ for (const e of VENDORS.values()) {           // 가장 많이 쓰인 표기를 
 }
 // 끝 글자가 한둘 잘린 표기는 훨씬 많이 쓰인 쪽에 합친다 (지란지교컴 4건 → 지란지교컴즈 763건).
 // 다른 회사가 잘못 묶이지 않도록 '앞부분이 같고 · 차이 2글자 이내 · 10배 이상 많을 때'만 합친다.
-const VMERGE = new Map();
+VMERGE = new Map();
 {
   const list = [...VENDORS.values()].sort((a, b) => b.n - a.n);
   // 앞부분이 같은 회사가 둘 이상이면 어디에 붙일지 알 수 없다 —
@@ -243,15 +249,21 @@ const VMERGE = new Map();
     VENDORS.delete(from);
   }
 }
+}
+buildVendorIndex();
 const vkey = n => { const k = vnorm(n); return VMERGE.get(k) || k; };
 const vendorRecs = key => R.filter(r => vkey(r.vendor) === key);
 // 공급사 명부(vendors.csv) — 에듀테크 제조·개발사. 빌드가 기록마다 정식 회사명(maker)을 붙여 보낸다.
 // 표기가 여럿인 회사(아이스크림미디어 7가지)는 정식명으로 한데 모은다. '제품 태그'(t)가 있는 회사는
 // 제품 하나만 파는 곳이라 계약명에 제품이 없는 기록도 빌드가 그 제품으로 붙였다(데이터 안내 참조).
 const MAKERS = new Map((DB_RAW.makers || []).map(m => [m.n, m]));      // 정식명 → {n, k, t, s}
-const MAKER_KEY = new Map();                                            // 업체 키 → 정식명
-for (const m of MAKERS.values()) for (const sp of (m.s || [])) MAKER_KEY.set(vkey(sp), m.n);
-for (const r of R) if (r.maker && r.vendor) MAKER_KEY.set(vkey(r.vendor), r.maker);
+let MAKER_KEY;                                                          // 업체 키 → 정식명
+function buildMakerKey() {
+  MAKER_KEY = new Map();
+  for (const m of MAKERS.values()) for (const sp of (m.s || [])) MAKER_KEY.set(vkey(sp), m.n);
+  for (const r of R) if (r.maker && r.vendor) MAKER_KEY.set(vkey(r.vendor), r.maker);
+}
+buildMakerKey();
 const makerOf = key => MAKER_KEY.get(key) || null;
 const makerRecs = name => R.filter(r => r.maker === name);
 // 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
@@ -260,12 +272,13 @@ const makerRecs = name => R.filter(r => r.maker === name);
 // vnorm이 괄호 안을 지우므로 'S2B(학교장터)'는 's2b'만 남아 '학교장터'로는 안 걸렸다.
 // 같은 곳인데 괄호 유무로 창구/공급사가 갈렸다(2026-09-12: S2B(학교장터) 298건이 공급 기업에 섞여 있었다).
 // 정규화된 이름을 검사하므로 소문자 s2b로 적는다. 교직원공제회는 S2B를 운영하는 기관이다.
-const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|s2b|교직원공제회|다나와|하이마트/;
-const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/;
+// 키는 소문자로 정규화돼 있으므로 대소문자를 가리지 않는다 — LG전자·한국HP가 제조사로 안 잡혔다(2026-09-15 구조검증 S11)
+const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|s2b|교직원공제회|다나와|하이마트/i;
+const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/i;
 const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : "공급 기업";
 
 const IDX = DB.schoolIndex || [];
-const idxByCode = new Map(IDX.map(s => [s.c, s]));
+const idxByCode = new Map(IDX.filter(s => s.c).map(s => [s.c, s]));   // 코드 없는 학교(설립 예정)는 이름으로만 찾는다
 const recordCodes = new Set(R.map(r => r.schoolCode).filter(Boolean));
 
 // ---- 차트 부품 ----
@@ -379,7 +392,8 @@ const ymInt = s => s ? parseInt(s.replace("-", ""), 10) : null;
 // 고를 수 있는 마지막 달은 빌드가 알려 준다 — 손으로 적어 두면 월 갱신 뒤에도 옛 달에 멈춘다.
 // 자료가 닿는 마지막 달(ymMax)이 아니라 '온전히 다 받은 달'(ymLabel)까지만 연다 —
 // 이번 달치는 아직 며칠분뿐이라(2026-09-12 기준 9월 357건) 고르면 텅 빈 결과처럼 보인다.
-const YM_MIN = 202001, YM_MAX = +((DB_RAW.meta && (DB_RAW.meta.ymLabel || DB_RAW.meta.ymMax)) || 202608);
+// 자료가 닿는 마지막 달까지 연다 — 다 차지 않은 달은 meta.ymPartial로 알려 화면에 "수집 중"이라 적는다(2026-09-15 구조검증 S03)
+const YM_MIN = 202001, YM_MAX = +((DB_RAW.meta && (DB_RAW.meta.ymMax || DB_RAW.meta.ymLabel)) || 202608);
 const YM_TO = `${String(YM_MAX).slice(0, 4)}-${String(YM_MAX).slice(4)}`;
 let pkS = null, pkE = null, pkBase = 2025;
 // 기본(2026년~)과 다르게 잡혀 있으면 조건이 걸린 것이다
@@ -481,13 +495,14 @@ function withOld(from, then) {
     if (typeof DB_OLD !== "undefined") {
       const more = decodeRows(DB_OLD.rows, DB_OLD.sparse, DB_OLD.offset);
       for (const r of more) R.push(r);
+      buildVendorIndex(); buildMakerKey();     // 공급 기업 색인을 전 기간으로 다시 만든다
       _brKey = null;                          // 걸러 둔 것을 버린다
       NAME_POOL = null;
       TAG_NOSPACE = null;
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260915b";
+    s2.src = "/data_detail_old.js?b=20260915c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -499,7 +514,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260915b";
+  s.src = "/data_old.js?b=20260915c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -926,6 +941,7 @@ function filterNote() {
   // 전체 기록으로 읽힌다(2026-09-12).
   const ym = v => v.replace("-0", ".").replace("-", ".");     // 2026-01 → 2026.1
   const bits = [`조사 기간 ${ym(PF || "2020-01")} ~ ${ym(PT || YM_TO)}`];
+  if (DB.meta.ymPartial && (!PT || ymInt(PT) >= DB.meta.ymPartial)) bits.push(`${ymKo(DB.meta.ymPartial)}은 수집 중`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
@@ -945,7 +961,7 @@ function homeView() {
   const scActive = SF.size > 0 || ES.size > 0;
   const rgActive = RG.size > 0;
   const anyF = active || scActive || rgActive;
-  const BASE = baseRecs().filter(r => !r.dup);
+  const BASE = baseRecs().filter(r => isCounted(r));
   // 전환에 따라 세 차트가 모두 같은 기준으로 움직인다
   const RF = SCOPE === "product" ? BASE.filter(hasProduct) : BASE;
   // 학교 선택 창이 초·중·고로 바뀌었으니 이 막대도 같은 층으로 보인다.
@@ -953,11 +969,20 @@ function homeView() {
   const byType = count(RF, r => levelLabelOf(r));
   const bySido = count(RF, r => r.sido).slice(0, 10);
   const tagPairs = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
-  const tagNames = tagPairs.map(([t]) => t)
-    .filter(t => SCOPE !== "product" || !GENERIC_TAGS.has(t));
-  const topTags = tagNames.slice(0, 10)
-    .map(t => [t, uniq(RF.filter(r => r.tags.includes(t)).map(skey)).length])
-    .sort((a, b) => b[1] - a[1]);
+  // 도입 학교 수 상위 10개는 모든 제품의 학교 수를 세어 고른다 — 전에는 계약 건수 상위 10개 안에서만
+  // 학교 수로 줄을 세워 알툴즈(434개교)가 빠지고 젭(374개교)이 들어갔다(2026-09-15 구조검증 S04)
+  const schoolsByTag = new Map();
+  for (const r of RF) {
+    const k = skey(r);
+    for (const t of r.tags) {
+      if (SCOPE === "product" && GENERIC_TAGS.has(t)) continue;
+      let st = schoolsByTag.get(t);
+      if (!st) schoolsByTag.set(t, st = new Set());
+      st.add(k);
+    }
+  }
+  const topTags = [...schoolsByTag.entries()].map(([t, st]) => [t, st.size])
+    .sort((a, b) => b[1] - a[1]).slice(0, 10);
   return `
     <div class="tiles">
       <div class="tile clickable" onclick="openRegionPicker()" role="button" aria-label="지역 선택">
@@ -973,7 +998,7 @@ function homeView() {
         <!-- 칸에 적는 것은 지금 보고 있는 기간이다. 자료는 2020년까지 닿지만 기본은 2023년부터
              보여 주므로, 손대지 않았을 때 전체 범위를 적으면 없는 것을 보고 있다고 착각하게 된다. -->
         <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || YM_TO}`.replaceAll("-", ".")
-          : (DB.meta.basePeriod || DB.meta.coveragePeriod)}</div>
+          : (DB.meta.basePeriod || DB.meta.coveragePeriod)}${DB.meta.ymPartial ? `<div class="conf">${ymKo(DB.meta.ymPartial)}은 수집 중</div>` : ""}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
@@ -996,6 +1021,14 @@ let SCHOOL_TAG = "";
 window.setSchoolTag = t => { SCHOOL_TAG = (SCHOOL_TAG === t ? "" : t); PAGE = 1; const y = window.scrollY; render(); window.scrollTo(0, y); };
 
 // 못 찾은 화면은 막다른 길이 된다 — 비슷한 이름을 권하고 돌아갈 길을 함께 준다
+// 첫 화면 자료(2026년~)에 없다고 곧바로 '없음'이라 하지 않는다 — 옛 기록(2020~2025)에만 있는 학교가 2,056곳,
+// 제품이 63종이다. 옛 자료를 받아 온 뒤 다시 그린다(2026-09-15 구조검증 S01). 이미 받았으면 null.
+function loadingOld(what) {
+  if (OLD_STATE === "done") return null;
+  withOld("", () => render());
+  return `<div class="notice"><b>${esc(what)} 기록을 전 기간(2020년~)에서 찾는 중입니다…</b>
+    <span class="conf">첫 화면 자료(2026년~)에는 없어 지난 기록을 불러옵니다</span></div>`;
+}
 function notFound(what, name, cands, hrefOf) {
   const near = (cands || [])
     .map(c => [c, sim(String(name), String(c))])
@@ -1044,6 +1077,7 @@ function schoolView(name, code) {
     // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
     const old = R.find(r => r.origSchool === name);
     if (old) return schoolView(old.school);
+    const wait = loadingOld("이 학교의"); if (wait) return wait;
     return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
   }
   if (!code) {
@@ -1082,7 +1116,7 @@ function schoolView(name, code) {
 // 이름이 같은 학교가 여럿일 때 — 합치면 다른 학교 기록이 섞인다. 어느 학교인지 고르게 한다.
 function sameNameView(name, codes) {
   const rows = codes.map(c => ({c, s: idxByCode.get(c),
-    n: R.filter(r => r.schoolCode === c && !r.dup).length})).sort((x, y) => y.n - x.n);
+    n: R.filter(r => r.schoolCode === c && isCounted(r)).length})).sort((x, y) => y.n - x.n);
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}</h2>
@@ -1129,7 +1163,7 @@ function tagView(tag) {
   // 제품 화면도 조사 기간·지역·계열·설립 조건을 따른다 — 첫 화면 숫자와 어긋나면 안 된다(2026-09-12).
   // 없는 제품인지 조건에 걸려 0건인지는 갈라 말한다.
   const everything = R.filter(r => r.tags.includes(tag));
-  if (!everything.length) return notFound("제품", tagName(tag), tags.map(([t]) => t), c => `/tag/${encodeURIComponent(c)}`);
+  if (!everything.length) return loadingOld("이 제품의") || notFound("제품", tagName(tag), tags.map(([t]) => t), c => `/tag/${encodeURIComponent(c)}`);
   const recs = baseRecs().filter(r => r.tags.includes(tag));
   const note = PLATFORM_NOTES[tag];
   const bySchoolType = count(recs, r => r.type);
@@ -1137,8 +1171,8 @@ function tagView(tag) {
   return `
     <div class="crumb"><a href="/">홈</a> › ${GENERIC_TAGS.has(tag) ? "제품군" : "제품"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)}${originOf(tag) ? ` <span class="obadge">${originOf(tag)}</span>` : ""}</h2>
-      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>!r.dup).map(skey)).length}개교 · 기록 ${recs.filter(r=>!r.dup).length}건</div>${filterNote()}</div>
-    ${recs.length ? "" : `<div class="fnote"><span>지금 조건에 맞는 기록이 없습니다 — 전 기간에는 ${everything.filter(r=>!r.dup).length.toLocaleString()}건 있습니다</span>
+      <div class="meta">${note ? "조달 기록상 " : "도입 학교 "}${uniq(recs.filter(r=>isCounted(r)).map(skey)).length}개교 · 기록 ${recs.filter(r=>isCounted(r)).length}건</div>${filterNote()}</div>
+    ${recs.length ? "" : `<div class="fnote"><span>지금 조건에 맞는 기록이 없습니다 — 전 기간에는 ${everything.filter(r=>isCounted(r)).length.toLocaleString()}건 있습니다</span>
       <a href="javascript:void(0)" onclick="openPicker()">조사 기간 넓히기</a></div>`}
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
@@ -1185,7 +1219,7 @@ function officeBuyCard(tag) {
 
 function vendorsOfTag(recs) {
   const cnt = new Map();
-  for (const r of recs.filter(x => !x.dup)) {
+  for (const r of recs.filter(x => isCounted(x))) {
     const v = vkey(r.vendor);
     if (!v) continue;
     const e = cnt.get(v) || {n: 0, sch: new Set()};
@@ -1211,9 +1245,9 @@ function vendorView(key) {
   const e = VENDORS.get(key);
   const maker = makerOf(key) ? MAKERS.get(makerOf(key)) : null;
   const recs = maker ? makerRecs(maker.n) : vendorRecs(key);   // 명부 회사는 표기가 달라도 정식명으로 모은다
-  if (!recs.length) return notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
+  if (!recs.length) return loadingOld("이 회사의") || notFound("공급 기업", key, [...VENDORS.values()].filter(v => v.n >= 5).map(v => v.name),
                                     c => `/vendor/${encodeURIComponent(vkey(c))}`);
-  const nd = recs.filter(r => !r.dup);
+  const nd = recs.filter(r => isCounted(r));
   const kind = vendorKind(key);
   // 온라인몰·조달 대행·대형 제조사는 공급 기업이 아니다 — 화면을 만들지 않는다
   if (kind !== "공급 기업") return `
@@ -1226,9 +1260,16 @@ function vendorView(key) {
       <p>기록은 <a href="/products">제품별</a>이나 학교 화면에서 그대로 보실 수 있습니다.</p></div>`;
   const byTag = count(nd.flatMap(r => r.tags.map(t => [t])), x => x[0]).slice(0, 12);
   const bySido = count(nd, r => r.sido).slice(0, 10);
-  const byType = count(nd, r => { const g = recLeaf(r); return g ? parentLabel[parentOf[g]] : "기타·미분류"; });
+  // '이 업체와 거래한 학교'라 적었으니 학교 수를 센다 — 전에는 기록 수였다(2026-09-15 구조검증 S08)
+  const _typeSch = new Map();
+  for (const r of nd) {
+    const g = recLeaf(r), k = g ? parentLabel[parentOf[g]] : "기타·미분류";
+    if (!_typeSch.has(k)) _typeSch.set(k, new Set());
+    _typeSch.get(k).add(skey(r));
+  }
+  const byType = [..._typeSch.entries()].map(([k, st]) => [k, st.size]).sort((a, b) => b[1] - a[1]);
   const won = a => a >= 100000000 ? `${(a / 100000000).toFixed(1)}억원` : `${Math.round(a / 10000).toLocaleString()}만원`;
-  const amt = nd.reduce((a, r) => a + (r.amt || 0), 0);
+  const amt = nd.reduce((a, r) => a + (r.feeOnly ? 0 : (r.amt || 0)), 0);   // 결제 수수료는 구매액이 아니다
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업</div>
     <div class="pagehead"><h2>${esc(maker ? maker.n : (e ? e.name : key))}</h2>
@@ -1259,7 +1300,7 @@ function vendorsView() {
   const all = [...VENDORS.values()].filter(v => v.n >= 5).map(v => ({...v, kind: vendorKind(v.key)}));
   // 명부에 오른 제조·개발사는 정식명으로 묶어 맨 위에 따로 보인다 — 아래 일반 목록에서는 뺀다
   const makerRows = [...MAKERS.values()].map(m => {
-    const recs = makerRecs(m.n).filter(r => !r.dup);
+    const recs = makerRecs(m.n).filter(r => isCounted(r));
     const key = [...MAKER_KEY.entries()].find(([k, n]) => n === m.n && VENDORS.has(k));
     return {n: m.n, t: m.t, cnt: recs.length, sch: uniq(recs.map(skey)).length, key: key ? key[0] : vkey(m.n)};
   }).filter(m => m.cnt).sort((a, b) => b.cnt - a.cnt);
@@ -1299,7 +1340,7 @@ function drillTagView(kind, tag, value) {
       : kind === "vs" ? r.sido === value
       : (r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; })(r));
     if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
-    const nd = recs.filter(r => !r.dup);
+    const nd = recs.filter(r => isCounted(r));
     return `
       <div class="crumb"><a href="/">홈</a> › <a href="/vendors">공급 기업</a> ›
         <a href="/vendor/${encodeURIComponent(tag)}">${esc(nm)}</a> ›
@@ -1313,7 +1354,7 @@ function drillTagView(kind, tag, value) {
   }
   const recs = baseRecs().filter(r => r.tags.includes(tag) && (kind === "tt" ? r.type === value : r.sido === value));
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
-  const nSchools = uniq(recs.filter(r => !r.dup).map(skey)).length;
+  const nSchools = uniq(recs.filter(r => isCounted(r)).map(skey)).length;
   return `
     <div class="crumb"><a href="/">홈</a> › <a href="/tag/${encodeURIComponent(tag)}">${esc(tagName(tag))}</a> › ${kind === "tt" ? "계열" : "지역"} 상세</div>
     <div class="pagehead"><h2>${tagLabel(tag)} · ${esc(value)}</h2>
@@ -1331,6 +1372,7 @@ function codeView(code) {
     const names = uniq(recs.map(r => r.school));
     return schoolView(names[0], code);
   }
+  const wait = loadingOld("이 학교의"); if (wait) return wait;
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(s.n)}</h2>
@@ -1349,7 +1391,7 @@ function drillView(kind, value) {
   else if (kind === "level") { recs = base.filter(r => levelLabelOf(r) === value); what = `${esc(value)}`; }
   else if (kind === "sido") { recs = base.filter(r => r.sido === value); what = `${esc(value)} 지역`; }
   else return `<div class="empty">알 수 없는 조건입니다</div>`;
-  const nd = recs.filter(r => !r.dup);
+  const nd = recs.filter(r => isCounted(r));
   const nSchools = uniq(nd.map(skey)).length;
   const conds = [];
   if (periodOn()) conds.push(`기간 ${(PF || "2020-01").replace("-", ".")} ~ ${(PT || YM_TO).replace("-", ".")}`);
@@ -1406,6 +1448,7 @@ function confNote(r) {
   const bits = [];
   if (r.confidence === "하") bits.push("학교를 특정하지 못한 기록");
   if (r.dup) bits.push("조달 기록과 동일 건(1건 집계)");
+  if (r.bid) bits.push("나라장터 입찰 공고(낙찰 전 — 도입 통계에서 제외)");
   if (r.feeOnly) bits.push("결제 수수료(제품 구매액 아님)");
   // 원본에 계약일이 없어 계약명에서 연도만 읽어 온 기록 — 실제 계약일과 다를 수 있다
   if (r.yrGuess) bits.push(`시기 추정(계약명의 ${r.year}년 · 원본에 계약일 없음)`);
@@ -1643,13 +1686,13 @@ function aboutView() {
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
         <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 포함되지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
-        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이런 형태이고, 그 안에 <b>10만 개 가까운</b> 제품이 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
+        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이런 형태이고, 그 안에 <b>약 ${(m.buriedProducts || 0).toLocaleString()}개</b>의 품목 표기(“외 N종”의 N을 더한 추정치)가 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
         <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
       </ul>
 
       <h3>수록 범위</h3>
       <ul>
-        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKo(m.ymPartial)}은 수집 중이라 일부만 실려 있습니다)</span>` : ""}
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 제공됩니다.
           <b>조사 기간</b>에서 2020년 1월부터 선택할 수 있습니다.` : ""}</li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b> <span class="cv">(전 기간 기준 — 첫 화면 숫자는 조사 기간에 따라 달라집니다)</span></li>
@@ -1762,7 +1805,7 @@ function allSwitch(cur) {
 // 조사 기간·지역·계열 조건을 그대로 따르므로 첫 화면 숫자와 이어진다.
 function recordsView() {
   const recs = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
-  const nd = recs.filter(r => !r.dup);
+  const nd = recs.filter(r => isCounted(r));
   // 기록에 나온 학교를 센다. 그중에는 어느 학교인지 특정하지 못한 곳도 있다(대부분 명단에는 있다) — 옛 이름으로 계약했거나
   // 학교코드가 없는 기록, 집합 항목 등이다. 학교 전체 보기(명단 기준)와 숫자가 다른 이유라 밝혀 둔다.
   const sKeys = uniq(nd.map(skey));
@@ -1838,7 +1881,7 @@ function productsView() {
 
 function regionsView() {
   const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
-  const all = count(src.filter(r => !r.dup), r => r.sido);
+  const all = count(src.filter(r => isCounted(r)), r => r.sido);
   // '미상'·'전국(공동)'·'비공개'처럼 시도가 아닌 항목은 목록 아래에 따로 적는다
   const isSido = s => SIDOS.includes(s);
   const rows = all.filter(([s]) => isSido(s));
@@ -1974,7 +2017,7 @@ function recsBlock(recs, opts = {}) {
   if (VMODE !== "map") return pagedTable(recs, {...opts, tool});
   const rs = listQFilter(recs);
   const spec = mapFromRecs(rs);
-  spec.nrec = rs.filter(r => !r.dup).length;
+  spec.nrec = rs.filter(r => isCounted(r)).length;
   spec.recs = rs;                                  // 학교를 누르면 지도 아래에 보일 기록
   return listToolbar(rs.length, recs.length > PAGE_SIZE || !!LISTQ, tool) + mapBox(spec);
 }
@@ -1997,7 +2040,7 @@ function showMapSel(spec, rows) {
   const all = spec.recs || [], MAX = 30;
   box.innerHTML = rows.slice(0, 8).map(p => {
     const rs = sortRecs(all.filter(r => r.schoolCode === p.c));
-    const nd = rs.filter(r => !r.dup).length;
+    const nd = rs.filter(r => isCounted(r)).length;
     return `<div class="mapsel"><div class="mapsel-h"><b>${esc(p.n)}</b>
         <span>${esc(p.s)} · ${esc(p.l)} · ${nd ? `기록 ${nd.toLocaleString()}건` : "기록 없음"}</span>
         <a href="${esc(p.href)}">${nd ? "학교 화면에서 보기 ›" : "학교 정보 ›"}</a></div>
@@ -2281,7 +2324,7 @@ perfMark("첫 화면 그리기");
 if (PERF && typeof DB_SUM !== "undefined") {
   // 요약과 같은 기준으로 세야 진짜 어긋남만 잡는다 — 전 기간으로 세어 늘 경고가 떴고,
   // 그래서 첫 화면과 자료 화면의 순위가 달라진 것을 잡아 주지 못했다(2026-09-12).
-  const BASE = baseRecs().filter(r => !r.dup);
+  const BASE = baseRecs().filter(r => isCounted(r));
   const RF = BASE.filter(hasProduct);
   const tp = count(RF.flatMap(r => r.tags.map(t => [t])), x => x[0]);
   const names = tp.map(p => p[0]).filter(t => !GENERIC_TAGS.has(t));

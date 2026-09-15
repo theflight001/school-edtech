@@ -142,6 +142,7 @@ def _nkey(n):
 if os.path.exists(MASTER):
     for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
         s["name"] = s["name"].strip()       # NEIS 원자료에 '세종중학교 '처럼 끝 공백이 남은 교명이 있다
+        s["code"] = (s.get("code") or "").strip()   # 설립 예정 학교 103곳은 코드 칸이 공백 7자다 — 코드 없음으로 본다(2026-09-15 구조검증 S02)
         master_by_name[s["name"]].append(s)
         master_by_nkey[_nkey(s["name"])].append(s)
         master_by_code[s["code"]] = s
@@ -169,7 +170,10 @@ def pick_by_title_place(cands, *texts):
     hit = []
     for c in cands:
         addr = c.get("address") or ""
-        places = {m.group(1) for m in _SIGUN.finditer(addr) if len(m.group(1)) >= 2}
+        # 학교 이름에 든 지명은 증거가 아니다 — '오산초등학교' 계약은 어느 오산초든 '오산'이 들어 있어
+        # 경기 오산시의 오산초로 쏠렸다(2026-09-15 구조검증 R01: 전남 오산초 25건·경남 금산초 9건)
+        places = {m.group(1) for m in _SIGUN.finditer(addr)
+                  if len(m.group(1)) >= 2 and m.group(1) not in (c.get("name") or "")}
         if any(pl in body for pl in places):
             hit.append(c)
     return hit if len(hit) == 1 else cands
@@ -274,6 +278,12 @@ def resolve_school(row):
         alt = lookup_school(name)
         if len(alt) == 1:
             cands, name = alt, alt[0]["name"]
+    # 기록의 시도가 분명하면 그 시도의 학교만 후보로 둔다 — 전국에 하나뿐인 이름이라도 다른 시도면 잇지 않는다
+    # (충남 계약공개의 '서남초등학교'가 경남 서남초로, 경북의 '한일여자고등학교'가 경남 한일여고로 이어졌다. 2026-09-15 R01)
+    _rs = sido2(row.get("시도") or head)
+    _rpat = next((pat for kw, pat in SIDO_FROM_ORG if kw == _rs), None)
+    if cands and _rpat:
+        cands = [c for c in cands if re.match(_rpat, c["sido"])]
     if len(cands) > 1 and head:
         for kw, pat in SIDO_FROM_ORG:
             if head.startswith(kw):
@@ -1156,7 +1166,10 @@ if os.path.exists("s2b_refined.csv"):
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": _s2b_amt(row.get("금액")), "ym": ym,
-            "content": f"S2B 학교장터 수의계약({row['구분']})",
+            # 금액·업체를 내용에 적는다 — 전에는 '수의계약(물품)'뿐이라 표에 금액이 안 보였다(2026-09-15 구조검증 S07)
+            "content": f"S2B 학교장터 수의계약({row['구분']})"
+                + ((lambda a: f" ({a/10000:,.0f}만원)" if a >= 10000 else f" ({a:,}원)")(_s2b_amt(row.get("금액"))) if _s2b_amt(row.get("금액")) else "")
+                + (f" · 계약업체: {(row.get('업체명') or '').strip()}" if (row.get("업체명") or "").strip() else ""),
             "sourceType": "S2B 학교장터",
             "url": "", "confidence": "중",
             "vendor": (row.get("업체명") or "").strip() or None,
@@ -1223,7 +1236,9 @@ def _title_alike(a, b):
 def _vendor_of(r):
     if r.get("vendor"):
         return r["vendor"]
-    m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
+    # 업체는 내용 문구 끝('· 계약업체: …')에 있다. 예전 식 '[^·)]+'는 ')'에서 끊겨 '(주)아이스크림미디어'를
+    # '(주'로 뽑았고, 그러면 _real_vendor가 빈 업체로 보아 중복 판정이 느슨해졌다(2026-09-15 고침).
+    m = re.search(r"계약업체[:：]\s*(.+?)\s*$", r.get("content") or "")
     return m.group(1).strip() if m else ""
 
 _office_dup_amt = 0
@@ -1265,7 +1280,9 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
                 # ① 업체가 같다 — 짝이 없는 기록부터, 없으면 같은 달에 이미 짝지은 기록(교육청 자료 안의 중복)
                 _same = [c for c in _pool if _v and _real_vendor(_vendor_of(c)) == _v]
                 _cands = [c for c in _same if not c.get("_paired")] or [c for c in _same if _mon(c) == 0]
+                _rule = "업체 같음"
                 if not _cands:
+                    _rule = "업체 미상"
                     # ② 한쪽이 업체를 모른다(빈칸·결제 창구) — 금액이 우연히 같은 다른 계약을 막으려고
                     #    1개월 이내이고, 두 계약명에서 같은 제품이 확인되거나 계약명이 닮았을 때만 짝짓는다.
                     #    양쪽 모두 실제 업체가 적혔는데 다르면 판매처가 다른 계약일 수 있어 합치지 않는다.
@@ -1335,6 +1352,8 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         })
         if _dup_partner is not None:
             records[-1]["_dup_of"] = _dup_partner["_uid"]
+            records[-1]["_dup_rule"] = _rule
+            records[-1]["_dup_with"] = f"{_dup_partner['sourceType']}|{_dup_partner['product']}|{_dup_partner.get('ym')}|{_vendor_of(_dup_partner)}"
             office_dup += 1
             _office_dup_amt += 1
         else:
@@ -2099,11 +2118,18 @@ if _chg_drop:
 # 짝이 빠졌으면 교육청 줄을 남긴다(그 줄도 자기 계약명으로 같은 규칙을 이미 거쳤다).
 # 완전 중복 제거·변경 계약 합치기 뒤에 둔다 — 짝이 그 단계에서 지워져도 교육청 줄을 잃지 않게.
 _alive_uid = {r["_uid"] for r in records if r.get("_uid")}
+# EDTECH_DUP_DUMP=파일 — 중복으로 빠지는 교육청 기록을 한 줄씩 내보낸다(규칙 변경 전후 비교용, 2026-09-15)
+if os.environ.get("EDTECH_DUP_DUMP"):
+    with open(os.environ["EDTECH_DUP_DUMP"], "w", encoding="utf-8") as _df:
+        for r in records:
+            if r.get("_dup_of") and r["_dup_of"] in _alive_uid:
+                _df.write("\t".join(str(x) for x in (r["id"], r["sourceType"], r["school"], r["product"], r.get("amt"), r.get("ym"),
+                                                     _vendor_of(r), r.get("_dup_rule"), r.get("_dup_with"))) + "\n")
 _before_pair = len(records)
 _orphan = sum(1 for r in records if r.get("_dup_of") and r["_dup_of"] not in _alive_uid)
 records = [r for r in records if not (r.get("_dup_of") and r["_dup_of"] in _alive_uid)]
 for r in records:
-    r.pop("_dup_of", None); r.pop("_uid", None)
+    r.pop("_dup_of", None); r.pop("_uid", None); r.pop("_dup_rule", None); r.pop("_dup_with", None)
 print(f"S2B·나라장터와 같은 계약인 교육청 줄 뺌: {_before_pair - len(records):,}건 (짝이 빠져 남긴 것 {_orphan:,}건)")
 
 
@@ -2220,7 +2246,9 @@ _YM_MAX = max((y for y in map(_ym_of, records) if 200001 <= y <= _now_ym), defau
 # 그걸 그대로 적으면 "2026.9까지 봤다"로 읽힌다. 이번 달 기록은 목록에 그대로 두고 표시만 지난달까지.
 _prev_ym = _now_ym - 1 if _now_ym % 100 > 1 else (_now_ym // 100 - 1) * 100 + 12
 _YM_LABEL = min(_YM_MAX, _prev_ym)
-_YM_TXT = f"{_YM_LABEL // 100}.{_YM_LABEL % 100}"
+# 표기는 자료가 닿는 달(_YM_MAX)까지 적는다 — '~2026.8'이라 적고 9월 기록 635건을 싣는 것은 어긋난다(2026-09-15 구조검증 S03).
+# 마지막 달이 아직 다 차지 않았으면 ymPartial로 알려 화면이 '수집 중'이라 밝힌다.
+_YM_TXT = f"{_YM_MAX // 100}.{_YM_MAX % 100}"
 meta = {
     "asOf": _dt.date.today().isoformat(),
     # 이 파일을 만든 날. 화면 아래에 '마지막 갱신'으로 보여 준다 —
@@ -2246,7 +2274,8 @@ meta = {
     "coveragePeriod": f"2020.1 ~ {_YM_TXT}",
     "basePeriod": f"{_BASE_YEAR}.1 ~ {_YM_TXT}",
     "ymMax": _YM_MAX,          # 자료가 닿는 마지막 달 (달력 고르개 끝)
-    "ymLabel": _YM_LABEL,      # 표시용 마지막 달 (다 찬 달)
+    "ymLabel": _YM_LABEL,      # 다 찬 마지막 달
+    "ymPartial": _YM_MAX if _YM_MAX > _YM_LABEL else 0,   # 아직 수집 중인 마지막 달 (없으면 0)
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------
@@ -2334,7 +2363,12 @@ meta["makerCompanies"] = len(_mk_companies)          # 공급사 명부에 올�
 meta["makerTagCompanies"] = len(_mk_tag_companies)   # 그중 회사명이 곧 제품명이라 제품 태그를 채운 회사 수
 meta["makerTagged"] = _mk_tag                         # 그렇게 제품 태그가 채워진 기록 수
 _DROP_COLS = {"id"}
-_SPARSE_COLS = ["dup", "feeOnly", "yrGuess"]
+_SPARSE_COLS = ["dup", "feeOnly", "yrGuess", "bid"]
+# 나라장터 입찰 공고는 낙찰 전 기록이라 구매가 확정된 것이 아니다 — 목록에는 두고 도입 학교 수·기록 수 통계에서는 뺀다
+# (2026-09-15 구조검증 S09: 공고·재공고가 도입으로 집계됐다)
+for r in records:
+    if r["sourceType"] == "나라장터 입찰공고":
+        r["bid"] = 1
 _cols = sorted({k for r in records for k in r} - _DROP_COLS - set(_SPARSE_COLS))
 _DICT_COLS = ["note", "sourceType", "category", "type", "region", "sido",
               "vendor", "ctpl", "maker",
