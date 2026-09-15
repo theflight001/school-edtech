@@ -213,6 +213,10 @@ main { max-width: 1120px; margin: 0 auto; padding: 24px 24px 28px; }
 .tile .v { font-size: clamp(30px, 4.6vw, 52px); font-weight: 700; color: var(--ink); letter-spacing: -0.8px; line-height: 1.15; }
 .tile .l { color: var(--ink-2); font-size: clamp(13px, 1.5vw, 15px); position: absolute; bottom: 30px; left: 12px; right: 12px; margin-top: 0 !important; }
 @media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } .tile { aspect-ratio: auto; padding: 28px 16px 64px; } }
+/* 데이터 안내의 시도별 공개 기준 표 — 칸이 많아 글자를 줄이고 줄바꿈을 허용한다 (2026-09-16) */
+table.policy { font-size: 12.5px; width: 100%; border-collapse: collapse; margin: 10px 0 6px; }
+table.policy th, table.policy td { padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; text-align: left; white-space: normal; }
+table.policy th { color: var(--ink-2); font-weight: 600; background: var(--surface); }
 .section-div { display: flex; align-items: center; gap: 14px; margin: 36px 0 18px; color: var(--muted); font-size: 13.5px; }
 .section-div::before, .section-div::after { content: ""; flex: 1; border-top: 1px solid var(--grid); }
 .fnote { color: var(--muted); font-size: 12.5px; margin: -8px 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -464,7 +468,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260915e"></script>
+<script src="/data_summary.js?b=20260916a"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -532,8 +536,8 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260915e");
-    load("/app.js?b=20260915e");
+    load("/data.js?b=20260916a");
+    load("/app.js?b=20260916a");
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

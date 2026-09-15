@@ -2376,6 +2376,32 @@ print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ct
 meta["makerCompanies"] = len(_mk_companies)          # 공급사 명부에 올라 기록이 있는 회사 수
 meta["makerTagCompanies"] = len(_mk_tag_companies)   # 그중 회사명이 곧 제품명이라 제품 태그를 채운 회사 수
 meta["makerTagged"] = _mk_tag                         # 그렇게 제품 태그가 채워진 기록 수
+# ── 시도별 공개 기준(office_policy.csv) + 실제 자료에서 관찰한 금액 분포 (2026-09-16)
+# 시도마다 소액 계약을 어디까지 공개하는지가 달라 시도 간 건수 비교가 왜곡된다. 안내문(사람이 확인해 CSV에 적음)과
+# 관찰값(빌드가 셈: 최소 금액·100만 원 미만 비율·첫 연도·건수)을 함께 화면에 보낸다. 숫자는 여기서만 만든다.
+_pol_obs = {}
+for r in records:
+    if "교육청 계약공개" not in r["sourceType"]:
+        continue
+    e = _pol_obs.setdefault(r["sido"], {"n": 0, "amts": [], "y0": 9999})
+    e["n"] += 1
+    if r.get("amt"):
+        e["amts"].append(r["amt"])
+    if r.get("year"):
+        e["y0"] = min(e["y0"], r["year"])
+_office_policy = []
+if os.path.exists("office_policy.csv"):
+    for _pr in csv.DictReader(open("office_policy.csv", encoding="utf-8-sig")):
+        e = _pol_obs.get(_pr["시도"], {"n": 0, "amts": [], "y0": 9999})
+        a = sorted(e["amts"])
+        _office_policy.append({
+            "sido": _pr["시도"], "screen": _pr["화면"], "notice": _pr["안내문에 적힌 공개 범위"],
+            "methods": _pr["계약방법 범위"], "note": _pr["비고"], "checked": _pr["확인일"],
+            "n": e["n"], "minAmt": a[0] if a else None, "median": a[len(a) // 2] if a else None,
+            "under1m": round(sum(1 for x in a if x < 1000000) / len(a) * 100) if a else None,
+            "firstYear": e["y0"] if e["y0"] != 9999 else None,
+        })
+meta["officePolicy"] = _office_policy
 # 학교코드가 있는 기록의 시도는 NEIS 명단을 따른다 — 옛 파일럿 자료(S2B 구매기록 등)의 시도 칸이 틀려
 # 한국에너지마이스터고(강원)가 충남으로 서는 등 10건이 학교 소재지와 어긋났다(2026-09-15 구조검증 R01 잔여).
 _sido_fix = 0

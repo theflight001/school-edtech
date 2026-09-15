@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260915e";
+  s.src = "/data_detail.js?b=20260916a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260915e";
+    s2.src = "/data_detail_old.js?b=20260916a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260915e";
+  s.src = "/data_old.js?b=20260916a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1694,6 +1694,17 @@ function aboutView() {
         <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
       </ul>
 
+      <h3>시도별 공개 기준이 다릅니다</h3>
+      <p>시도교육청 계약공개는 「지방자치단체를 당사자로 하는 계약에 관한 법률」 제43조와 같은 법 시행령 제124조에 따른 것이지만,
+        <b>소액 계약을 어디까지 공개하는지는 교육청마다 다릅니다.</b> 경기·인천·충북·세종처럼 수만 원짜리 계약까지 공개하는 곳이 있고,
+        부산·경북·제주·충남·대전·광주·전북처럼 100만 원 이상만 공개하는 곳이 있습니다. 강원은 금액을 공개하지 않습니다.
+        그래서 <b>시도 간 기록 건수를 그대로 비교하면 안 됩니다.</b> 건수가 많은 시도는 에듀테크를 더 많이 산 곳이 아니라 더 작은 계약까지 공개한 곳일 수 있습니다.
+        같은 학교를 나라장터·S2B 학교장터에서도 받으므로 100만 원 이상 계약은 시도와 무관하게 대체로 잡힙니다.</p>
+      ${(m.officePolicy || []).length ? `<div class="tablewrap"><table class="policy"><thead><tr><th>시도</th><th>받은 화면</th><th>계약방법</th><th>안내문의 공개 범위</th><th>실제 자료의 최소 금액</th><th>100만 원 미만 비율</th><th>첫 연도</th><th>비고</th></tr></thead><tbody>
+        ${m.officePolicy.map(p => `<tr><td>${esc(p.sido)}</td><td>${esc(p.screen)}</td><td>${esc(p.methods)}</td><td>${esc(p.notice)}</td>
+          <td>${p.minAmt == null ? "금액 없음" : p.minAmt.toLocaleString() + "원"}</td><td>${p.under1m == null ? "—" : p.under1m + "%"}</td><td>${p.firstYear || "—"}</td><td>${esc(p.note)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="cv">안내문은 각 교육청 공개 화면에서 ${esc((m.officePolicy[0] || {}).checked || "")}에 확인했고, 최소 금액·비율·첫 연도는 이 서비스에 실린 기록에서 센 값입니다. 법령 조문 원문은 국가법령정보센터에서 확인하세요.</p>` : ""}
       <h3>수록 범위</h3>
       <ul>
         <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKo(m.ymPartial)}은 수집 중이라 일부만 실려 있습니다)</span>` : ""}
@@ -1896,7 +1907,9 @@ function regionsView() {
     <div class="crumb"><a href="/">홈</a> › 지역별 전체</div>
     <div class="pagehead"><h2>지역별 사례 수</h2>
       <div class="sub2">전국 ${rows.length}개 시도 ·
-        ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다</div>${filterNote()}</div>
+        ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다
+        <div class="conf">시도교육청마다 소액 계약을 공개하는 기준이 달라(경기는 수만 원, 부산·경북 등은 100만 원 이상) 시도 간 건수를 그대로 비교하면 안 됩니다 —
+          <a href="/about">데이터 안내 › 시도별 공개 기준</a></div></div>${filterNote()}</div>
     <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
     <div class="plist" style="margin-top:14px">
       ${rows.map(([s, n]) => `<a href="/drill/sido/${encodeURIComponent(s)}">${esc(s)}
