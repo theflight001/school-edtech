@@ -12,7 +12,8 @@ if not KEY:
     sys.exit("NARA_KEY 환경변수에 인증키를 넣어 실행할 것 (코드에 하드코딩 금지)")
 
 SCHOOL_PAT = re.compile(r"(초등학교|중학교|고등학교|영재학교|학교)$")
-LEVEL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교)$")
+# 특수학교·각종학교('OO재활학교'·'OO온라인학교')도 학교다 — 대학교만 뺀다(2026-09-15 외부 검증)
+LEVEL_END = re.compile(r"(?<!대)학교$")
 SIDO_HINT = [("서울", "서울"), ("부산", "부산"), ("대구", "대구"), ("인천", "인천"),
              ("광주", "광주"), ("대전", "대전"), ("울산", "울산"), ("세종", "세종"),
              ("경기", "경기"), ("강원", "강원"), ("충청북", "충청북"), ("충북", "충청북"),
@@ -102,7 +103,9 @@ def run_window(begin, end):
                     org_clean = org.strip()
                     tokens = org_clean.split()
                     school = tokens[-1]
-                    if "대학" in school or not LEVEL_END.search(school):
+                    # '대학'이 든 이름을 통째로 빼면 '연세대학교사범대학부속중학교' 같은 부설 초·중·고 84곳이 빠진다 —
+                    # 이름이 대학교·대학으로 끝날 때만 대학으로 본다(2026-09-15 외부 검증)
+                    if school.endswith(("대학교", "대학")) or not LEVEL_END.search(school):
                         continue
                     key = (it.get("untyCntrctNo"), school)
                     if key in seen:

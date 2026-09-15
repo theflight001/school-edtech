@@ -9,7 +9,7 @@ MENU = "DOM_000001003001009000"
 PAGE = f"{BASE}/open/index.jbe?menuCd={MENU}"   # 2026-09 이전: /index.jbe (옮겨졌다)
 ACT = f"{BASE}/open/edufine/eduCntrlist1.jbe"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 1.0
+SPACING = float(os.environ.get("EDTECH_SPACING", "3"))   # 2026-09-15: 1초는 너무 잦다
 OUT = "전북_candidates.csv"
 CKPT = ".ckpt_전북.json"
 FIELDS = ["회계연도", "기관명", "계약명", "계약일", "계약금액", "계약방법", "계약상대자", "키워드"]
@@ -20,7 +20,9 @@ DEFAULT_KEYWORDS = ["에듀테크", "코스웨어", "인공지능", "소프트�
 EXCLUDE = re.compile(r"전세버스|버스 ?임차|차량 ?임차|숙박|수송|캠프|여행|급식|간식|도시락|"
                      r"청소|방역|소독|교복|졸업앨범|정수기|승강기")
 RISKY = re.compile(r"\b(and|or|not|select|union|insert|update|delete|where|from|drop|exec)\b", re.I)
-SCHOOL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교|특수학교)$")
+# '학교'로 끝나면 학교로 본다(대학교 제외) — 초·중·고·영재·특수학교로만 끝나게 하면 '군산명화학교'·'거창애광학교'·
+# '강원온라인학교' 같은 특수학교·각종학교가 빠졌다(2026-09-15 외부 검증: 전북 18·강원 25·경남 31곳)
+SCHOOL_END = re.compile(r"(?<!대)학교$")
 
 _opener = None
 def opener():
@@ -139,6 +141,9 @@ def main():
                 if page % 10 == 0:
                     print(f"  …{page}페이지째", flush=True)
                 time.sleep(SPACING)
+            if page > a.max_pages:                 # 상한에 닿아 끝난 것은 다 받은 것이 아니다 — 끝냄으로 적지 않는다
+                print(f"  [{kw} {year}] 쪽 상한 {a.max_pages}에 닿음 — 미완료", flush=True)
+                bad = True
             if bad:
                 continue
             done.add(tag)

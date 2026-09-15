@@ -35,7 +35,10 @@ EDTECH_CTX = re.compile(
     r"온라인 ?수업|원격 ?수업|미래교실|스마트교실|전자칠판|태블릿|크롬북|노트북|컴퓨터실", re.I)
 
 
-COVER_END = "2026-07-31"   # 나라장터 전수 수집 종료일
+# 수집 종료일을 손으로 적어 두면 그 뒤에 받은 달이 정제에서 빠진다(2026-09-15 외부 검증: 8월분이 7/31에 잘렸다).
+# 오늘까지로 본다 — 실제로 받은 자료가 있는 만큼만 들어온다.
+import datetime as _dt
+COVER_END = _dt.date.today().isoformat()
 
 def main():
     ap = argparse.ArgumentParser()

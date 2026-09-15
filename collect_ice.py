@@ -211,6 +211,9 @@ def main():
             if page % 10 == 0:
                 print(f"  …{page}페이지째", flush=True)
             polite()
+        if page > a.max_pages:                     # 쪽 상한에 닿은 조합은 미완료로 남긴다(2026-09-15 외부 검증)
+            print(f"  [{tag}] 쪽 상한 {a.max_pages}에 닿음 — 미완료", flush=True)
+            failed.add(tag)
         if tag not in failed:
             done.add(tag)
         ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]

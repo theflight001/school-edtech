@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>공교육 에듀테크 활용 현황</title>
 <link rel="icon" type="image/png" href="/favicon.png?v=1">
-<meta name="description" content="전국 초·중·고가 실제로 사들인 조달 기록 326,658건으로 보는 공교육 에듀테크 도입 현황. 학교·지역·제품별로 무엇을 언제 얼마에 샀는지 찾아봅니다.">
+<meta name="description" content="전국 초·중·고가 실제로 사들인 조달 기록 325,939건으로 보는 공교육 에듀테크 도입 현황. 학교·지역·제품별로 무엇을 언제 얼마에 샀는지 찾아봅니다.">
 <link rel="canonical" href="https://school-edtech.kr/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="공교육 에듀테크 활용 현황">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:url" content="https://school-edtech.kr/">
 <meta property="og:title" content="공교육 에듀테크 활용 현황">
-<meta property="og:description" content="전국 초·중·고가 실제로 사들인 조달 기록 326,658건으로 보는 에듀테크 도입 현황">
+<meta property="og:description" content="전국 초·중·고가 실제로 사들인 조달 기록 325,939건으로 보는 에듀테크 도입 현황">
 <meta property="og:image" content="https://school-edtech.kr/og_card.png?v=5">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="공교육 에듀테크 활용 현황 — 계약 326,658건, 2020~2026, 학교 12,121곳">
+<meta property="og:image:alt" content="공교육 에듀테크 활용 현황 — 계약 325,939건, 2020~2026, 학교 12,121곳">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="공교육 에듀테크 활용 현황">
-<meta name="twitter:description" content="전국 초·중·고가 실제로 사들인 조달 기록 326,658건으로 보는 에듀테크 도입 현황">
+<meta name="twitter:description" content="전국 초·중·고가 실제로 사들인 조달 기록 325,939건으로 보는 에듀테크 도입 현황">
 <meta name="twitter:image" content="https://school-edtech.kr/og_card.png?v=5">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -176,14 +176,15 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
 .page .who { margin: 14px 0 2px; font-size: 13.5px; font-weight: 700; color: var(--accent); }
 /* 히어로: 에듀집식 둥근 카드 — 왼쪽 문구, 오른쪽 일러스트 */
 .herocard { position: relative; overflow: hidden; border-radius: 26px; margin: 20px 0 16px;
-  padding: 46px 44px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  /* 여백·그림·글자를 창 너비에 비례시켜 창을 줄이면 배너도 낮아진다(에듀집 배너처럼). 2026-09-15 */
+  padding: clamp(24px, 4.3vw, 46px) clamp(20px, 4.1vw, 44px); display: flex; align-items: center; justify-content: space-between; gap: clamp(12px, 2.2vw, 24px);
   background: linear-gradient(105deg, #dff5ea 0%, #d9f0f6 45%, #dce9fb 100%); }
 @media (prefers-color-scheme: dark) { .herocard { background: linear-gradient(105deg, #14382f 0%, #123640 45%, #142a44 100%); } }
-.hero-txt .eyebrow { color: var(--accent); font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+.hero-txt .eyebrow { color: var(--accent); font-weight: 700; font-size: clamp(12px, 1.4vw, 15px); margin-bottom: clamp(6px, .9vw, 10px); }
 .herocard h1 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.28; color: var(--ink); }
-.herocard p { margin-top: 12px; color: var(--ink-2); font-size: clamp(14px, 1.5vw, 16px); }
+.herocard p { margin-top: clamp(8px, 1.1vw, 12px); color: var(--ink-2); font-size: clamp(14px, 1.5vw, 16px); }
 .hero-img { flex: none; }
-.hero-img img { display: block; height: 210px; width: auto; }
+.hero-img img { display: block; height: clamp(140px, 19.6vw, 210px); width: auto; }
 @media (max-width: 820px) { .herocard { padding: 32px 24px; } .hero-img { display: none; } }
 
 
@@ -463,7 +464,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20260915d"></script>
+<script src="/data_summary.js?b=20260915e"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -531,8 +532,8 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20260915d");
-    load("/app.js?b=20260915d");
+    load("/data.js?b=20260915e");
+    load("/app.js?b=20260915e");
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

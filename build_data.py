@@ -593,7 +593,10 @@ EDZIP_SKIP = {"온라인 교육", "리빙박스",
               # 마음톡톡은 소프트웨어가 아니라 집단관계개선 예술치유 프로그램이다.
               # 72건 전부 라이선스·구독·플랫폼 신호가 없고, 계약업체가 상담·복지 기관이다
               # (햇살심리상담센터 8건·두그루아동청소년상담센터·굿네이버스, 2026-09-13 전수검사).
-              "마음톡톡"}
+              "마음톡톡",
+              # 인마인드는 글자 사이 띄어쓰기 허용 규칙 때문에 '예비직장인 마인드 함양 교육'에 붙었다.
+              # 조달 기록에 실제 제품으로 확인된 건이 없어 뺀다(2026-09-15 tag_review).
+              "인마인드"}
 
 # 문맥 조건부 태그: 제품명이 보통명사와 겹칠 수 있어 소프트웨어 문맥이 확인될 때만 인정한다
 CTX_REQUIRED = set()
@@ -858,7 +861,7 @@ def expand_shorthand(text):
         text = _SHORT_PAIR.sub(lambda m: f"{m.group(1)}{m.group(2)} {m.group(1)}{m.group(3)}", text)
     return text
 
-SW_KW = r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱"
+SW_KW = r"소프트웨어|\bSW\b(?![-\d])|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱"
 GENERIC_SET = {t for t, _ in GENERIC_RULES}
 
 def tags_of(name, content):
@@ -920,7 +923,10 @@ def tags_of(name, content):
     # 통화녹음 단말기(알티폰·RT폰)는 '단말시스템'이라는 말 때문에 소프트웨어로 잡혔다 — 기기다
     if not tags and re.search(r"알티폰|\bRT ?폰\b|알티텔레콤|녹음기|녹취기|키폰", name, re.I):
         return ["기기(PC·태블릿·전자칠판 등)"]
-    if not tags and re.search(r"소프트웨어|SW|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I) \
+    # 'SW'는 낱말로 홀로 설 때만 소프트웨어다 — 'SW-200 생마카펜'(모델명)·'삼우 SW 분말소화기'(제품군 이름)가
+    # 소프트웨어로 잡혔다(2026-09-15 외부 검증). 소화기·위생화처럼 소프트웨어일 수 없는 물건은 뺀다.
+    if not tags and re.search(r"소프트웨어|\bSW\b(?![-\d])|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I) \
+            and not re.search(r"소화기|소화전|위생화|ID ?카드", name) \
             and not (BOOK_BUY.search(name) and not re.search(r"소프트웨어|S/?W\b|라이선스|라이센스|구독|플랫폼", name, re.I)):
         tags.append("SW·플랫폼")
     return tags
@@ -2370,6 +2376,20 @@ print(f"내용 문구 조립화: {_ctpl_n:,}건 (원문 유지 {len(records)-_ct
 meta["makerCompanies"] = len(_mk_companies)          # 공급사 명부에 올라 기록이 있는 회사 수
 meta["makerTagCompanies"] = len(_mk_tag_companies)   # 그중 회사명이 곧 제품명이라 제품 태그를 채운 회사 수
 meta["makerTagged"] = _mk_tag                         # 그렇게 제품 태그가 채워진 기록 수
+# 학교코드가 있는 기록의 시도는 NEIS 명단을 따른다 — 옛 파일럿 자료(S2B 구매기록 등)의 시도 칸이 틀려
+# 한국에너지마이스터고(강원)가 충남으로 서는 등 10건이 학교 소재지와 어긋났다(2026-09-15 구조검증 R01 잔여).
+_sido_fix = 0
+for r in records:
+    _m = master_by_code.get(r.get("schoolCode") or "")
+    if not _m:
+        continue
+    _ss = NEIS_SIDO_SHORT.get(_m["sido"], _m["sido"])
+    if _ss and r.get("sido") != _ss:
+        r["sido"] = _ss
+        if not r.get("region") or r["region"] in NEIS_SIDO_SHORT.values():
+            r["region"] = _ss
+        _sido_fix += 1
+print(f"시도를 NEIS 명단으로 맞춤: {_sido_fix}건")
 _DROP_COLS = {"id"}
 _SPARSE_COLS = ["dup", "feeOnly", "yrGuess", "bid"]
 # 나라장터 입찰 공고는 낙찰 전 기록이라 구매가 확정된 것이 아니다 — 목록에는 두고 도입 학교 수·기록 수 통계에서는 뺀다

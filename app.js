@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260915d";
+  s.src = "/data_detail.js?b=20260915e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -164,6 +164,9 @@ const canonOf = raw => { for (const [re, nm] of VENDOR_CANON) if (re.test(raw ||
 
 const vnorm = n => (canonOf(n) ? canonOf(n) : (n || "")
   .replace(/\(주\)|주식회사|㈜|\(유\)|유한회사|\(재\)|재단법인|\(사\)|사단법인|유한책임회사/g, "")
+  // 카드 결제 표기는 회사명 뒤에 상품·결제 꼬리를 밑줄로 붙인다 — '이웃닷컴_ealimi', '케이티알파_기쇼비즈_직접결제'.
+  // 꼬리를 떼어 같은 회사로 모은다(2026-09-15: 이웃닷컴이 목록에 둘로 섰다)
+  .replace(/(_[A-Za-z0-9가-힣]+)+$/, "")
   .replace(/[（(][^)）]*[)）]/g, "")          // 괄호 안 덧말 — 제품명·지점명이 붙어 나온다
   // 사이에 낀 기호와 대소문자 차이로 갈라지던 것을 모은다
   //   S2B / s2b · Padlet / PADLET · 지마켓옥션 / 지마켓-옥션 / 지마켓&옥션
@@ -273,7 +276,8 @@ const makerRecs = name => R.filter(r => r.maker === name);
 // 같은 곳인데 괄호 유무로 창구/공급사가 갈렸다(2026-09-12: S2B(학교장터) 298건이 공급 기업에 섞여 있었다).
 // 정규화된 이름을 검사하므로 소문자 s2b로 적는다. 교직원공제회는 S2B를 운영하는 기관이다.
 // 키는 소문자로 정규화돼 있으므로 대소문자를 가리지 않는다 — LG전자·한국HP가 제조사로 안 잡혔다(2026-09-15 구조검증 S11)
-const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|s2b|교직원공제회|다나와|하이마트/i;
+// 결제 대행·카드사 표기(NHN한국사이버결제·KCP·NICE 통신판매·비씨카드 해외결제·정기과금)도 사는 창구일 뿐 공급사가 아니다(2026-09-15)
+const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|s2b|교직원공제회|다나와|하이마트|사이버결제|kcp|nice통신판매|통신판매|해외결제|카드결제|인터넷쇼핑몰결제|정기과금|^결제$/i;
 const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/i;
 const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : "공급 기업";
 
@@ -502,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260915d";
+    s2.src = "/data_detail_old.js?b=20260915e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -514,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260915d";
+  s.src = "/data_old.js?b=20260915e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
