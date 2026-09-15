@@ -110,6 +110,8 @@ def main():
             page = 1
             bad = False
             while page <= a.max_pages:
+                if page > 1 or req_n:
+                    time.sleep(SPACING)              # 검색어가 바뀔 때도 쉰다 — 전에는 쪽 넘김 사이에만 쉬어 초당 한 번꼴이었다(2026-09-16)
                 try:
                     rows = parse(fetch(q, year, page))
                 except Exception as e:
@@ -140,7 +142,6 @@ def main():
                 # 멈춤 감시에 끊기고, 다시 걸어도 같은 자리에서 또 끊긴다(2026-09-12 경기·강원·광주)
                 if page % 10 == 0:
                     print(f"  …{page}페이지째", flush=True)
-                time.sleep(SPACING)
             if page > a.max_pages:                 # 상한에 닿아 끝난 것은 다 받은 것이 아니다 — 끝냄으로 적지 않는다
                 print(f"  [{kw} {year}] 쪽 상한 {a.max_pages}에 닿음 — 미완료", flush=True)
                 bad = True
