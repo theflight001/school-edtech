@@ -37,14 +37,16 @@ def build(total, schools, ymin, ymax):
 
 def rewrite_meta(total, schools, ymin, ymax):
     s = open("index.html", encoding="utf-8").read()
-    s2 = re.sub(r"조달 기록 [\d,]+건", f"조달 기록 {total:,}건", s)
-    # 카카오톡 미리보기의 설명도 짧게 — 제목 아래 한 줄이면 된다(2026-09-16)
+    # 미리보기·검색 설명·이미지 대체문에는 건수를 적지 않는다 — 건수는 매달 바뀌어 공유된 글마다 달라진다(2026-09-16 사용자).
+    # 화면 안의 숫자는 여전히 meta로 들어간다. 아래 치환은 옛 판에 남은 건수 표기가 있을 때만 고친다.
+    s2 = re.sub(r"조달 기록 [\d,]+건으로 보는 공교육 에듀테크 도입 현황\.", "공공 조달 기록으로 확인하는 서비스입니다.", s)
+    # 카카오톡 미리보기의 설명은 건수 없이 한 줄 — 건수는 계속 바뀌어 공유된 글마다 달라진다(2026-09-16 사용자)
     s2 = re.sub(r'(<meta property="og:description" content=")[^"]*(")',
-                lambda m: f'{m.group(1)}전국 초·중·고의 에듀테크 도입 현황 — 조달 기록 {total:,}건{m.group(2)}', s2)
+                lambda m: f'{m.group(1)}전국 초·중·고가 어떤 에듀테크를 쓰는지 공공 조달 기록으로 확인합니다{m.group(2)}', s2)
     # og:image:alt도 건수·학교 수를 적는다 — 여기만 빠뜨려 307,093건·10,502곳이 계속 남아 있었다
     # (2026-09-12 확인). 화면에 보이는 숫자는 빌드가 만든다는 규칙은 메타태그에도 똑같이 적용된다.
-    s2 = re.sub(r"계약 [\d,]+건, [^,\"]+, 학교 [\d,]+곳",
-                f"계약 {total:,}건, {ymin}~{ymax}, 학교 {schools:,}곳", s2)
+    s2 = re.sub(r'(<meta property="og:image:alt" content=")[^"]*(")',
+                lambda x: f"{x.group(1)}school edtech 로고와 제목 ‘공교육 에듀테크 활용 현황’{x.group(2)}", s2)
     if s2 != s:
         open("index.html", "w", encoding="utf-8").write(s2)
     return s2 != s
