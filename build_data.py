@@ -145,7 +145,8 @@ if os.path.exists(MASTER):
         s["code"] = (s.get("code") or "").strip()   # 설립 예정 학교 103곳은 코드 칸이 공백 7자다 — 코드 없음으로 본다(2026-09-15 구조검증 S02)
         master_by_name[s["name"]].append(s)
         master_by_nkey[_nkey(s["name"])].append(s)
-        master_by_code[s["code"]] = s
+        if s["code"]:                        # 코드가 빈 설립 예정 학교를 사전에 넣으면 코드 없는 기록이 모두 그 학교로 이어진다
+            master_by_code[s["code"]] = s    # (2026-09-18 외부 검증: 1,391건이 홍콩한국국제학교(초)·재외로 붙었다)
 
 # 시도 접두어가 붙거나 빠진 표기 ('인천재능고' ↔ '재능고', '담방초' ↔ '인천담방초').
 # 다른 시도에 같은 이름이 있을 수 있으니 후보가 딱 하나일 때만 인정한다.
@@ -596,7 +597,9 @@ EDZIP_SKIP = {"온라인 교육", "리빙박스",
               "마음톡톡",
               # 인마인드는 글자 사이 띄어쓰기 허용 규칙 때문에 '예비직장인 마인드 함양 교육'에 붙었다.
               # 조달 기록에 실제 제품으로 확인된 건이 없어 뺀다(2026-09-15 tag_review).
-              "인마인드"}
+              "인마인드",
+              # 바른한글도 같은 이유 — '올바른 한글 사용 이끎학교 운영' 계약에 붙었다(2026-09-18 tag_review). 조달 기록에 실제 제품 없음.
+              "바른한글"}
 
 # 문맥 조건부 태그: 제품명이 보통명사와 겹칠 수 있어 소프트웨어 문맥이 확인될 때만 인정한다
 CTX_REQUIRED = set()
@@ -923,6 +926,11 @@ def tags_of(name, content):
     # 통화녹음 단말기(알티폰·RT폰)는 '단말시스템'이라는 말 때문에 소프트웨어로 잡혔다 — 기기다
     if not tags and re.search(r"알티폰|\bRT ?폰\b|알티텔레콤|녹음기|녹취기|키폰", name, re.I):
         return ["기기(PC·태블릿·전자칠판 등)"]
+    # 마우스·키보드·충전함·케이블 같은 주변기기는 '소프트웨어교육 용품'이라 적혀도 소프트웨어가 아니라 기기다
+    # (2026-09-18 외부 검증: 금성초 무선마우스·키보드 세트가 SW·플랫폼으로). 사용권·구독이 함께 적힌 것은 제외.
+    if not tags and re.search(r"마우스|키보드|충전함|충전기|케이블|거치대|어댑터|허브|보호필름|케이스|젠더", name, re.I) \
+            and not re.search(r"라이선스|라이센스|구독|사용권|이용권|플랫폼", name, re.I):
+        return ["기기(PC·태블릿·전자칠판 등)"]
     # 'SW'는 낱말로 홀로 설 때만 소프트웨어다 — 'SW-200 생마카펜'(모델명)·'삼우 SW 분말소화기'(제품군 이름)가
     # 소프트웨어로 잡혔다(2026-09-15 외부 검증). 소화기·위생화처럼 소프트웨어일 수 없는 물건은 뺀다.
     if not tags and re.search(r"소프트웨어|\bSW\b(?![-\d])|S/W|플랫폼|프로그램|라이선스|라이센스|구독|시스템|어플|앱", name, re.I) \
@@ -998,7 +1006,8 @@ NEIS_SIDO_SHORT = {"서울특별시": "서울", "부산광역시": "부산", "�
 master_by_code = {}
 for cands in master_by_name.values():
     for c in cands:
-        master_by_code[c["code"]] = c
+        if c["code"]:                            # 빈 코드는 사전에 넣지 않는다(2026-09-18)
+            master_by_code[c["code"]] = c
 
 import glob
 # 수동 보정: 계약번호 → 실제 제품명 (조달 기록에 브랜드가 없는 계약을 사람이 확인해 채움)
@@ -1632,8 +1641,14 @@ def _book_only(p):
 
 _book_cut = 0
 _book_drop = []
+# 'SW 수업용 도서(챗GPT 교육혁명 외) 구입'은 SW라는 말이 있어도 책이다 — 수업 이름이 SW이지 산 것이 아니다.
+# 괄호 안이 책 제목인 '도서(…)'도 마찬가지. 다만 '도서 구입 및 GPT5 구독료'처럼 구독을 함께 산 것은 남긴다(2026-09-18 외부 검증).
+_BOOK_TITLED = re.compile(r"(?:수업|교육)용\s*도서|도서\s*\(")
 for _r in records:
-    if not _book_only(_r["product"]) or BOOK_KEEP.search(_r["product"]):
+    if not _book_only(_r["product"]):
+        continue
+    if BOOK_KEEP.search(_r["product"]) and not (_BOOK_TITLED.search(_r["product"])
+                                             and not re.search(r"구독|라이선스|라이센스|사용권|이용권", _r["product"])):
         continue
     _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or t in BOOK_TAG_KEEP]
     if len(_keep) != len(_r["tags"]):
@@ -2406,7 +2421,7 @@ meta["officePolicy"] = _office_policy
 # 한국에너지마이스터고(강원)가 충남으로 서는 등 10건이 학교 소재지와 어긋났다(2026-09-15 구조검증 R01 잔여).
 _sido_fix = 0
 for r in records:
-    _m = master_by_code.get(r.get("schoolCode") or "")
+    _m = master_by_code.get(r.get("schoolCode")) if r.get("schoolCode") else None
     if not _m:
         continue
     _ss = NEIS_SIDO_SHORT.get(_m["sido"], _m["sido"])

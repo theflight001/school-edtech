@@ -81,7 +81,7 @@ def main():
             if EDU_SERVICE.search(name) and not has_specific and not SW_BUY.search(name):
                 drop["교육·연수 용역"] += 1
                 continue
-            if HARD_SERVICE.search(name) and not SW_BUY.search(name) and not re.search(r"플랫폼|시스템", name):
+            if HARD_SERVICE.search(name) and not has_specific and not SW_BUY.search(name) and not re.search(r"플랫폼|시스템", name):   # 제품명이 확인되면 "운영비"가 있어도 제품 구매다(2026-09-18: 주중초 클래스팅·코드모스가 빠졌다)
                 drop["교육 서비스 계약"] += 1
                 continue
             if "용역" in name and not SVC_KEEP.search(name) and not has_specific:

@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260917a";
+  s.src = "/data_detail.js?b=20260918a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260917a";
+    s2.src = "/data_detail_old.js?b=20260918a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260917a";
+  s.src = "/data_old.js?b=20260918a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1672,7 +1672,7 @@ function aboutView() {
           ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 그런 회사이며, 이 규칙으로 제품이 정해진 기록은
           ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명부는 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
         <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
-        <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 집계에서 제외하였습니다.</li>
+        <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 규칙으로 걸러 냅니다. 여러 품목을 한 계약에 적은 경우나 규칙이 못 가린 경우가 남아 있을 수 있어, 예외 없이 걸러졌다고 보장하지는 않습니다.</li>
         <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
       </ul>
 
@@ -1686,7 +1686,8 @@ function aboutView() {
       </div>
 
       <h3>무엇이 빠지나</h3>
-      <p>여기 실린 숫자는 <b>최소값</b>으로 보시는 것이 타당합니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
+      <p>여기 실린 숫자는 <b>확보한 공개 기록을 규칙으로 분류한 결과</b>입니다. 받지 못한 계약(누락)과 잘못 붙은 제품 태그(분류 오류)가 모두 있을 수 있어
+        수학적 최소값이나 최대값이 아닙니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
         <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 포함되지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
@@ -1699,7 +1700,9 @@ function aboutView() {
         <b>소액 계약을 어디까지 공개하는지는 교육청마다 다릅니다.</b> 경기·인천·충북·세종처럼 수만 원짜리 계약까지 공개하는 곳이 있고,
         부산·경북·제주·충남·대전·광주·전북처럼 100만 원 이상만 공개하는 곳이 있습니다. 강원은 금액을 공개하지 않습니다.
         그래서 <b>시도 간 기록 건수를 그대로 비교하면 안 됩니다.</b> 건수가 많은 시도는 에듀테크를 더 많이 산 곳이 아니라 더 작은 계약까지 공개한 곳일 수 있습니다.
-        같은 학교를 나라장터·S2B 학교장터에서도 받으므로 100만 원 이상 계약은 시도와 무관하게 대체로 잡힙니다.</p>
+        나라장터·S2B 학교장터가 시도교육청 자료를 일부 보완하지만, 지역·금액대별로 얼마나 빠짐없이 잡히는지는 측정된 수집률이 없어 보장하지 못합니다.</p>
+      <p>또 하나의 한계는 <b>수집 방식</b>입니다. 시도교육청 15곳은 계약명에 검색어(기본 19개와 에듀집 제품명 3,964개)를 넣어 조회하므로,
+        그 낱말이 계약명에 없는 에듀테크 계약은 원자료 자체가 수집되지 않습니다. 전수로 받는 곳은 나라장터·S2B·제주·서울(수의계약공개)뿐입니다.</p>
       ${(m.officePolicy || []).length ? `<div class="tablewrap"><table class="policy"><thead><tr><th>시도</th><th>받은 화면</th><th>계약방법</th><th>안내문의 공개 범위</th><th>실제 자료의 최소 금액</th><th>100만 원 미만 비율</th><th>첫 연도</th><th>비고</th></tr></thead><tbody>
         ${m.officePolicy.map(p => `<tr><td>${esc(p.sido)}</td><td>${esc(p.screen)}</td><td>${esc(p.methods)}</td><td>${esc(p.notice)}</td>
           <td>${p.minAmt == null ? "금액 없음" : p.minAmt.toLocaleString() + "원"}</td><td>${p.under1m == null ? "—" : p.under1m + "%"}</td><td>${p.firstYear || "—"}</td><td>${esc(p.note)}</td></tr>`).join("")}

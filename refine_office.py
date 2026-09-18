@@ -85,7 +85,9 @@ def refine(sido):
     for r in rows:
         name = (r["계약명"] or "").strip()
         school_raw = (r["기관명"] or "").strip()
-        if not re.search(r"(초등학교|중학교|고등학교|영재학교|특수학교)$", school_raw):
+        # '학교'로 끝나면 학교로 본다(대학교 제외) — 초·중·고·영재·특수학교로 끝나야만 했던 규칙이 '제주영지학교'·
+        # '인천연일학교'·'청주혜원학교' 같은 특수학교·각종학교를 걸렀다(2026-09-18 외부 검증: 154개 학교 묶음 17,087행)
+        if not re.search(r"(?<!대)학교$", school_raw) or "외국인" in school_raw:
             drop["학교 아님(유치원 등)"] += 1
             continue
         if EXCLUDE_EVENT.search(name):
@@ -103,7 +105,7 @@ def refine(sido):
         if EDU_SERVICE.search(name) and not has_spec and not SW_BUY.search(name):
             drop["교육·연수 용역"] += 1
             continue
-        if HARD_SERVICE.search(name) and not SW_BUY.search(name) and not re.search(r"플랫폼|시스템", name):
+        if HARD_SERVICE.search(name) and not has_spec and not SW_BUY.search(name) and not re.search(r"플랫폼|시스템", name):   # 제품명이 확인되면 "운영비"가 있어도 제품 구매다(2026-09-18: 주중초 클래스팅·코드모스가 빠졌다)
             drop["교육 서비스 계약"] += 1
             continue
         if "용역" in name and not SVC_KEEP.search(name) and not has_spec:
