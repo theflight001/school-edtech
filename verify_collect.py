@@ -17,6 +17,9 @@ RAW = {"인천": "ice_candidates.csv", "충북": "충북_candidates.csv", "전�
        "경기": "경기_candidates.csv", "세종": "세종_candidates.csv"}
 
 
+SPACING = float(os.environ.get("EDTECH_SPACING", "10"))   # 원천에 묻는 간격(초)
+
+
 def load(mod):
     spec = importlib.util.spec_from_file_location(mod, f"{mod}.py")
     m = importlib.util.module_from_spec(spec)
@@ -25,21 +28,29 @@ def load(mod):
 
 
 def source_total(m, kw, year, half=False):
-    """원천 화면이 알려 주는 전체 건수"""
-    spans = [("0101", "0630"), ("0701", "1231")] if half else [("", "")]
+    """원천 화면이 알려 주는 전체 건수. 못 읽으면 None과 사유를 돌려준다"""
+    # 경기는 수집기와 같은 세 칸으로 묻는다 — 셋째 칸은 회계연도 Y의 이듬해 1~2월(2026-09-19 수집기에 추가)
+    spans = [("0101", "0630"), ("0701", "1231"), ("NEXT", "NEXT")] if half else [("", "")]
     n = 0
     for s1, s2 in spans:
-        st = f"{year}{s1}" if s1 else ""
-        ed = f"{year}{s2}" if s2 else ""
+        if s1 == "NEXT":
+            ny = int(year) + 1
+            leap = ny % 4 == 0 and (ny % 100 != 0 or ny % 400 == 0)
+            st, ed = f"{ny}0101", f"{ny}02{29 if leap else 28}"
+        else:
+            st = f"{year}{s1}" if s1 else ""
+            ed = f"{year}{s2}" if s2 else ""
         try:
-            b = m.fetch(m.safe_kw(kw), 1, year, st, ed)
+            b = m.fetch(kw, 1, year, st, ed)
         except Exception as e:
-            return None                      # 원천을 못 읽으면 판단하지 않는다
+            # 2026-09-19: 없는 함수(safe_kw)를 불러 난 오류를 여기서 삼키고 '모든 칸이 맞는다'고 끝낸 적이 있다.
+            # 사유를 남기고, 못 읽은 칸은 통과로 치지 않는다.
+            return None, f"{type(e).__name__}: {e}"
         t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", b)))
         g = re.search(r"전체\s*([\d,]+)", t)
         n += int(g.group(1).replace(",", "")) if g else 0
-        time.sleep(1.0)
-    return n
+        time.sleep(SPACING)
+    return n, ""
 
 
 def mine(path, kw, year):
@@ -48,7 +59,12 @@ def mine(path, kw, year):
     csv.field_size_limit(10 ** 7)
     n = 0
     for r in csv.DictReader(open(path, encoding="utf-8-sig")):
-        if r.get("키워드") == kw and (r.get("계약일") or "").startswith(str(year)):
+        # 원천은 회계연도로 묻는다. 회계연도 칸이 있으면 그것으로, 없으면 계약일의 해로 센다
+        fy = (r.get("회계연도") or "").strip() or (r.get("계약일") or "")[:4]
+        # 수집기는 다른 검색어에서 이미 받은 계약을 다시 적지 않는다. '키워드' 칸으로 세면 늘 모자라게 나온다
+        # (2026-09-19 경기 2025 '소프트웨어': 원천 215행 중 210행 보유·5행 제외어인데 164로 셈). 원천 검색이
+        # 계약명 부분일치이므로 우리도 계약명에 검색어가 든 행을 센다.
+        if kw.lower() in (r.get("계약명") or "").lower() and fy == str(year):
             n += 1
     return n
 
@@ -59,7 +75,7 @@ def main():
     ap.add_argument("--years", default="2020,2021,2022,2023,2024,2025,2026")
     a = ap.parse_args()
     m = load("collect_ice")
-    bad = []
+    bad, unread = [], []
     print(f'{"시도":<6}{"해":<6}{"검색어":<10}{"원천":>8}{"우리":>8}   판정')
     for off in a.offices.split(","):
         if off not in m.OFFICES:
@@ -68,9 +84,10 @@ def main():
         m.PAGE = 10 if off == "경기" else 100
         for year in a.years.split(","):
             for kw in PROBES:
-                src = source_total(m, kw, year, half=(off == "경기"))
+                src, why = source_total(m, kw, year, half=(off == "경기"))
                 if src is None:
-                    print(f"{off:<6}{year:<6}{kw:<10}{'?':>8}{'':>8}   원천을 못 읽음")
+                    unread.append((off, year, kw, why))
+                    print(f"{off:<6}{year:<6}{kw:<10}{'?':>8}{'':>8}   원천을 못 읽음 — {why}")
                     continue
                 ours = mine(RAW.get(off, ""), kw, year)
                 ok = ours >= src * 0.9 or src == 0
@@ -83,6 +100,9 @@ def main():
         for off, y, kw, s, o in bad[:20]:
             print(f"   {off} {y} '{kw}' — 원천 {s:,} · 우리 {o:,}")
         sys.exit(1)
+    if unread:
+        print(f"※ 원천을 못 읽은 칸 {len(unread)}개 — 검증하지 못했다(통과 아님)")
+        sys.exit(2)
     print("모든 칸이 원천과 맞는다")
 
 

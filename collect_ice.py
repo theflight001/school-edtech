@@ -169,11 +169,19 @@ def main():
           continue
       spans = [("", "")]
       if a.half:
-          spans = [("0101", "0630"), ("0701", "1231")]
+          # 학교 회계연도는 3월~이듬해 2월이다. 회계연도 Y로 'Y년 1~6월'을 물으면 1~2월 계약(Y-1 회계 소속)은 나오지 않아
+          # 경기는 매년 1~2월을 한 번도 받지 못했다(2026-09-19 확인: FY2024로 2025-01을 물으면 101,906건).
+          # 셋째 칸 'NEXT'는 회계연도 Y의 이듬해 1월 1일~2월 말을 묻는다. 앞의 두 칸 표식(|0,|1)은 그대로라 받은 것을 다시 묻지 않는다.
+          spans = [("0101", "0630"), ("0701", "1231"), ("NEXT0101", "NEXT0229")]
       for year in years:
        for si, (s1, s2) in enumerate(spans):
-        st = f"{year}{s1}" if s1 else ""
-        ed = f"{year}{s2}" if s2 else ""
+        if s1.startswith("NEXT"):
+            ny = int(year) + 1
+            leap = ny % 4 == 0 and (ny % 100 != 0 or ny % 400 == 0)
+            st, ed = f"{ny}0101", f"{ny}02{29 if leap else 28}"
+        else:
+            st = f"{year}{s1}" if s1 else ""
+            ed = f"{year}{s2}" if s2 else ""
         tag = kw if year == "ALL" else f"{kw}|{year}" + (f"|{si}" if s1 else "")
         if tag in done:
             continue
