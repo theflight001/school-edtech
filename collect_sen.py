@@ -20,13 +20,14 @@ BASE = "https://open.sen.go.kr/fus/1/contractOpen/"
 LIST = BASE + "list0010v.do"
 DET = BASE + "list0010d.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 0.8
+SPACING = float(os.environ.get("EDTECH_SPACING", "0.8"))   # 초. 큰 보충 수집은 10으로 준다
 OUT = "서울_candidates.csv"
 CKPT = ".ckpt_서울.json"
 FIELDS = ["회계연도", "기관명", "계약명", "계약일", "계약금액", "계약방법", "계약상대자", "키워드"]
 
 # 유치원·교육지원청·직속기관을 뺀다 ('○○초등학교병설유치원'은 유치원이다)
-SCHOOL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교|특수학교)$")
+# '학교'로 끝나면 학교로 본다(대학교 제외). 급별 이름으로 끝나야만 했던 규칙은 '서울서진학교' 같은 특수·각종학교를 걸렀다(2026-09-19)
+SCHOOL_END = re.compile(r"(?<!대)학교$")
 EXCLUDE = re.compile(r"전세버스|버스 ?임차|차량 ?임차|숙박|수송|캠프|여행|급식|간식|도시락|"
                      r"청소|방역|소독|교복|졸업앨범|정수기|승강기")
 
@@ -54,11 +55,17 @@ def req(url, data=None):
 
 # searchOraCode는 관할 교육지원청 코드다. 빈값으로 두면 학원·기관까지 49만 건이 섞여 나오고,
 # 한 코드만 쓰면 그 지원청 관내 학교만 나온다(처음에 002=강남서초만 받아 97개교에서 멈췄다).
-ORA_CODES = ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011"]
+# 000은 본청 관할이다 — 고등학교와 특수학교가 여기에 있다. 2026-09-19 외부 재검증 전까지 빠져 있어
+# 서울 고등학교 330여 곳을 한 번도 받지 못했다. 000에는 본청 부서 게시물이 20만 건 섞여 있어
+# 기관명에 '학교'가 든 것만 1,000건씩 받는다(HQ_ORA).
+ORA_CODES = ["000", "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011"]
+HQ_ORA = "000"
 
 def list_page(page, ora, per=100):
+    hq = ora == HQ_ORA
     q = {"searchOraCode": ora, "searchSchoolCode": "", "pageIndex": str(page),
-         "pageUnit": str(per), "searchCondition": "", "searchKeyword": "",
+         "pageUnit": "1000" if hq else str(per),
+         "searchCondition": "school_name" if hq else "", "searchKeyword": "학교" if hq else "",
          "searchStaDate": "", "searchEndDate": ""}
     return req(LIST + "?" + urllib.parse.urlencode(q))
 
@@ -71,7 +78,10 @@ def posts_of(page_html):
         if k in seen:
             continue
         seen.add(k)
-        out.append({"sc": sc, "neis": neis, "name": html.unescape(name).strip(), "month": month})
+        nm = html.unescape(name).strip()
+        if "외국인" in nm:
+            continue
+        out.append({"sc": sc, "neis": neis, "name": nm, "month": month})
     return out
 
 # 화면이 받아 주는 작성일자 범위. 2020년까지 넓힐 수 있는지 시험해 보고 정했다 —
@@ -82,7 +92,7 @@ def detail(school, page=1, per=1000):
     """학교 하나의 전 기간 계약 — 기준월을 비우고 작성일자 범위를 준다"""
     d = {"detPageIndex": str(page), "pageIndex": "1", "pageUnit": str(per),
          "school_code": school["sc"], "neis_cd": school["neis"], "stdr_month": "",
-         "seq": "", "searchOraCode": "002", "searchSchoolCode": "",
+         "seq": "", "searchOraCode": school.get("ora") or "002", "searchSchoolCode": "",
          "searchDetStaDate": PERIOD_FROM, "searchDetEndDate": PERIOD_TO,
          "searchSect": "", "searchDetCondition": "all", "searchDetKeyword": ""}
     s = req(DET, urllib.parse.urlencode(d).encode())
@@ -137,6 +147,8 @@ def main():
                 got = posts_of(list_page(page, ora))
                 if not got:
                     break
+                for p in got:
+                    p["ora"] = ora
                 posts += [p for p in got if SCHOOL_END.search(p["name"])
                           and (p["month"][:4] in years if not months else p["month"] in months)]
                 if page % 20 == 0:
