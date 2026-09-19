@@ -90,7 +90,9 @@ def main():
                     print(f"{off:<6}{year:<6}{kw:<10}{'?':>8}{'':>8}   원천을 못 읽음 — {why}")
                     continue
                 ours = mine(RAW.get(off, ""), kw, year)
-                ok = ours >= src * 0.9 or src == 0
+                # 경기 원천은 같은 계약을 여러 행으로 되풀이해 싣는다(2026-09-19 '코딩' 2023 상반기 80행 중 고유 57건, 71%).
+                # 우리는 고유 계약만 가지므로 경기는 0.6을 문턱으로 본다. 이보다 낮으면 계약 단위 표본 대조를 할 것.
+                ok = ours >= src * (0.6 if off == "경기" else 0.9) or src == 0
                 if not ok:
                     bad.append((off, year, kw, src, ours))
                 print(f"{off:<6}{year:<6}{kw:<10}{src:>8,}{ours:>8,}   {'✓' if ok else '✗ 모자람'}")
