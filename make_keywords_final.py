@@ -89,9 +89,24 @@ def main():
     found = appearing(pool + newer)
     revive = [l.strip() for l in open(a.revive, encoding="utf-8") if l.strip()] if a.revive else []
     final = [k for k in pool if k in found or k in DEFAULTS or k in revive]
-    dropped = [k for k in pool if k not in final]
     if a.include_newer:
         final += [k for k in newer if k in found and k not in final]   # 기본 검색어와 겹치는 새 표기는 한 번만
+    # 가운뎃점이 든 표기는 검색창에서 글자 그대로는 걸리지 않는다(규칙의 [\s·]?를 펼친 꼴: '3D·스·팀·펜').
+    # 위 대조가 가운뎃점을 무시해서 '나타난다'고 본 것뿐이다. 붙여 쓴 꼴이나 띄어 쓴 꼴이 목록에 있으면 빼고,
+    # 없으면 띄어 쓴 꼴로 바꾼다. 글자마다 점이 낀 것은 띄어 써도 걸리지 않으므로 붙여 쓴 꼴로 바꾼다.
+    fs, out = set(final), []
+    for k in final:
+        if "·" not in k:
+            out.append(k); continue
+        compact, spaced = k.replace("·", ""), re.sub(r"\s+", " ", k.replace("·", " ")).strip()
+        perchar = bool(re.search(r"(?:[가-힣]·){2,}[가-힣]", k))
+        if compact in fs or (not perchar and spaced in fs):
+            continue
+        alt = compact if perchar else spaced
+        if alt not in fs:
+            fs.add(alt); out.append(alt)
+    final = out
+    dropped = [k for k in pool if k not in set(final)]
     got, kept = pulled()
     risky = sorted(((kept[k], got[k], k) for k in dropped if kept[k] > 0), reverse=True)
     cnt_all, cnt_fin = collections.Counter(map(branch, pool + [k for k in final if k not in pool])), collections.Counter(map(branch, final))
