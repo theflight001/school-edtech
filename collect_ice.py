@@ -137,7 +137,15 @@ def main():
             a.out = f"{a.office}_candidates.csv"
 
     ckpt = json.load(open(CKPT)) if os.path.exists(CKPT) else {"done": [], "seen": []}
-    done, seen = set(ckpt["done"]), set(tuple(k) for k in ckpt["seen"])
+    done = set(ckpt["done"])
+    # 중복 열쇠는 (기관·계약명·계약일·금액)이다. 금액이 없던 옛 열쇠는 같은 날 같은 이름에 금액만 다른
+    # 계약을 하나로 합쳤다(2026-09-19 경기 표본 약 3%). 옛 체크포인트의 seen(세 칸)은 쓰지 않고,
+    # 받아 둔 CSV에서 네 칸 열쇠를 다시 만든다 — 그래야 옛 행과 새 행이 같은 기준으로 걸러진다.
+    seen = set()
+    if os.path.exists(a.out):
+        csv.field_size_limit(10 ** 7)
+        for _r in csv.DictReader(open(a.out, encoding="utf-8-sig")):
+            seen.add((_r.get("기관명", ""), _r.get("계약명", ""), _r.get("계약일", ""), _r.get("계약금액", "")))
     new_file = not os.path.exists(a.out)
     f = open(a.out, "a", encoding="utf-8-sig", newline="")
     w = csv.DictWriter(f, fieldnames=FIELDS)
@@ -203,7 +211,7 @@ def main():
             for r in rows:
                 if EXCLUDE.search(r["계약명"]):
                     continue
-                key = (r["기관명"], r["계약명"], r["계약일"])
+                key = (r["기관명"], r["계약명"], r["계약일"], r["계약금액"])
                 if key in seen:
                     continue
                 seen.add(key)

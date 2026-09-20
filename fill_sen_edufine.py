@@ -10,7 +10,7 @@ SRC, OUT, CKPT = "서울에듀파인_candidates.csv", "서울에듀파인_full.c
 VIEW = "https://open.sen.go.kr/fus/MI000000000000000539/cntr/view0010v.do"
 LIST = "https://open.sen.go.kr/fus/MI000000000000000539/cntr/list0010v.do"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-SPACING = 0.7
+SPACING = float(os.environ.get("EDTECH_SPACING", "0.7"))   # 초
 FIELDS = ["계약번호", "회계연도", "기관명", "계약명", "계약금액", "진행상태",
           "계약일", "구분", "계약상대자", "키워드"]
 

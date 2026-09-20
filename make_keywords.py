@@ -194,7 +194,8 @@ def from_edzip():
     return prod, comp
 
 
-def main():
+def build():
+    """(전체 목록, 갈래별 다듬은 검색어) — 파일은 쓰지 않는다. make_keywords_final.py가 갈래를 세는 데 쓴다"""
     rules = from_rules()
     prod, comp = from_edzip()
     # 너무 흔한 낱말은 그 시도 계약을 통째로 끌어와 수집이 끝나지 않는다
@@ -260,7 +261,9 @@ def main():
     # 규칙 표기는 판정 규칙에 사람이 적어 둔 것이라 자르지도 흔한 말로 거르지도 않는다
     # ('AI 디지털 교과서'가 그렇다 — 자료에서 가장 큰 범주다). 특수문자만 다듬는다.
     kw_rules = {c for c in (clean(k, trim=False) for k in rules) if usable(c, generic_ok=True)}
-    kw_edzip = {c for c in (clean(k) for k in (prod | comp)) if usable(c)}
+    kw_prod = {c for c in (clean(k) for k in prod) if usable(c)}
+    kw_comp = {c for c in (clean(k) for k in comp) if usable(c)}
+    kw_edzip = kw_prod | kw_comp
     pool = sorted((kw_rules | kw_edzip) - STOP)
     # 띄어쓰기·가운뎃점만 다른 변형은 무리마다 둘만 남긴다 — '다 띄운 것'과 '다 붙인 것'.
     # 교육청 검색은 글자 그대로 찾아서 변형이 아예 쓸모없진 않지만, 규칙의 \s?를 곱해 펼치면
@@ -277,6 +280,11 @@ def main():
         compact = min(vs, key=lambda v: (len(re.findall(r"[\s·]", v)), v))
         allk.extend({spaced, compact})
     allk = sorted(allk)
+    return allk, {"규칙 표기 변형": kw_rules, "에듀집 제품명": kw_prod, "에듀집 회사명": kw_comp}, (rules, prod, comp)
+
+
+def main():
+    allk, _branches, (rules, prod, comp) = build()
     open(OUT, "w", encoding="utf-8").write("\n".join(allk) + "\n")
     print(f"{OUT} — {len(allk):,}종 "
           f"(규칙 표기 {len(rules):,} · 에듀집 제품 {len(prod):,} · 회사 {len(comp):,})")
