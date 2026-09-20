@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920a";
+  s.src = "/data_detail.js?b=20260920b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920a";
+    s2.src = "/data_detail_old.js?b=20260920b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920a";
+  s.src = "/data_old.js?b=20260920b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2242,6 +2242,7 @@ function mountMap() {
               selK = [p.c || p.href];
               showMapSel(spec, [p]);
               paintSel();
+              if (map._tiltTo) map._tiltTo(at);
             }
           };
           const m = new maplibregl.Marker({element: el}).setLngLat(at).addTo(map);
@@ -2254,6 +2255,42 @@ function mountMap() {
       map.on("click", () => { if (selK.length || expandKey) { expandKey = null; clearMapSel(); draw(); } });   // 빈 곳을 누르면 선택이 풀린다
       map.on("moveend", draw);
       map.on("zoomend", draw);
+      // 동네 수준까지 확대하면 저절로 비스듬히 기울어 건물이 입체로 선다. 축소하면 다시 평면이 된다.
+      // 단추는 두지 않는다(2026-09-20 사용자). 이용자가 직접 기울였으면 그 뒤로는 손대지 않는다.
+      let autoPitch = true, tilting = false;
+      // 기울기는 확대 정도를 따라 이어서 변한다(13.8에서 0도 → 16.4에서 40도). 처음엔 확대가 끝난 뒤에
+      // 한꺼번에 기울였더니 축소할 때 갑자기 평면으로 바뀌어 보였다(2026-09-20 사용자).
+      const MAXP = 40, Z0 = 13.8, Z1 = 16.4;
+      const pitchFor = z => { const t = Math.max(0, Math.min(1, (z - Z0) / (Z1 - Z0))); return MAXP * t * t * (3 - 2 * t); };
+      map.on("pitchstart", e => { if (e.originalEvent || MAP_ROT) autoPitch = false; });
+      el.addEventListener("mousedown", e => { if (e.metaKey || e.ctrlKey || e.button === 2) autoPitch = false; }, true);
+      // 확대·축소가 진행되는 매 장면마다 기울기를 맞춘다 — 움직임을 끊지 않도록 카메라 값만 바꾼다
+      map.on("zoom", () => {
+        if (!autoPitch || tilting) return;
+        const want = pitchFor(map.getZoom());
+        if (Math.abs(map.getPitch() - want) < 0.05) return;
+        try { map.transform.setPitch(want); } catch (_) { /* 아래 zoomend가 맞춘다 */ }
+      });
+      map.on("zoomend", () => {                  // 장면마다 못 맞춘 경우의 마무리
+        if (!autoPitch || tilting) return;
+        const want = pitchFor(map.getZoom());
+        if (Math.abs(map.getPitch() - want) < 1) return;
+        tilting = true;
+        map.easeTo({pitch: want, duration: 600});
+        map.once("moveend", () => { tilting = false; });
+      });
+      map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 멀리서 골랐으면 그 동네로 다가가 기울인다
+        if (!autoPitch || map.getZoom() >= 15.6) return;
+        tilting = true;
+        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), duration: 1300});
+        map.once("moveend", () => { tilting = false; });
+      };
+      // 입체 건물이 밋밋한 회색 한 덩어리로 보이지 않게 높이에 따라 조금씩 짙게 칠한다
+      if (map.getLayer("building-3d")) {
+        map.setPaintProperty("building-3d", "fill-extrusion-color",
+          ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0], 0, "hsl(35,12%,93%)", 30, "hsl(35,12%,88%)", 120, "hsl(35,14%,80%)"]);
+        map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.85);
+      }
       draw();
     });
   }).catch(() => { el.innerHTML = `<div class="maploading">지도를 불러오지 못했습니다 — 목록으로 보세요</div>`; });
