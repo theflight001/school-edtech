@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920f";
+  s.src = "/data_detail.js?b=20260920g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920f";
+    s2.src = "/data_detail_old.js?b=20260920g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920f";
+  s.src = "/data_old.js?b=20260920g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2350,7 +2350,8 @@ function mountMap() {
             const firstSym = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
             map.addSource("edcolor", {type: "image", url: ov.url, coordinates: ov.coords});
             map.addLayer({id: "edcolor", type: "raster", source: "edcolor",
-              paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.8, 12, 0], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
+              // 높이는 시군보다 가까워지면 걷지만 색은 연하게 끝까지 남긴다 — 확대할 때 색이 뚝 사라지면 어색하다(2026-09-20 사용자)
+              paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.8, 12.5, 0.3, 15, 0.22], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
             map.addLayer({id: "edshade", type: "hillshade", source: "edterr", maxzoom: 12,
               paint: {"hillshade-exaggeration": 0.35, "hillshade-shadow-color": "#1d4f5f", "hillshade-highlight-color": "#ffffff"}}, firstSym);
             const sumEl = document.getElementById("mapsum");
