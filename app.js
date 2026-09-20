@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260921a";
+  s.src = "/data_detail.js?b=20260921b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260921a";
+    s2.src = "/data_detail_old.js?b=20260921b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260921a";
+  s.src = "/data_old.js?b=20260921b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2095,7 +2095,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2351,9 +2351,7 @@ function mountMap() {
             map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
           }
           // 설명은 한 줄로 — 수치와 구역 이름은 적지 않는다(2026-09-21 사용자)
-          const note = /^\/vendor\//.test(location.pathname) ? "상대적으로 거래 학교 비율이 높은 시군구는 진하게 표시됩니다."
-            : /^\/tag\//.test(location.pathname) ? "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다."
-            : "상대적으로 기록이 확인된 학교 비율이 높은 시군구는 진하게 표시됩니다.";
+          const note = "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다.";   // 어느 화면이든 이 문구 그대로(2026-09-21 사용자)
           const sumEl = document.getElementById("mapsum");
           if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${note}</span>`);
         }).catch(() => {});
