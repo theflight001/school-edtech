@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920j";
+  s.src = "/data_detail.js?b=20260920k";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920j";
+    s2.src = "/data_detail_old.js?b=20260920k";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920j";
+  s.src = "/data_old.js?b=20260920k";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2092,7 +2092,7 @@ const MAP_TERRAIN = true;
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920j").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920k").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2322,7 +2322,7 @@ function mountMap() {
           const best = fc.features.reduce((a, b) => b.properties.v > a.properties.v ? b : a).properties;
           const sumEl = document.getElementById("mapsum");
           if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend",
-            ` · <span class="terrnote">바탕색의 진하기 = 시군구별로 기록이 확인된 학교의 비율(가장 진한 곳 ${esc(best.name)} ${best.pct}%)</span>`);
+            ` · <span class="terrnote">해당 시군구 내에서 ${/^\/vendor\//.test(location.pathname) ? "거래 기록" : /^\/tag\//.test(location.pathname) ? "도입 기록" : "기록"}이 확인된 학교의 비율대로 바탕색의 진하기가 표시됩니다(가장 진한 곳 ${esc(best.name)} ${best.pct}%)</span>`);
           const tip = new maplibregl.Popup({closeButton: false, closeOnClick: false, offset: 8, className: "sggtip"});
           map.on("mousemove", "edsgg", e => { const q = e.features[0].properties;
             tip.setLngLat(e.lngLat).setHTML(`<b>${esc(q.name)}</b> 학교 ${q.n}곳 중 ${q.r}곳 · ${q.pct}%`).addTo(map); });
