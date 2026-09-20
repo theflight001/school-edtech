@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920c";
+  s.src = "/data_detail.js?b=20260920d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920c";
+    s2.src = "/data_detail_old.js?b=20260920d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920c";
+  s.src = "/data_old.js?b=20260920d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1240,9 +1240,9 @@ function vendorsOfTag(recs) {
     ${sup.length ? `<div class="plist">${sup.map(v =>
       `<a href="/vendor/${encodeURIComponent(v.k)}">${esc(nameOf(v.k))}
         <span class="n">${v.n.toLocaleString()}건 · ${v.sch.toLocaleString()}개교</span></a>`).join("")}</div>` : ""}
-    ${etc.length ? `<p class="sub2" style="margin-top:10px">구매 창구·제조사로 잡힌 곳:
+    ${etc.length ? `<p class="sub2" style="margin-top:10px">구매 창구·제조사로 분류된 곳:
       ${etc.map(v => `${esc(nameOf(v.k))} ${v.n.toLocaleString()}건`).join(" · ")}
-      <br>이 업체가 만든 제품이라는 뜻은 아닙니다 — 학교가 그곳을 통해 샀다는 기록입니다</p>` : ""}
+      <br>이 기업이 생산한 제품이 아닌 학교가 이 곳으로부터 구매했다는 기록입니다.</p>` : ""}
   </div>`;
 }
 function vendorView(key) {
