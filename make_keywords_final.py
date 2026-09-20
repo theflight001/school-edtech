@@ -72,6 +72,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="keywords_final.txt를 쓴다(없으면 보고서만)")
     ap.add_argument("--revive", help="되살릴 검색어를 줄 단위로 적은 파일")
+    ap.add_argument("--include-newer", action="store_true",
+                    help="9/11 이후 판정 규칙에 새로 생긴 표기 가운데 S2B·나라장터에 나타나는 것도 넣는다(2026-09-20 사용자 결정)")
     a = ap.parse_args()
     spec = importlib.util.spec_from_file_location("mk", "make_keywords.py")
     mk = importlib.util.module_from_spec(spec); spec.loader.exec_module(mk)
@@ -88,10 +90,13 @@ def main():
     revive = [l.strip() for l in open(a.revive, encoding="utf-8") if l.strip()] if a.revive else []
     final = [k for k in pool if k in found or k in DEFAULTS or k in revive]
     dropped = [k for k in pool if k not in final]
+    if a.include_newer:
+        final += [k for k in newer if k in found and k not in final]   # 기본 검색어와 겹치는 새 표기는 한 번만
     got, kept = pulled()
     risky = sorted(((kept[k], got[k], k) for k in dropped if kept[k] > 0), reverse=True)
-    cnt_all, cnt_fin = collections.Counter(map(branch, pool)), collections.Counter(map(branch, final))
+    cnt_all, cnt_fin = collections.Counter(map(branch, pool + [k for k in final if k not in pool])), collections.Counter(map(branch, final))
     L = ["# 확정 검색어 목록 보고", "",
+         f"- 되살린 검색어 {len([k for k in revive if k in pool]):,}종 · 9/11 이후 새 규칙 표기 {len([k for k in final if k not in pool]):,}종 포함" if (revive or a.include_newer) else "- (되살림·새 표기 없음)",
          f"- 모집단 {len(pool):,}종(현재 판 {len(cur):,} + 기본 {len(DEFAULTS)}, 겹침 제외) → **확정 {len(final):,}종**, 빠짐 {len(dropped):,}종",
          "- 대조: S2B 전수·나라장터 전수 계약명에 부분 일치(대소문자·띄어쓰기·가운뎃점·하이픈 무시). 기본 19종은 무조건 포함.", "",
          "| 갈래 | 모집단 | 확정 |", "|---|---:|---:|"]
