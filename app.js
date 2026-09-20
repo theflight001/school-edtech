@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920g";
+  s.src = "/data_detail.js?b=20260920h";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920g";
+    s2.src = "/data_detail_old.js?b=20260920h";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920g";
+  s.src = "/data_old.js?b=20260920h";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2088,6 +2088,8 @@ window.addEventListener("mouseup", () => { MAP_ROT = null; });
 // 비율"을 부드러운 지형(높이+색)으로 깐다. 행정구역별 기둥은 층계가 져 보여서(2026-09-20 사용자) 학교 위치에
 // 가우스 창을 씌워 비율을 이어 붙인다 — 경계 파일이 필요 없다. 끄려면 MAP_TERRAIN을 false로.
 const MAP_TERRAIN = true;
+// 높이로 솟게 하는 것은 끈다 — 멀리서 보면 봉우리 하나가 뾰족하게 선 것처럼 어색했다(2026-09-20 사용자). 색의 진하기만 쓴다.
+const MAP_TERRAIN_3D = false;
 const TG = {x0: 124.4, y0: 32.9, dx: 0.03, dy: 0.03, nx: 224, ny: 196, sig: 4};   // 격자 3.3km · 창 반경 약 13km
 let TG_ALL = null, TG_CUR = null, TG_VER = 0;
 function tgSplat(pts) {
@@ -2344,24 +2346,30 @@ function mountMap() {
           TF = tgBuild(spec);
           if (TF) {
             TG_CUR = TF; TG_VER++; tgProtocol();
-            map.addSource("edterr", {type: "raster-dem", tiles: [`edterr://${TG_VER}/{z}/{x}/{y}`], tileSize: 128, minzoom: 4, maxzoom: 9, encoding: "mapbox"});
+            if (MAP_TERRAIN_3D) map.addSource("edterr", {type: "raster-dem", tiles: [`edterr://${TG_VER}/{z}/{x}/{y}`], tileSize: 128, minzoom: 4, maxzoom: 9, encoding: "mapbox"});
             // 색과 음영은 바탕 지도의 물 층 아래에 둔다 — 바다·강이 그 위를 덮어 색이 바닷가 밖으로 번지지 않는다(2026-09-20 사용자)
             const ov = tgOverlay(TF), lyrs = map.getStyle().layers;
             const firstSym = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
             map.addSource("edcolor", {type: "image", url: ov.url, coordinates: ov.coords});
             map.addLayer({id: "edcolor", type: "raster", source: "edcolor",
               // 높이는 시군보다 가까워지면 걷지만 색은 연하게 끝까지 남긴다 — 확대할 때 색이 뚝 사라지면 어색하다(2026-09-20 사용자)
-              paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.8, 12.5, 0.3, 15, 0.22], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
-            map.addLayer({id: "edshade", type: "hillshade", source: "edterr", maxzoom: 12,
+              paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.85, 12.5, 0.32, 15, 0.22], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
+            if (MAP_TERRAIN_3D) map.addLayer({id: "edshade", type: "hillshade", source: "edterr", maxzoom: 12,
               paint: {"hillshade-exaggeration": 0.35, "hillshade-shadow-color": "#1d4f5f", "hillshade-highlight-color": "#ffffff"}}, firstSym);
+            // 지형 색 위에서 노랑·주황 도로가 너무 튄다(2026-09-20 사용자) — 멀리서는 도로를 흰 실선처럼 흐리게 하고
+            // 동네 수준으로 다가가면 원래 색으로 돌아오게 한다.
+            for (const ly of lyrs) {
+              if (ly.type !== "line" || !/^(road|bridge|tunnel)_/.test(ly.id) || /rail/.test(ly.id)) continue;
+              map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
+            }
             const sumEl = document.getElementById("mapsum");
-            if (sumEl) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">지형의 높이와 색 = 주변 학교 가운데 기록이 확인된 학교의 비율(가장 높은 곳 약 ${Math.round(TF.max * 100)}%)</span>`);
+            if (sumEl) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${MAP_TERRAIN_3D ? "지형의 높이와 색" : "바탕색의 진하기"} = 주변 학교 가운데 기록이 확인된 학교의 비율(가장 높은 곳 약 ${Math.round(TF.max * 100)}%)</span>`);
           }
         } catch (_) { TF = null; }
       }
       // 화면에서 보이는 높이가 확대 정도와 무관하게 비슷하도록 과장값을 확대에 맞춘다. 시군보다 가까이 가면 지형을 걷는다.
       const terrSync = () => {
-        if (!TF) return;
+        if (!TF || !MAP_TERRAIN_3D) return;
         const z = map.getZoom();
         if (z >= 11.6) { if (terrOn) { map.setTerrain(null); terrOn = false; terrEx = 0; } return; }
         const ex = 85 * Math.pow(2, 6 - Math.max(5, z)) * Math.min(1, (11.6 - z) / 1.6);
@@ -2371,7 +2379,7 @@ function mountMap() {
       // 동네 수준(13.8~16.4)에서 다시 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
       // 축소할 때 갑자기 평면으로 바뀌어 보였다(2026-09-20 사용자).
       const MAXP = 40, Z0 = 13.8, Z1 = 16.4, sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-      const pitchFor = z => Math.max(TF ? 45 * (1 - sm((z - 10.2) / 2)) : 0, MAXP * sm((z - Z0) / (Z1 - Z0)));
+      const pitchFor = z => Math.max(TF && MAP_TERRAIN_3D ? 45 * (1 - sm((z - 10.2) / 2)) : 0, MAXP * sm((z - Z0) / (Z1 - Z0)));
       map.on("pitchstart", e => { if (e.originalEvent || MAP_ROT) autoPitch = false; });
       el.addEventListener("mousedown", e => { if (e.metaKey || e.ctrlKey || e.button === 2) autoPitch = false; }, true);
       // 확대·축소가 진행되는 매 장면마다 기울기를 맞춘다 — 움직임을 끊지 않도록 카메라 값만 바꾼다
