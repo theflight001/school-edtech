@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920i";
+  s.src = "/data_detail.js?b=20260920j";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920i";
+    s2.src = "/data_detail_old.js?b=20260920j";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920i";
+  s.src = "/data_old.js?b=20260920j";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2083,84 +2083,38 @@ window.addEventListener("mousemove", e => {
 });
 window.addEventListener("mouseup", () => { MAP_ROT = null; });
 
-// ── 도입 지형 ────────────────────────────────────────────────────────────────
-// 제품·제품군·공급 기업·검색 결과 지도에서, 전국~시군 수준으로 볼 때 "주변 학교 가운데 기록이 확인된 학교의
-// 비율"을 부드러운 지형(높이+색)으로 깐다. 행정구역별 기둥은 층계가 져 보여서(2026-09-20 사용자) 학교 위치에
-// 가우스 창을 씌워 비율을 이어 붙인다 — 경계 파일이 필요 없다. 끄려면 MAP_TERRAIN을 false로.
+// ── 도입 색지도 ──────────────────────────────────────────────────────────────
+// 제품·제품군·공급 기업·검색 결과 지도의 바탕에 "시군구별로 기록이 확인된 학교의 비율"을 색의 진하기로 칠한다.
+// 처음엔 학교 위치에 창을 씌워 부드럽게 이어 붙였는데, 색이 북한·바다로 번지고 얼룩져 보였다(2026-09-20 사용자).
+// 시군구 경계 안에만 한 가지 색으로 고르게 칠한다. 경계: 통계청 2018(southkorea-maps 가공본, sgg_2018_topo.json).
+// 끄려면 MAP_TERRAIN을 false로.
 const MAP_TERRAIN = true;
-// 높이로 솟게 하는 것은 끈다 — 멀리서 보면 봉우리 하나가 뾰족하게 선 것처럼 어색했다(2026-09-20 사용자). 색의 진하기만 쓴다.
-const MAP_TERRAIN_3D = false;
-const TG = {x0: 124.4, y0: 32.9, dx: 0.03, dy: 0.03, nx: 224, ny: 196, sig: 4};   // 격자 3.3km · 창 반경 약 13km
-let TG_ALL = null, TG_CUR = null, TG_VER = 0;
-function tgSplat(pts) {
-  const f = new Float32Array(TG.nx * TG.ny), R = TG.sig * 3, k = -0.5 / (TG.sig * TG.sig);
-  for (const [lat, lng] of pts) {
-    const cx = (lng - TG.x0) / TG.dx, cy = (lat - TG.y0) / TG.dy, ix = Math.round(cx), iy = Math.round(cy);
-    for (let y = Math.max(0, iy - R); y <= Math.min(TG.ny - 1, iy + R); y++)
-      for (let x = Math.max(0, ix - R); x <= Math.min(TG.nx - 1, ix + R); x++)
-        f[y * TG.nx + x] += Math.exp(k * ((x - cx) * (x - cx) + (y - cy) * (y - cy)));
-  }
-  return f;
-}
-function tgBuild(spec) {
-  if (!TG_ALL) TG_ALL = tgSplat(SCHOOL_GEO.filter(Boolean).map(g => [g[0], g[1]]));
-  const pts = [];
-  for (const it of spec.items) { if (!it.k) continue; const g = SCHOOL_GEO[IDX_POS.get(it.s)]; if (g) pts.push([g[0], g[1]]); }
-  if (pts.length < 5) return null;                       // 몇 곳 안 되면 지형이 점 몇 개의 혹이 될 뿐이다
-  const hit = tgSplat(pts), v = new Float32Array(hit.length); let max = 0;
-  for (let i = 0; i < v.length; i++) {
-    const a = TG_ALL[i];
-    // 학교가 드문 곳(섬·산지)은 한 곳만 있어도 100%가 되어 봉우리가 선다 — 학교 네 곳만큼을 분모에 더해 눌러 준다
-    v[i] = a > 0.05 ? hit[i] / (a + 4) : 0;
-    if (v[i] > max) max = v[i];
-  }
-  if (max <= 0) return null;
-  return {v, max};
-}
-function tgAt(F, lng, lat) {                              // 두 방향 선형 보간
-  const fx = (lng - TG.x0) / TG.dx, fy = (lat - TG.y0) / TG.dy;
-  if (fx < 0 || fy < 0 || fx >= TG.nx - 1 || fy >= TG.ny - 1) return 0;
-  const x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y, i = y * TG.nx + x, v = F.v;
-  return ((v[i] * (1 - tx) + v[i + 1] * tx) * (1 - ty) + (v[i + TG.nx] * (1 - tx) + v[i + TG.nx + 1] * tx) * ty) / F.max;
-}
-const mercLat = yn => Math.atan(Math.sinh(Math.PI * (1 - 2 * yn))) * 180 / Math.PI;
-const canvasBlob = c => new Promise(r => c.toBlob(b => b.arrayBuffer().then(r), "image/png"));
-let TG_PROTO = false;
-function tgProtocol() {
-  if (TG_PROTO) return; TG_PROTO = true;
-  maplibregl.addProtocol("edterr", async params => {       // edterr://판/z/x/y — 높이 0~1000m를 Mapbox 방식으로 담는다
-    const [, z, x, y] = params.url.replace("edterr://", "").split("/").map(Number), N = 128, n = 2 ** z;
-    const c = document.createElement("canvas"); c.width = c.height = N;
-    const ctx = c.getContext("2d"), img = ctx.createImageData(N, N), d = img.data, F = TG_CUR;
-    for (let py = 0; py < N; py++) {
-      const lat = mercLat((y + (py + 0.5) / N) / n);
-      for (let px = 0; px < N; px++) {
-        const lng = (x + (px + 0.5) / N) / n * 360 - 180;
-        const val = Math.round(((F ? tgAt(F, lng, lat) : 0) * 1000 + 10000) * 10), o = (py * N + px) * 4;
-        d[o] = val >> 16; d[o + 1] = (val >> 8) & 255; d[o + 2] = val & 255; d[o + 3] = 255;
+let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
+function sggLoad() {
+  if (SGG_P) return SGG_P;
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920j").then(r => r.json()).then(t => {
+    const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
+    const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
+    const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
+    const feats = Object.values(t.objects)[0].geometries.map((g, id) => {
+      const polys = (g.type === "Polygon" ? [g.arcs] : g.arcs).map(pg => pg.map(ring));
+      let x0 = 999, y0 = 999, x1 = -999, y1 = -999;
+      for (const pg of polys) for (const [x, y] of pg[0]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      return {type: "Feature", id, properties: {name: g.properties.name}, geometry: {type: "MultiPolygon", coordinates: polys}, bb: [x0, y0, x1, y1]};
+    });
+    const inRing = (x, y, r) => { let c = false; for (let a = 0, b = r.length - 1; a < r.length; b = a++) {
+      const [xi, yi] = r[a], [xj, yj] = r[b]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+    const of = new Int16Array(SCHOOL_GEO.length).fill(-1), total = new Uint16Array(feats.length);
+    SCHOOL_GEO.forEach((g, k) => {
+      if (!g) return;
+      const x = g[1], y = g[0];
+      for (const f of feats) {
+        if (x < f.bb[0] || x > f.bb[2] || y < f.bb[1] || y > f.bb[3]) continue;
+        if (f.geometry.coordinates.some(pg => inRing(x, y, pg[0]) && !pg.slice(1).some(h => inRing(x, y, h)))) { of[k] = f.id; total[f.id]++; break; }
       }
-    }
-    ctx.putImageData(img, 0, 0);
-    return {data: await canvasBlob(c)};
+    });
+    return SGG = {feats, of, total};
   });
-}
-function tgOverlay(F) {                                   // 색 덧칠 — 세로는 메르카토르 간격으로 그려 지도와 어긋나지 않게 한다
-  const W = TG.nx * 2, H = TG.ny * 2, c = document.createElement("canvas"); c.width = W; c.height = H;
-  const ctx = c.getContext("2d"), img = ctx.createImageData(W, H), d = img.data;
-  const latTop = TG.y0 + TG.dy * (TG.ny - 1), latBot = TG.y0, lngL = TG.x0, lngR = TG.x0 + TG.dx * (TG.nx - 1);
-  const my = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)), mT = my(latTop), mB = my(latBot);
-  const ramp = [[232, 243, 238], [143, 205, 181], [47, 156, 138], [29, 95, 122]];
-  for (let py = 0; py < H; py++) {
-    const m = mT + (mB - mT) * (py + 0.5) / H, lat = (2 * Math.atan(Math.exp(m)) - Math.PI / 2) * 180 / Math.PI;
-    for (let px = 0; px < W; px++) {
-      const t = tgAt(F, lngL + (lngR - lngL) * (px + 0.5) / W, lat), o = (py * W + px) * 4;
-      const q = Math.min(2.999, t * 3), i = Math.floor(q), u = q - i, a = ramp[i], b = ramp[i + 1];
-      d[o] = a[0] + (b[0] - a[0]) * u; d[o + 1] = a[1] + (b[1] - a[1]) * u; d[o + 2] = a[2] + (b[2] - a[2]) * u;
-      d[o + 3] = t < 0.02 ? 0 : Math.min(225, 60 + t * 330);
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return {url: c.toDataURL("image/png"), coords: [[lngL, latTop], [lngR, latTop], [lngR, latBot], [lngL, latBot]]};
 }
 function mountMap() {
   const el = document.getElementById("map"), spec = MAP_SPEC;
@@ -2339,61 +2293,58 @@ function mountMap() {
       // 동네 수준까지 확대하면 저절로 비스듬히 기울어 건물이 입체로 선다. 축소하면 다시 평면이 된다.
       // 단추는 두지 않는다(2026-09-20 사용자). 이용자가 직접 기울였으면 그 뒤로는 손대지 않는다.
       let autoPitch = true, tilting = false;
-      // 도입 지형 — 학교 찾기(전체 학교)는 뺀다: 기록 있는 학교 비율이 어디나 96~98%라 평평하다
-      let TF = null, terrOn = false, terrEx = 0;
-      if (MAP_TERRAIN && spec.unit !== "idx") {
-        try {
-          TF = tgBuild(spec);
-          if (TF) {
-            TG_CUR = TF; TG_VER++; tgProtocol();
-            if (MAP_TERRAIN_3D) map.addSource("edterr", {type: "raster-dem", tiles: [`edterr://${TG_VER}/{z}/{x}/{y}`], tileSize: 128, minzoom: 4, maxzoom: 9, encoding: "mapbox"});
-            // 색과 음영은 바탕 지도의 물 층 아래에 둔다 — 바다·강이 그 위를 덮어 색이 바닷가 밖으로 번지지 않는다(2026-09-20 사용자)
-            const ov = tgOverlay(TF), lyrs = map.getStyle().layers;
-            const firstSym = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
-            map.addSource("edcolor", {type: "image", url: ov.url, coordinates: ov.coords});
-            map.addLayer({id: "edcolor", type: "raster", source: "edcolor",
-              // 높이는 시군보다 가까워지면 걷지만 색은 연하게 끝까지 남긴다 — 확대할 때 색이 뚝 사라지면 어색하다(2026-09-20 사용자)
-              paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.85, 12.5, 0.32, 15, 0.22], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
-            if (MAP_TERRAIN_3D) map.addLayer({id: "edshade", type: "hillshade", source: "edterr", maxzoom: 12,
-              paint: {"hillshade-exaggeration": 0.35, "hillshade-shadow-color": "#1d4f5f", "hillshade-highlight-color": "#ffffff"}}, firstSym);
-            // 지형 색 위에서 노랑·주황 도로가 너무 튄다(2026-09-20 사용자) — 멀리서는 도로를 흰 실선처럼 흐리게 하고
-            // 동네 수준으로 다가가면 원래 색으로 돌아오게 한다.
-            for (const ly of lyrs) {
-              if (ly.type !== "line" || !/^(road|bridge|tunnel)_/.test(ly.id) || /rail/.test(ly.id)) continue;
-              map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
-            }
-            const sumEl = document.getElementById("mapsum");
-            if (sumEl) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${MAP_TERRAIN_3D ? "지형의 높이와 색" : "바탕색의 진하기"} = 주변 학교 가운데 기록이 확인된 학교의 비율(가장 높은 곳 약 ${Math.round(TF.max * 100)}%)</span>`);
+      // 도입 색지도 — 학교 찾기(전체 학교)는 뺀다: 기록 있는 학교 비율이 어디나 96~98%라 한 가지 색이 된다
+      if (MAP_TERRAIN && spec.unit !== "idx" && spec.items.filter(it => it.k).length >= 5) {
+        sggLoad().then(G => {
+          if (MAP !== map) return;                          // 받는 사이 지도가 바뀌었다
+          const rec = new Uint16Array(G.feats.length);
+          for (const it of spec.items) { if (!it.k) continue; const f = G.of[IDX_POS.get(it.s)]; if (f >= 0) rec[f]++; }
+          let max = 0;
+          const fc = {type: "FeatureCollection", features: G.feats.map(f => {
+            const n = G.total[f.id], r = rec[f.id], rate = n ? r / n : 0, v = n ? r / (n + 3) : 0;   // 학교가 몇 곳 안 되는 구역은 눌러 준다
+            if (v > max) max = v;
+            return {type: "Feature", id: f.id, geometry: f.geometry, properties: {name: f.properties.name, n, r, pct: Math.round(rate * 1000) / 10, v}};
+          })};
+          if (!max) return;
+          const lyrs = map.getStyle().layers, under = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
+          const fade = ["interpolate", ["linear"], ["zoom"], 9.5, 0.78, 12.5, 0.3, 15, 0.2];
+          map.addSource("edsgg", {type: "geojson", data: fc});
+          // 다섯 단계 — 이어지는 색보다 단계가 나뉜 색이 깨끗하게 읽힌다. 기록이 없는 구역은 칠하지 않는다
+          map.addLayer({id: "edsgg", type: "fill", source: "edsgg", filter: [">", ["get", "r"], 0], paint: {"fill-opacity": fade,
+            "fill-color": ["step", ["/", ["get", "v"], max], "#e3f1ec", 0.2, "#bfe0d5", 0.4, "#8fcab9", 0.6, "#55ab9c", 0.8, "#2a8583"]}}, under);
+          map.addLayer({id: "edsgg-line", type: "line", source: "edsgg", paint: {"line-color": "#ffffff", "line-width": 0.6,
+            "line-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 9.5, 0.8, 12.5, 0.3]}}, under);
+          // 색 위에서 노랑·주황 도로가 튄다 — 멀리서는 흐리게, 동네 수준에서 원래대로
+          for (const ly of lyrs) {
+            if (ly.type !== "line" || !/^(road|bridge|tunnel)_/.test(ly.id) || /rail/.test(ly.id)) continue;
+            map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
           }
-        } catch (_) { TF = null; }
+          const best = fc.features.reduce((a, b) => b.properties.v > a.properties.v ? b : a).properties;
+          const sumEl = document.getElementById("mapsum");
+          if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend",
+            ` · <span class="terrnote">바탕색의 진하기 = 시군구별로 기록이 확인된 학교의 비율(가장 진한 곳 ${esc(best.name)} ${best.pct}%)</span>`);
+          const tip = new maplibregl.Popup({closeButton: false, closeOnClick: false, offset: 8, className: "sggtip"});
+          map.on("mousemove", "edsgg", e => { const q = e.features[0].properties;
+            tip.setLngLat(e.lngLat).setHTML(`<b>${esc(q.name)}</b> 학교 ${q.n}곳 중 ${q.r}곳 · ${q.pct}%`).addTo(map); });
+          map.on("mouseleave", "edsgg", () => tip.remove());
+        }).catch(() => {});
       }
-      // 화면에서 보이는 높이가 확대 정도와 무관하게 비슷하도록 과장값을 확대에 맞춘다. 시군보다 가까이 가면 지형을 걷는다.
-      const terrSync = () => {
-        if (!TF || !MAP_TERRAIN_3D) return;
-        const z = map.getZoom();
-        if (z >= 11.6) { if (terrOn) { map.setTerrain(null); terrOn = false; terrEx = 0; } return; }
-        const ex = 85 * Math.pow(2, 6 - Math.max(5, z)) * Math.min(1, (11.6 - z) / 1.6);
-        if (!terrOn || Math.abs(ex - terrEx) / (terrEx || 1) > 0.07) { map.setTerrain({source: "edterr", exaggeration: ex}); terrOn = true; terrEx = ex; }
-      };
-      // 기울기는 확대 정도를 따라 이어서 변한다. 지형이 깔린 전국~시군 수준은 45도, 시군보다 가까워지며 평면으로 눕고,
-      // 동네 수준(13.8~16.4)에서 다시 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
+      // 기울기는 확대 정도를 따라 이어서 변한다. 전국~시군 수준은 평면, 동네 수준(13.8~16.4)에서 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
       // 축소할 때 갑자기 평면으로 바뀌어 보였다(2026-09-20 사용자).
       const MAXP = 40, Z0 = 13.8, Z1 = 16.4, sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
       // 학교를 눌러 다가간 동안은 10도 더 눕혀 50도로 본다 — 학교 주변은 대개 저층이라 40도에서는 지붕만 보여 납작했다(2026-09-20 사용자)
       let boost = 0;
-      const pitchFor = z => Math.max(TF && MAP_TERRAIN_3D ? 45 * (1 - sm((z - 10.2) / 2)) : 0, (MAXP + boost) * sm((z - Z0) / (Z1 - Z0)));
+      const pitchFor = z => (MAXP + boost) * sm((z - Z0) / (Z1 - Z0));
       map.on("pitchstart", e => { if (e.originalEvent || MAP_ROT) autoPitch = false; });
       el.addEventListener("mousedown", e => { if (e.metaKey || e.ctrlKey || e.button === 2) autoPitch = false; }, true);
       // 확대·축소가 진행되는 매 장면마다 기울기를 맞춘다 — 움직임을 끊지 않도록 카메라 값만 바꾼다
       map.on("zoom", () => {
-        terrSync();
         if (!autoPitch || tilting) return;
         const want = pitchFor(map.getZoom());
         if (Math.abs(map.getPitch() - want) < 0.05) return;
         try { map.transform.setPitch(want); } catch (_) { /* 아래 zoomend가 맞춘다 */ }
       });
       map.on("zoomend", () => {                  // 장면마다 못 맞춘 경우의 마무리
-        terrSync();
         if (!autoPitch || tilting) return;
         if (map.getZoom() < 14.5) boost = 0;
         const want = pitchFor(map.getZoom()), turn = map.getZoom() < 14.5 && Math.abs(map.getBearing()) > 1;   // 멀어지면 다시 정북
@@ -2402,14 +2353,13 @@ function mountMap() {
         map.easeTo(turn ? {pitch: want, bearing: 0, duration: 900} : {pitch: want, duration: 600});
         map.once("moveend", () => { tilting = false; });
       });
-      if (TF) { terrSync(); map.jumpTo({pitch: pitchFor(map.getZoom())}); }    // 첫 화면은 정북
       map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 멀리서 골랐으면 그 동네로 다가가 기울인다
         if (!autoPitch || map.getZoom() >= 15.6) return;
         tilting = true;
         // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다(2026-09-20 사용자)
         boost = 10;                              // 다가가면서 50도로 눕히고 20도쯤 돌려 건물의 두 면이 함께 보이게 한다
         map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), bearing: -20, duration: 2600, easing: t => 1 - Math.pow(1 - t, 3)});
-        map.once("moveend", () => { tilting = false; terrSync(); });
+        map.once("moveend", () => { tilting = false; });
       };
       // 입체 건물이 밋밋한 회색 한 덩어리로 보이지 않게 높이에 따라 조금씩 짙게 칠한다
       if (map.getLayer("building-3d")) {
