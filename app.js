@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920h";
+  s.src = "/data_detail.js?b=20260920i";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920h";
+    s2.src = "/data_detail_old.js?b=20260920i";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920h";
+  s.src = "/data_old.js?b=20260920i";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2379,7 +2379,9 @@ function mountMap() {
       // 동네 수준(13.8~16.4)에서 다시 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
       // 축소할 때 갑자기 평면으로 바뀌어 보였다(2026-09-20 사용자).
       const MAXP = 40, Z0 = 13.8, Z1 = 16.4, sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-      const pitchFor = z => Math.max(TF && MAP_TERRAIN_3D ? 45 * (1 - sm((z - 10.2) / 2)) : 0, MAXP * sm((z - Z0) / (Z1 - Z0)));
+      // 학교를 눌러 다가간 동안은 10도 더 눕혀 50도로 본다 — 학교 주변은 대개 저층이라 40도에서는 지붕만 보여 납작했다(2026-09-20 사용자)
+      let boost = 0;
+      const pitchFor = z => Math.max(TF && MAP_TERRAIN_3D ? 45 * (1 - sm((z - 10.2) / 2)) : 0, (MAXP + boost) * sm((z - Z0) / (Z1 - Z0)));
       map.on("pitchstart", e => { if (e.originalEvent || MAP_ROT) autoPitch = false; });
       el.addEventListener("mousedown", e => { if (e.metaKey || e.ctrlKey || e.button === 2) autoPitch = false; }, true);
       // 확대·축소가 진행되는 매 장면마다 기울기를 맞춘다 — 움직임을 끊지 않도록 카메라 값만 바꾼다
@@ -2393,10 +2395,11 @@ function mountMap() {
       map.on("zoomend", () => {                  // 장면마다 못 맞춘 경우의 마무리
         terrSync();
         if (!autoPitch || tilting) return;
-        const want = pitchFor(map.getZoom());
-        if (Math.abs(map.getPitch() - want) < 1) return;
+        if (map.getZoom() < 14.5) boost = 0;
+        const want = pitchFor(map.getZoom()), turn = map.getZoom() < 14.5 && Math.abs(map.getBearing()) > 1;   // 멀어지면 다시 정북
+        if (Math.abs(map.getPitch() - want) < 1 && !turn) return;
         tilting = true;
-        map.easeTo({pitch: want, duration: 600});
+        map.easeTo(turn ? {pitch: want, bearing: 0, duration: 900} : {pitch: want, duration: 600});
         map.once("moveend", () => { tilting = false; });
       });
       if (TF) { terrSync(); map.jumpTo({pitch: pitchFor(map.getZoom())}); }    // 첫 화면은 정북
@@ -2404,14 +2407,17 @@ function mountMap() {
         if (!autoPitch || map.getZoom() >= 15.6) return;
         tilting = true;
         // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다(2026-09-20 사용자)
-        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), bearing: 0, duration: 2600, easing: t => 1 - Math.pow(1 - t, 3)});
+        boost = 10;                              // 다가가면서 50도로 눕히고 20도쯤 돌려 건물의 두 면이 함께 보이게 한다
+        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), bearing: -20, duration: 2600, easing: t => 1 - Math.pow(1 - t, 3)});
         map.once("moveend", () => { tilting = false; terrSync(); });
       };
       // 입체 건물이 밋밋한 회색 한 덩어리로 보이지 않게 높이에 따라 조금씩 짙게 칠한다
       if (map.getLayer("building-3d")) {
         map.setPaintProperty("building-3d", "fill-extrusion-color",
           ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0], 0, "hsl(35,12%,93%)", 30, "hsl(35,12%,88%)", 120, "hsl(35,14%,80%)"]);
-        map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.85);
+        map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.92);
+        // 빛을 옆에서 비춰 옆면이 지붕보다 어둡게 보이게 한다 — 저층 건물이 흰 판이 아니라 상자로 읽힌다
+        try { map.setLight({anchor: "map", position: [1.5, 120, 50], intensity: 0.6, color: "#ffffff"}); } catch (_) {}
       }
       draw();
     });
