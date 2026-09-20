@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920e";
+  s.src = "/data_detail.js?b=20260920f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920e";
+    s2.src = "/data_detail_old.js?b=20260920f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920e";
+  s.src = "/data_old.js?b=20260920f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2214,7 +2214,8 @@ function mountMap() {
     map.once("style.load", () => {
       for (const ly of map.getStyle().layers) {
         // 바탕 지도의 가게·시설 이름은 걷는다 — 학교 이름표와 겹쳐 어지럽다
-        if (ly.id.startsWith("poi")) { map.setLayoutProperty(ly.id, "visibility", "none"); continue; }
+        // 도로 번호 표지(네모 안 숫자)도 걷는다 — 학교를 찾는 지도에 쓸모가 없고 지저분하다(2026-09-20 사용자)
+        if (ly.id.startsWith("poi") || /shield/i.test(ly.id)) { map.setLayoutProperty(ly.id, "visibility", "none"); continue; }
         if (ly.type !== "symbol") continue;
         // 지명은 한글로 — 기본 양식은 로마자와 현지 표기를 겹쳐 쓴다
         const tf = map.getLayoutProperty(ly.id, "text-field");
@@ -2344,7 +2345,9 @@ function mountMap() {
           if (TF) {
             TG_CUR = TF; TG_VER++; tgProtocol();
             map.addSource("edterr", {type: "raster-dem", tiles: [`edterr://${TG_VER}/{z}/{x}/{y}`], tileSize: 128, minzoom: 4, maxzoom: 9, encoding: "mapbox"});
-            const ov = tgOverlay(TF), firstSym = (map.getStyle().layers.find(l => l.type === "symbol") || {}).id;
+            // 색과 음영은 바탕 지도의 물 층 아래에 둔다 — 바다·강이 그 위를 덮어 색이 바닷가 밖으로 번지지 않는다(2026-09-20 사용자)
+            const ov = tgOverlay(TF), lyrs = map.getStyle().layers;
+            const firstSym = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
             map.addSource("edcolor", {type: "image", url: ov.url, coordinates: ov.coords});
             map.addLayer({id: "edcolor", type: "raster", source: "edcolor",
               paint: {"raster-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0.8, 12, 0], "raster-fade-duration": 0, "raster-resampling": "linear"}}, firstSym);
@@ -2387,7 +2390,7 @@ function mountMap() {
         map.easeTo({pitch: want, duration: 600});
         map.once("moveend", () => { tilting = false; });
       });
-      if (TF) { terrSync(); map.jumpTo({pitch: pitchFor(map.getZoom()), bearing: -8}); }
+      if (TF) { terrSync(); map.jumpTo({pitch: pitchFor(map.getZoom())}); }    // 첫 화면은 정북
       map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 멀리서 골랐으면 그 동네로 다가가 기울인다
         if (!autoPitch || map.getZoom() >= 15.6) return;
         tilting = true;
