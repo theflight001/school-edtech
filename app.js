@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920l";
+  s.src = "/data_detail.js?b=20260921a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920l";
+    s2.src = "/data_detail_old.js?b=20260921a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920l";
+  s.src = "/data_old.js?b=20260921a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2089,10 +2089,13 @@ window.addEventListener("mouseup", () => { MAP_ROT = null; });
 // 시군구 경계 안에만 한 가지 색으로 고르게 칠한다. 경계: 통계청 2018(southkorea-maps 가공본, sgg_2018_topo.json).
 // 끄려면 MAP_TERRAIN을 false로.
 const MAP_TERRAIN = true;
+// 통계청 시도 부호 — '중구'처럼 여러 시도에 있는 이름 앞에 시도를 붙인다
+const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "광주", 25: "대전", 26: "울산", 29: "세종", 31: "경기", 32: "강원",
+  33: "충북", 34: "충남", 35: "전북", 36: "전남", 37: "경북", 38: "경남", 39: "제주"};
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920l").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2100,7 +2103,8 @@ function sggLoad() {
       const polys = (g.type === "Polygon" ? [g.arcs] : g.arcs).map(pg => pg.map(ring));
       let x0 = 999, y0 = 999, x1 = -999, y1 = -999;
       for (const pg of polys) for (const [x, y] of pg[0]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-      return {type: "Feature", id, properties: {name: g.properties.name}, geometry: {type: "MultiPolygon", coordinates: polys}, bb: [x0, y0, x1, y1]};
+      const sd = SGG_SIDO[String(g.properties.code || "").slice(0, 2)] || "", nm = g.properties.name;
+      return {type: "Feature", id, properties: {name: sd && !nm.startsWith(sd) ? `${sd} ${nm}` : nm}, geometry: {type: "MultiPolygon", coordinates: polys}, bb: [x0, y0, x1, y1]};
     });
     const inRing = (x, y, r) => { let c = false; for (let a = 0, b = r.length - 1; a < r.length; b = a++) {
       const [xi, yi] = r[a], [xj, yj] = r[b]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
@@ -2257,7 +2261,7 @@ function mountMap() {
           el.type = "button";
           el.className = "mpin" + (many ? " mcluster" : p.k > 0 ? "" : " dim");
           el.textContent = many ? `${c.items.length.toLocaleString()}개교` : p.n;
-          el.title = many ? "누르면 확대합니다" : `${p.s} · ${p.l} · ${p.k ? p.k.toLocaleString() + "건" : "기록 없음"}`;
+          if (!many) el.title = `${p.s} · ${p.l} · ${p.k ? p.k.toLocaleString() + "건" : "기록 없음"}`;   // 묶음에는 풍선말을 달지 않는다(2026-09-21 사용자)
           el.onclick = ev => {
             ev.stopPropagation();
             if (many) {
@@ -2308,12 +2312,33 @@ function mountMap() {
           if (!max) return;
           const lyrs = map.getStyle().layers, under = (lyrs.find(l => /^water/.test(l.id)) || lyrs.find(l => l.type === "symbol") || {}).id;
           const fade = ["interpolate", ["linear"], ["zoom"], 9.5, 0.78, 12.5, 0.3, 15, 0.2];
-          map.addSource("edsgg", {type: "geojson", data: fc});
-          // 다섯 단계 — 이어지는 색보다 단계가 나뉜 색이 깨끗하게 읽힌다. 기록이 없는 구역은 칠하지 않는다
-          map.addLayer({id: "edsgg", type: "fill", source: "edsgg", filter: [">", ["get", "r"], 0], paint: {"fill-opacity": fade,
-            "fill-color": ["step", ["/", ["get", "v"], max], "#e3f1ec", 0.2, "#bfe0d5", 0.4, "#8fcab9", 0.6, "#55ab9c", 0.8, "#2a8583"]}}, under);
-          map.addLayer({id: "edsgg-line", type: "line", source: "edsgg", paint: {"line-color": "#ffffff", "line-width": 0.6,
-            "line-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 9.5, 0.8, 12.5, 0.3]}}, under);
+          // 구역 사이 경계는 부드럽게 번지게, 바깥 경계(해안선·휴전선)는 또렷하게(2026-09-21 사용자).
+          // 구역을 단계 색으로 그린 그림을 줄였다 키워 흐린 뒤, 전체 시군구 모양으로 오려 낸다 — 색이 북한·바다로 넘어가지 않는다.
+          const L = 124.5, R = 131.0, T = 38.75, B = 32.95, W = 1560, my = la => Math.log(Math.tan(Math.PI / 4 + la * Math.PI / 360));
+          const H = Math.round(W * (my(T) - my(B)) / ((R - L) * Math.PI / 180));
+          const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+          const trace = (ctx, f) => { ctx.beginPath();
+            for (const pg of f.geometry.coordinates) for (const ring of pg) { ring.forEach(([x, y], k) => {
+              const px = (x - L) / (R - L) * W, py = (my(T) - my(y)) / (my(T) - my(B)) * H; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.closePath(); } };
+          const STEPS = ["#e3f1ec", "#bfe0d5", "#8fcab9", "#55ab9c", "#2a8583"];
+          const sharp = mk(), sc = sharp.getContext("2d"), mask = mk(), mc = mask.getContext("2d");
+          mc.fillStyle = "#000";
+          for (const f of fc.features) {
+            trace(mc, f); mc.fill("evenodd");
+            if (!f.properties.r) continue;                  // 기록이 없는 구역은 칠하지 않는다
+            sc.fillStyle = STEPS[Math.min(4, Math.floor(f.properties.v / max * 5))];
+            trace(sc, f); sc.fill("evenodd"); sc.strokeStyle = sc.fillStyle; sc.lineWidth = 1; sc.stroke();   // 구역 사이 실금을 메운다
+          }
+          const small = document.createElement("canvas"); small.width = Math.round(W / 10); small.height = Math.round(H / 10);
+          const sm2 = small.getContext("2d"); sm2.imageSmoothingEnabled = true; sm2.imageSmoothingQuality = "high";
+          sm2.drawImage(sharp, 0, 0, small.width, small.height);
+          const soft = mk(), so = soft.getContext("2d"); so.imageSmoothingEnabled = true; so.imageSmoothingQuality = "high";
+          so.drawImage(small, 0, 0, W, H);
+          so.globalAlpha = 0.45; so.drawImage(sharp, 0, 0); so.globalAlpha = 1;       // 너무 뭉개지지 않게 원래 모양을 조금 얹는다
+          so.globalCompositeOperation = "destination-in"; so.drawImage(mask, 0, 0);
+          map.addSource("edsgg", {type: "image", url: soft.toDataURL("image/png"), coordinates: [[L, T], [R, T], [R, B], [L, B]]});
+          map.addLayer({id: "edsgg", type: "raster", source: "edsgg",
+            paint: {"raster-opacity": fade, "raster-fade-duration": 0, "raster-resampling": "linear"}}, under);
           // 바탕 지도의 숲·초지·공원 초록이 우리 색과 비슷해, 기록이 없는 곳(북한 포함)도 도입한 것처럼 보였다(2026-09-20 사용자).
           // 멀리서는 걷고 동네 수준에서 되살린다.
           for (const [id, full] of [["landcover_wood", 0.4], ["landcover_grass", 0.3], ["park", 0.7], ["landcover_wetland", 0.8]])
@@ -2325,14 +2350,12 @@ function mountMap() {
             if (ly.type !== "line" || !/^(road|bridge|tunnel)_/.test(ly.id) || /rail/.test(ly.id)) continue;
             map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
           }
-          const best = fc.features.reduce((a, b) => b.properties.v > a.properties.v ? b : a).properties;
+          // 설명은 한 줄로 — 수치와 구역 이름은 적지 않는다(2026-09-21 사용자)
+          const note = /^\/vendor\//.test(location.pathname) ? "상대적으로 거래 학교 비율이 높은 시군구는 진하게 표시됩니다."
+            : /^\/tag\//.test(location.pathname) ? "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다."
+            : "상대적으로 기록이 확인된 학교 비율이 높은 시군구는 진하게 표시됩니다.";
           const sumEl = document.getElementById("mapsum");
-          if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend",
-            ` · <span class="terrnote">해당 시군구 내에서 ${/^\/vendor\//.test(location.pathname) ? "거래 기록" : /^\/tag\//.test(location.pathname) ? "도입 기록" : "기록"}이 확인된 학교의 비율대로 바탕색의 진하기가 표시됩니다(가장 진한 곳 ${esc(best.name)} ${best.pct}%)</span>`);
-          const tip = new maplibregl.Popup({closeButton: false, closeOnClick: false, offset: 8, className: "sggtip"});
-          map.on("mousemove", "edsgg", e => { const q = e.features[0].properties;
-            tip.setLngLat(e.lngLat).setHTML(`<b>${esc(q.name)}</b> 학교 ${q.n}곳 중 ${q.r}곳 · ${q.pct}%`).addTo(map); });
-          map.on("mouseleave", "edsgg", () => tip.remove());
+          if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${note}</span>`);
         }).catch(() => {});
       }
       // 기울기는 확대 정도를 따라 이어서 변한다. 전국~시군 수준은 평면, 동네 수준(13.8~16.4)에서 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
