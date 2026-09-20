@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920k";
+  s.src = "/data_detail.js?b=20260920l";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920k";
+    s2.src = "/data_detail_old.js?b=20260920l";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920k";
+  s.src = "/data_old.js?b=20260920l";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2092,7 +2092,7 @@ const MAP_TERRAIN = true;
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920k").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260920l").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2314,6 +2314,12 @@ function mountMap() {
             "fill-color": ["step", ["/", ["get", "v"], max], "#e3f1ec", 0.2, "#bfe0d5", 0.4, "#8fcab9", 0.6, "#55ab9c", 0.8, "#2a8583"]}}, under);
           map.addLayer({id: "edsgg-line", type: "line", source: "edsgg", paint: {"line-color": "#ffffff", "line-width": 0.6,
             "line-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 9.5, 0.8, 12.5, 0.3]}}, under);
+          // 바탕 지도의 숲·초지·공원 초록이 우리 색과 비슷해, 기록이 없는 곳(북한 포함)도 도입한 것처럼 보였다(2026-09-20 사용자).
+          // 멀리서는 걷고 동네 수준에서 되살린다.
+          for (const [id, full] of [["landcover_wood", 0.4], ["landcover_grass", 0.3], ["park", 0.7], ["landcover_wetland", 0.8]])
+            if (map.getLayer(id)) map.setPaintProperty(id, "fill-opacity", ["interpolate", ["linear"], ["zoom"], 11.5, 0, 13.5, full]);
+          if (map.getLayer("park_outline")) map.setPaintProperty("park_outline", "line-opacity", ["interpolate", ["linear"], ["zoom"], 11.5, 0, 13.5, 1]);
+          if (map.getLayer("natural_earth")) map.setLayoutProperty("natural_earth", "visibility", "none");
           // 색 위에서 노랑·주황 도로가 튄다 — 멀리서는 흐리게, 동네 수준에서 원래대로
           for (const ly of lyrs) {
             if (ly.type !== "line" || !/^(road|bridge|tunnel)_/.test(ly.id) || /rail/.test(ly.id)) continue;
