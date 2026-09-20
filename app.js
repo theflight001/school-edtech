@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260920b";
+  s.src = "/data_detail.js?b=20260920c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260920b";
+    s2.src = "/data_detail_old.js?b=20260920c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260920b";
+  s.src = "/data_old.js?b=20260920c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2237,7 +2237,7 @@ function mountMap() {
                 return;
               }
               map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
-                            {padding: 60, maxZoom: Math.min(17, map.getZoom() + 3), duration: 400});
+                            {padding: 60, maxZoom: Math.min(17, map.getZoom() + 3), duration: 1100});
             } else {
               selK = [p.c || p.href];
               showMapSel(spec, [p]);
@@ -2282,7 +2282,8 @@ function mountMap() {
       map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 멀리서 골랐으면 그 동네로 다가가 기울인다
         if (!autoPitch || map.getZoom() >= 15.6) return;
         tilting = true;
-        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), duration: 1300});
+        // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다(2026-09-20 사용자)
+        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), duration: 2600, easing: t => 1 - Math.pow(1 - t, 3)});
         map.once("moveend", () => { tilting = false; });
       };
       // 입체 건물이 밋밋한 회색 한 덩어리로 보이지 않게 높이에 따라 조금씩 짙게 칠한다
