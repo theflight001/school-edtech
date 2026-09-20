@@ -19,7 +19,7 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 OUT, CKPT = "서울에듀파인_candidates.csv", ".ckpt_서울에듀파인.json"
 FIELDS = ["계약번호", "회계연도", "기관명", "계약명", "계약금액", "진행상태",
           "계약일", "구분", "계약상대자", "키워드"]
-SPACING = 0.7
+SPACING = float(os.environ.get("EDTECH_SPACING", "0.7"))   # 초. 보충 수집은 10으로 준다
 SCHOOL_END = re.compile(r"(초등학교|중학교|고등학교|영재학교|특수학교)$")
 EXCLUDE = re.compile(r"전세버스|버스 ?임차|차량 ?임차|숙박|수송|캠프|여행|급식|간식|도시락|"
                      r"청소|방역|소독|교복|졸업앨범|정수기|승강기")
@@ -96,7 +96,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", default="2020,2021")
     ap.add_argument("--keyword-file", help="줄 단위 검색어 파일 (없으면 판정 규칙에서 뽑는다)")
-    ap.add_argument("--max-pages", type=int, default=400)
+    ap.add_argument("--max-pages", type=int, default=2000)
     a = ap.parse_args()
 
     kws = ([l.strip() for l in open(a.keyword_file, encoding="utf-8") if l.strip()]
@@ -115,6 +115,7 @@ def main():
     print(f"검색어 {len(kws):,}개 × 회계연도 {len(years)}개 = {len(kws)*len(years):,}조합 "
           f"(이미 본 것 {len(done):,})", flush=True)
     kept = req = 0
+    cut = []                       # 상한에 잘린 조합
     for yi, year in enumerate(years):
         for i, kw in enumerate(kws, 1):
             tag = f"{year}|{kw}"
@@ -148,7 +149,13 @@ def main():
                     print(f"  …{page}페이지째", flush=True)
                 time.sleep(SPACING)
             f.flush()
-            done.add(tag)
+            # 쪽 상한에 닿은 조합은 완료로 적지 않는다. 400쪽(4,000행)에서 멈추고도 완료로 적어
+            # FY2020 '컴퓨터'(원천 5,053행) 같은 넓은 검색어의 뒤쪽이 빠졌다(2026-09-19 외부 재검증).
+            if page > a.max_pages:
+                print(f"  [{tag}] 쪽 상한 {a.max_pages}에 닿음(원천 {total:,}행) — 미완료", flush=True)
+                cut.append(tag)
+            else:
+                done.add(tag)
             if i % 20 == 0:
                 json.dump({"done": sorted(done), "seen": [list(k) for k in seen]},
                           open(CKPT, "w"), ensure_ascii=False)
@@ -158,6 +165,8 @@ def main():
               open(CKPT, "w"), ensure_ascii=False)
     f.close()
     print(f"\n완료 — 학교 계약 {kept:,}건 (요청 {req:,}회) → {OUT}")
+    if cut:
+        print(f"※ 쪽 상한에 잘려 미완료로 남긴 조합 {len(cut)}개: {', '.join(cut)}")
 
 
 if __name__ == "__main__":
