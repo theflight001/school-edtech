@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260921b";
+  s.src = "/data_detail.js?b=20260921c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260921b";
+    s2.src = "/data_detail_old.js?b=20260921c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260921b";
+  s.src = "/data_old.js?b=20260921c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2095,7 +2095,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921b").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921c").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2384,7 +2384,7 @@ function mountMap() {
         if (!autoPitch || map.getZoom() >= 15.6) return;
         tilting = true;
         // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다(2026-09-20 사용자)
-        boost = 10;                              // 다가가면서 50도로 눕히고 20도쯤 돌려 건물의 두 면이 함께 보이게 한다
+        boost = 20;                              // 다가가면서 60도로 눕히고 20도쯤 돌려 건물의 두 면이 함께 보이게 한다(50도도 낮은 건물은 납작했다, 2026-09-21 사용자)
         map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), bearing: -20, duration: 2600, easing: t => 1 - Math.pow(1 - t, 3)});
         map.once("moveend", () => { tilting = false; });
       };
@@ -2393,6 +2393,8 @@ function mountMap() {
         map.setPaintProperty("building-3d", "fill-extrusion-color",
           ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0], 0, "hsl(35,12%,93%)", 30, "hsl(35,12%,88%)", 120, "hsl(35,14%,80%)"]);
         map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.92);
+        // 시골 학교처럼 한두 층짜리 건물은 실제 높이로는 판처럼 보인다 — 높이를 1.7배로 과장하고 최소 7m를 준다
+        map.setPaintProperty("building-3d", "fill-extrusion-height", ["max", 7, ["*", 1.7, ["coalesce", ["get", "render_height"], 4]]]);
         // 빛을 옆에서 비춰 옆면이 지붕보다 어둡게 보이게 한다 — 저층 건물이 흰 판이 아니라 상자로 읽힌다
         try { map.setLight({anchor: "map", position: [1.5, 120, 50], intensity: 0.6, color: "#ffffff"}); } catch (_) {}
       }
