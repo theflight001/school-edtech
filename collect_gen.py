@@ -160,6 +160,9 @@ def main():
             json.dump(ckpt, cf, ensure_ascii=False)
         os.replace(CKPT + ".tmp", CKPT)
         print(f"[{kw} {year}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+        # 검색어(칸) 하나를 끝낼 때도 쉰다. 쪽을 넘길 때만 쉬어서, 결과가 한 쪽뿐인 검색어가 이어지면 요청이 2~6초 간격으로 나갔다
+        # (2026-09-20 인천 3.1초·세종 1.7초·광주 2.0초). 하루 상한도 이 호출로 센다.
+        polite()
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
 
