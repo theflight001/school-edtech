@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260921f";
+  s.src = "/data_detail.js?b=20260921g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260921f";
+    s2.src = "/data_detail_old.js?b=20260921g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260921f";
+  s.src = "/data_old.js?b=20260921g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2095,7 +2095,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921f").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260921g").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2145,7 +2145,10 @@ function mountMap() {
     el.innerHTML = "";
     const map = MAP = new maplibregl.Map({container: el, center: [127.8, 36.2], zoom: 5.6, minZoom: 5, maxZoom: 18, maxPitch: 70,
       style: "https://tiles.openfreemap.org/styles/liberty", attributionControl: {compact: true}});
-    map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), "top-right");
+    const nav = new maplibregl.NavigationControl({visualizePitch: true});
+    map.addControl(nav, "top-right");
+    // 자동 기울임은 기울기 이벤트 없이 카메라 값만 바꾸므로 나침반 그림(기울면 납작해진다)이 갱신되지 않았다 — 움직일 때마다 다시 그린다
+    map.on("move", () => { try { nav._rotateCompassArrow(); } catch (_) {} });
     // 출처 표기는 빼지 못한다(OpenStreetMap 자료·OpenFreeMap 이용 조건). 대신 처음엔 ⓘ만 두고
     // 누르면 펼쳐지게 한다. 여닫기는 지도 기본 동작에 맡기고 우리는 처음 상태만 접는다 —
     // 접힘을 우리가 따로 관리했더니 누를 때 지도와 서로 상쇄돼 아무 변화가 없었다(2026-09-12).
@@ -2359,33 +2362,32 @@ function mountMap() {
       // 기울기는 확대 정도를 따라 이어서 변한다. 전국~시군 수준은 평면, 동네 수준(13.8~16.4)에서 40도까지 기울어 건물이 입체로 선다. 처음엔 확대가 끝난 뒤 한꺼번에 기울였더니
       // 축소할 때 갑자기 평면으로 바뀌어 보였다(2026-09-20 사용자).
       const MAXP = 40, Z0 = 13.8, Z1 = 16.4, sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-      // 학교를 눌러 다가간 동안은 10도 더 눕혀 50도로 본다 — 학교 주변은 대개 저층이라 40도에서는 지붕만 보여 납작했다(2026-09-20 사용자)
+      // 학교를 눌러 다가간 동안은 시선을 더 낮춘다(boost) — 학교 주변은 대개 저층이라 40도에서는 지붕만 보여 납작했다
       let boost = 0;
-      const pitchFor = z => (MAXP + boost) * sm((z - Z0) / (Z1 - Z0));
+      const pitchFor = z => (MAXP + boost * sm(z - 15)) * sm((z - Z0) / (Z1 - Z0));   // 도착용 낮은 시선은 15~16에서만 더해져, 풀릴 때 튀지 않는다
       map.on("pitchstart", e => { if (e.originalEvent || MAP_ROT) autoPitch = false; });
       el.addEventListener("mousedown", e => { if (e.metaKey || e.ctrlKey || e.button === 2) autoPitch = false; }, true);
-      // 확대·축소가 진행되는 매 장면마다 기울기를 맞춘다 — 움직임을 끊지 않도록 카메라 값만 바꾼다
-      map.on("zoom", () => {
-        if (!autoPitch || tilting) return;
-        const want = pitchFor(map.getZoom());
-        if (Math.abs(map.getPitch() - want) < 0.05) return;
-        try { map.transform.setPitch(want); } catch (_) { /* 아래 zoomend가 맞춘다 */ }
-      });
-      map.on("zoomend", () => {                  // 장면마다 못 맞춘 경우의 마무리
-        if (!autoPitch || tilting) return;
-        if (map.getZoom() < 14.5) boost = 0;
-        const want = pitchFor(map.getZoom()), turn = map.getZoom() < 14.5 && Math.abs(map.getBearing()) > 1;   // 멀어지면 다시 정북
-        if (Math.abs(map.getPitch() - want) < 1 && !turn) return;
-        tilting = true;
-        map.easeTo(turn ? {pitch: want, bearing: 0, duration: 900} : {pitch: want, duration: 600});
+      // 카메라가 바뀔 때마다(휠·트랙패드·끌기·단추·자동 이동 모두) 라이브러리가 이 함수를 불러 값을 고칠 기회를 준다.
+      // 처음엔 zoom 이벤트에서 카메라 값을 직접 바꾸고 zoomend에서 마무리했는데, 휠 확대 중에는 라이브러리가 카메라를
+      // 따로 들고 있어 먹히지 않았고, 마무리 움직임은 지도를 조금만 끌어도 취소되어 평면으로 남았다(2026-09-21 영광공고 화면).
+      map.transformCameraUpdate = tr => (autoPitch && !tilting) ? {pitch: pitchFor(tr.zoom)} : {};
+      map.on("zoomend", () => { if (map.getZoom() < 14.5) boost = 0; });     // 멀어지면 학교 도착용 낮은 시선을 푼다
+      // 나침반 단추는 원래 '정북·평면으로 초기화'다. 그것을 직접 기울인 것으로 받아들여 자동 기울임이 영영 꺼졌다(2026-09-21 사용자).
+      // 단추를 우리가 받아 '정북 + 지금 확대에 맞는 자동 기울임으로 복귀'로 바꾼다 — 직접 기울여 둔 것을 풀 때도 이 단추를 누르면 된다.
+      const cbtn = el.querySelector(".maplibregl-ctrl-compass");
+      if (cbtn) cbtn.addEventListener("click", e => {
+        e.stopImmediatePropagation(); e.preventDefault();
+        autoPitch = true; boost = 0; tilting = true;
+        map.easeTo({bearing: 0, pitch: pitchFor(map.getZoom()), duration: 700});
         map.once("moveend", () => { tilting = false; });
-      });
-      map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 멀리서 골랐으면 그 동네로 다가가 기울인다
-        if (!autoPitch || map.getZoom() >= 15.6) return;
+      }, true);
+      map._tiltTo = at => {                      // 학교 하나를 골랐을 때 — 그 학교로 다가가 시선을 낮춘다. 이미 가까이 있어도 시선은 낮춘다
+        if (!autoPitch) return;
+        const near = map.getZoom() >= 15.6, z = Math.max(map.getZoom(), 16.2);
+        boost = 30;                              // 지도 프로그램 기준 70도(땅에서 재면 20도 — 이 프로그램의 한계)까지 눕힌다(2026-09-21 사용자)
         tilting = true;
-        // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다(2026-09-20 사용자)
-        boost = 30;                              // 다가가면서 지도 프로그램 기준 70도(땅에서 재면 20도 — 이 프로그램의 한계)까지 눕힌다(2026-09-21 사용자)
-        map.easeTo({center: at, zoom: 16.2, pitch: pitchFor(16.2), bearing: 0, duration: 2600,   /* 정북(2026-09-21 사용자 시험). 비스듬히 보려면 bearing: -20 */ easing: t => 1 - Math.pow(1 - t, 3)});
+        // 너무 빨리 파고들면 어디로 가는지 놓친다 — 천천히, 끝에서 부드럽게 멈춘다. 방향은 정북 그대로(2026-09-21 사용자)
+        map.easeTo({center: at, zoom: z, pitch: pitchFor(z), bearing: 0, duration: near ? 1200 : 2600, easing: t => 1 - Math.pow(1 - t, 3)});
         map.once("moveend", () => { tilting = false; });
       };
       // 입체 건물이 밋밋한 회색 한 덩어리로 보이지 않게 높이에 따라 조금씩 짙게 칠한다
