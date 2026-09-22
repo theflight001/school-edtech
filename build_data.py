@@ -2541,7 +2541,10 @@ if os.path.exists("office_refined.csv"):
     for _r in csv.DictReader(open("office_refined.csv", encoding="utf-8-sig")):
         # 교육청이 산 것이 연수라면 제품 도입이 아니다 — 학교 기록과 같은 규칙(2026-09-22 사용자, 경북 미리캔버스 교원 연수 위탁 용역)
         _nm = (_r.get("계약명") or "").rstrip()
-        if TRAIN_SVC.search(_nm) and not TRAIN_KEEP.search(_nm):
+        # 교육청 계약은 '구축·개발·설치·물품 대여'가 붙어도 연수 용역이면 뺀다(2026-09-22 사용자: 보건교사 연수 Zoom 생방송 용역,
+        # 하이러닝 원격연수 콘텐츠 개발 용역, 연수 운영 용역). 학교 기록보다 좁게 본다 — 연수 용역이라 적힌 것만
+        _ob_svc = re.search(r"연수\s*(?:운영\s*)?용역|연수\s*콘텐츠\s*개발|연수[^,]{0,20}(?:생방송|위탁)\s*용역", _nm)
+        if (TRAIN_SVC.search(_nm) and not TRAIN_KEEP.search(_nm)) or _ob_svc:
             _ob_train += 1
             continue
         for _t in (_r.get("태그") or "").split("|"):
