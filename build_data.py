@@ -1553,6 +1553,19 @@ records = [r for r in records
 records = [r for r in records
            if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
                    and not re.search(r"플랫폼|시스템", r["product"]))]
+# 제품 이름이 적혀 있어도 산 것이 연수·특강·강사라면 제품 도입이 아니다 — '미리캔버스 활용 교원 역량강화 직무 연수 운영
+# 위탁 용역'은 미리캔버스를 산 게 아니라 미리캔버스를 가르치는 연수를 산 것이다(2026-09-22 사용자). 제품 태그가 있으면
+# 연수 판정을 건너뛰던 것을, 계약명이 연수 자체(운영·실시·용역·강사료·연수비·연수로 끝남)를 가리키고 구매 낱말이 없을 때는
+# 빼도록 한다. 구매 낱말이 있으면(연수용 소프트웨어 구독, 교사 연수 교구, 연수 물품 구입) 제품을 산 것이므로 남긴다.
+TRAIN_SVC = re.compile(r"연수\s*(?:운영|용역|실시|위탁|프로그램|강좌|비|를|에|\(|및|$)|(?:특강|강좌|워크숍|워크샵|연수)\s*(?:용역|경비|비\b|식사|프로그램)|"
+                       r"강사료|강사비|외부\s*강사|강사\s*초청|강사\s*지급|(?:활용|교육|자격취득|교사|교원|학부모|사용자|역량\s*강화|기초|심화)\s*연수"
+                       r"(?!\s*(?:교구|물품|지원|키트|세트|용|포함))|연수\s*\)|특강\s*$|워크숍\s*$|연수\s*$")
+TRAIN_KEEP = re.compile(r"구입|구매|구독|라이선스|라이센스|사용권|이용권|사용료|이용료|계정|시트|연수\s*포함|서비스\s*위탁|사용\s*위탁|구축|설치|"
+                        r"교구|키트|세트|패키지|외\s*\d+\s*종|물품|재료|소모품|준비물|로봇|통합형|교재|다과|기자재|검사")
+_before_train = len(records)
+records = [r for r in records
+           if not (TRAIN_SVC.search(r["product"].rstrip()) and not TRAIN_KEEP.search(r["product"]))]
+print(f"연수·강사 계약 제외(제품명이 있어도): {_before_train - len(records):,}건")
 # 용역 계약인데 계약명이 교육 실행이고 물품 신호가 없으면, 제품군 태그만으로는 도입 근거가 못 된다.
 # (예: '드론 교육', '메타버스 진로체험' — 제품을 산 게 아니라 교육을 산 것)
 EDU_WORD = re.compile(r"교육|연수|캠프|아카데미|특강|강좌|체험|수업")
@@ -2524,7 +2537,13 @@ if os.path.exists("product_origin.csv"):
 # 제품 화면에 따로 놓아 '조달에 안 보인다 = 안 쓴다'는 오해만 막는다.
 _office_buy = {}
 if os.path.exists("office_refined.csv"):
+    _ob_train = 0
     for _r in csv.DictReader(open("office_refined.csv", encoding="utf-8-sig")):
+        # 교육청이 산 것이 연수라면 제품 도입이 아니다 — 학교 기록과 같은 규칙(2026-09-22 사용자, 경북 미리캔버스 교원 연수 위탁 용역)
+        _nm = (_r.get("계약명") or "").rstrip()
+        if TRAIN_SVC.search(_nm) and not TRAIN_KEEP.search(_nm):
+            _ob_train += 1
+            continue
         for _t in (_r.get("태그") or "").split("|"):
             _t = _t.strip()
             if not _t:
@@ -2536,7 +2555,7 @@ if os.path.exists("office_refined.csv"):
     for _t in _office_buy:
         _office_buy[_t].sort(key=lambda x: x["d"], reverse=True)
     print(f"시도교육청 일괄 도입: 제품 {len(_office_buy):,}종 · "
-          f"기록 {sum(len(v) for v in _office_buy.values()):,}건")
+          f"기록 {sum(len(v) for v in _office_buy.values()):,}건 · 연수 계약 제외 {_ob_train}건")
 
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")
