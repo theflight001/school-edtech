@@ -18,10 +18,12 @@ echo "══ 지역 수집 시작 $(date '+%Y-%m-%d %H:%M') — 서버별 동시
 
 # 대전은 2026-09-11 하루에 여러 번 두드린 뒤로 새 세션까지 곧바로 409로 거부한다 — 전남이 막혔을
 # 때와 같은 모양이다. 9월 13일까지는 건드리지 않고, 그 뒤로도 30초 간격·하루 300회로만 받는다.
-if [ "$(date +%Y%m%d)" -ge 20260913 ]; then
+# 9월 13일부터 매일 한 번씩 다시 두드렸지만 9월 23일까지 계속 409다(logs/region_대전.log). 매일 건드리면 차단이
+# 길어질 수 있어 10월 1일까지 아예 쉰다. 그 뒤에 첫 요청 한 번으로 풀렸는지 보고 나서 다시 켠다.
+if [ "$(date +%Y%m%d)" -ge 20261001 ]; then
   ( export EDTECH_SPACING=30 EDTECH_MAXREQ=300; par_run 대전 region_대전 python3 collect_dje.py --office 대전 --years $Y --keyword-file $KF ) &
 else
-  echo "▷ 대전 — 9월 13일까지 쉰다(거부 응답이 이어져 차단 위험)"
+  echo "▷ 대전 — 10월 1일까지 쉰다(9/11부터 409 거부가 이어진다)"
 fi
 par_run 충남 region_충남 python3 collect_dje.py --office 충남 --years $Y --keyword-file $KF &
 par_run 경남 region_경남 python3 collect_gne.py --years $Y --keyword-file $KF &
