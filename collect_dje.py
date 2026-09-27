@@ -66,7 +66,9 @@ def opener():
     return _opener
 
 def req_retry(target, data=None):
-    for wait in [30, 120, 300, None]:
+    # 409는 서버가 세션을 끊은 것이라 곧바로 새 세션으로 다시 물으면 같은 IP에서 세션이 잇따라 생겨 더 의심을 산다.
+    # 5분·15분·30분을 쉬고 나서 새 세션으로 묻는다(2026-09-27 노트북: 첫 요청 뒤 곧바로 409).
+    for wait in [300, 900, 1800, None]:
         try:
             r = urllib.request.Request(target, data=data,
                                        headers={"User-Agent": UA, "Referer": LIST})
