@@ -193,9 +193,9 @@ def main():
                     vendor = r.pop("계약상대자", "") or ""
                     if not vendor and not a.no_vendor and r["_key"]:
                         try:
+                            polite()                       # 상세도 한 요청이다 — 0.3초가 아니라 같은 간격으로(2026-09-27)
                             vendor = vendor_of(*r["_key"])
                             req_n += 1
-                            time.sleep(0.3)
                         except Exception as e:
                             print(f"  상세 실패({e}) — 업체명 없이 저장", flush=True)
                     r.pop("_key", None)
@@ -218,6 +218,8 @@ def main():
                 json.dump(ckpt, cf, ensure_ascii=False)
             os.replace(CKPT + ".tmp", CKPT)
             print(f"[{kw} {year}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
+            # 검색어(칸) 하나를 끝낼 때도 쉰다 — 쪽을 넘길 때만 쉬면 한 쪽짜리 검색어가 이어질 때 요청이 2~6초 간격으로 나간다(2026-09-21)
+            polite()
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
 
