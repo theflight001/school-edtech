@@ -317,7 +317,11 @@ SPECIFIC_RULES = [
     # 보통명사와 겹치는 이름(옥수수·비누·런웨이·리플릿)은 구매 문맥이 함께 있을 때만 잡는다.
     ("오조봇",              r"오조봇|Ozobot"),
     ("네오씽카",            r"네오 ?씽카"),
-    ("비상 옥수수",         r"비상(?:교육)? ?옥수수|(?=.*(?:코스웨어|프로그램|소프트웨어|에듀테크|수학|\bAI\b|이용권|구독|라이선스|라이센스))(?!.*(?:급식|식재료|농산물|간식|찰옥수수|옥수수 ?(?:차|수염|빵|콘|알갱이)))^.*옥수수"),
+    # '수학 동아리 활동용품(옥수수전분)'·'요리수업 물품(팝콘옥수수)'처럼 수학·프로그램이 어디든 있으면 걸리던 느슨한 갈래를
+    # 걷고, 옥수수 바로 옆에 제품 낱말(AI·수학·코스웨어·이용권…)이 붙거나 '비상'이 앞에 올 때만 잡는다(2026-09-28 외부 검증 7건).
+    ("비상 옥수수",         r"^(?!.*(?:전분|모닝롤|팝콘|급식|식재료|농산물|간식|요리|제과|제빵|찰옥수수|옥수수 ?(?:차|수염|빵|콘|알갱이|외)))"
+                           r"(?=.*(?:비상(?:교육)? ?옥수수|옥수수\s*(?:AI|수학|코스웨어|프로그램|이용권|구독|라이선스|라이센스|사용권|사용|이용|계약)|에듀테크\s*옥수수|"
+                           r"(?:AI ?수학|수학 ?AI|AI ?코스웨어|코스웨어)\s*\(?옥수수)).*옥수수"),
     ("Blooket(블루킷)",     r"블루[킷켓]|Blooket"),
     ("수학대왕",            r"수학 ?대왕"),
     ("코스페이시스(CoSpaces)", r"코스페이시스|코스페이스 ?에듀|CoSpaces|딜라이텍스|Delightex"),
@@ -344,7 +348,8 @@ SPECIFIC_RULES = [
     # 다른 제품에 GPT가 붙는 경우가 있어, GPT 단독은 잡지 않는다.
     ("ChatGPT",            # '겟지피티(GetGPT)'는 유한책임회사 워드브릭스의 딴 제품이다 — 에듀집에 따로 등록돼 있다.
                            # 이름이 닮았다고 ChatGPT로 묶으면 안 된다(46건이 그랬다).
-                           r"Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇][\s\-]?지피티|GPT[- ]?[45]|OpenAI"),
+                           # '플라우드노트 ChatGPT AI 녹음기'·'챗GPT AI녹음기'는 녹음기 상품 설명이지 ChatGPT 이용권이 아니다(2026-09-28 외부 검증).
+                           r"(?:Chat[\s\-]?GPT|[챗쳇][\s\-]?GPT|[챗쳇][\s\-]?지피티)(?!\s*AI ?녹음기|\s*녹음기)|GPT[- ]?[45]|OpenAI"),
     # Google AI Plus/Pro/Ultra는 Gemini 구독 요금제 이름이다(구 Gemini Advanced·Google One AI Premium).
     # 요금제 이름으로 산 것도 제품은 Gemini이므로 한 태그로 모은다(2026-09-13).
     ("Gemini",             r"Gemini|제미나이|구글 ?AI ?(?:PRO|프로|Plus|플러스|Ultra|울트라)|"
@@ -531,7 +536,7 @@ SPECIFIC_RULES = [
     ("엠타이니",           r"엠타이니"),
     ("로보마스터",          r"로보마스터|RoboMaster"),
     ("메타퀘스트",          r"메타 ?퀘스트|Meta ?Quest"),
-    ("Canva",              r"\bCanva\b|캔바(?!스)"),   # '캔바스'(화판)·'Miri Canvas'에 걸리던 것을 막는다
+    ("Canva",              r"\bCanva\b|캔바(?!스|책)"),   # '캔바책'은 책(2026-09-28)   # '캔바스'(화판)·'Miri Canvas'에 걸리던 것을 막는다
     # 한글 '피그마'는 사쿠라 피그마 드로잉펜이다(73건 전부). 진짜 Figma 계약은 영문을 함께 적는다
     ("Figma",              r"\bFigma\b"),
     # 미로(MIRO)는 가습기 상표이고 미로 보드게임도 있다(50건).
@@ -743,8 +748,8 @@ BOOK_BUY = re.compile(r"(교재|도서|워크북|문제집|참고서|학습지)\
 # 산 것이 다과·간식·생수인 계약 — 협의회·연수 자리에 낸 먹을거리는 제품 도입이 아니다.
 # (예: '소프트웨어 선도학교 업무협의회 다과 구입', 'AI코스웨어 선정 물품선정위원회 다과비')
 # 다만 '교구 및 다과', '실습재료 외 5종 및 간식'처럼 물건을 함께 산 건은 남긴다.
-REFRESHMENT = re.compile(r"(?:다과|간식|생수|음료수|음료|커피|원두|과자|샌드위치|떡|피자|케이크)"
-                         r"(?:류|비|값)?\s*(?:\([^)]*\)|외 ?\d+ ?[종건개품]?)?\s*(?:등)?\s*"
+REFRESHMENT = re.compile(r"(?:다과|간식|생수|음료수|음료|커피|원두|과자|샌드위치|떡|피자|케이크|빙과)"
+                         r"(?:류|비|값)?\)?\s*(?:\([^)]*\)|외 ?\d+ ?[종건개품]?)?\s*(?:등)?\s*"
                          r"(?:구[입매]|구매|지출|지급|비용|요청|품의|계약)")
 REFRESH_WITH_GOODS = re.compile(r"(?:재료|교구|기기|장비|용품|단말|노트북|태블릿|프린터|SSD|키트|도서)"
                                 r"[^,]{0,12}?(?:및|외 ?\d+ ?종[^,]{0,8}?및)\s*(?:협의회 ?)?"
@@ -756,7 +761,11 @@ REFRESH_WITH_GOODS = re.compile(r"(?:재료|교구|기기|장비|용품|단말|�
 # 현수막·배너·족자는 '구입'만이 아니라 '제작·설치'로도 산다. OPER_GOODS의 뒷낱말을
 # 넓히면 '물품 구입' 전체가 걸려 제품 구매 2,299건을 흔들었다(2026-09-13) — 따로 좁게 둔다.
 BANNER_MADE = re.compile(r"(?:현수막|배너|홍보용품|족자|어깨띠|리플릿|브로슈어)\s*"
-                         r"(?:제작|설치|출력)(?:비|료)?\s*(?:구[입매]|지급|지출|대금|계약)?")
+                         r"(?:(?:제작|설치|출력)(?:비|료)?\s*(?:구[입매]|지급|지출|대금|계약)?|구[입매]\s*(?:제작)?)")   # '현수막 구입 제작'(2026-09-28)
+# 우수 학생 시상·격려품·챌린지 상품은 제품을 산 것이 아니다 — '듀오링고 우수아 시상 상품(젤리)', '마타수학 우수학생 격려품',
+# '리딩앤 챌린지 상품', '해커톤 수상 지출'(2026-09-28 외부 검증)
+AWARD_COST = re.compile(r"(?:시상|수상|격려|우수아?|인증제|챌린지|참여 ?우수자?|영어왕|선정에 따른)[^,()]{0,14}?(?:상품|격려품|시상품|기념품|선물|경품)|"
+                        r"(?:시상|수상|격려품)\s*(?:지출|지급|비)")
 
 MEET_COST = re.compile(r"(?:협의회|회의|간담회|워크숍|워크샵|연수회|위원회)\s*(?:비|용|운영)?\s*"
                        r"(?:지출|지급|구[입매]|비용|경비|대금|실시|용품)|"
@@ -1272,6 +1281,77 @@ def _vendor_of(r):
 
 _office_dup_amt = 0
 _dup_uid = [0]
+# 규칙 패턴 색인 — 서비스 문맥 판정(_service_ctx_off)이 병합 단계에서 쓰므로 여기서 미리 만든다(2026-09-28)
+_RULE_PAT = {}
+for _t, _p in SPECIFIC_RULES:
+    try:
+        _RULE_PAT.setdefault(_t, re.compile(_p))
+    except re.error:
+        pass
+_RULE_PAT_I = {}                    # 업체 이름에 대 볼 때는 대소문자를 가리지 않는다
+for _t, _p in SPECIFIC_RULES:
+    try:
+        _RULE_PAT_I.setdefault(_t, re.compile(_p, re.I))
+    except re.error:
+        pass
+
+OPER_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|사용료|이용료|소프트웨어|플랫폼|S/?W|"
+                       r"계정|콘텐츠|설치|재계약|및 ?물품 ?구[입매]")
+
+# ── 서비스 이름이 사업·활동의 이름으로만 쓰인 기록 ─────────────────────────────────────────
+# '하이러닝 거점교 운영을 위한 기자재 구입(오즈모)', 'AI 펭톡 학습을 위한 헤드셋', '듀오링고 우수아 시상 상품'처럼
+# 무형 서비스의 이름이 사업·행사·활동의 이름일 뿐인 기록에서 그 태그를 뗀다(2026-09-28 외부 검증 — 하이러닝 178건 재분류 풀).
+# 판정: 이름 바로 뒤가 구매 낱말이면 남기고, 바로 뒤가 문맥 낱말(거점교·기반·선도학교·활용·을 위한·우수…)이면 뗀다.
+# 둘 다 아니면 계약명 어딘가에 구매 낱말(OPER_KEEP)이 있으면 남기고, 물품·기자재·협의회·상품 같은 낱말이 이름 뒤에 오면 뗀다.
+# 나라장터·S2B에서 같은 계약을 찾아 교육청 계약명의 제품을 옮겨 붙일 때도 같은 판정을 거친다(갤럭시 탭에 하이러닝이 붙었다).
+SERVICE_TAGS = {
+    "하이러닝", "AI 펭톡", "아이톡톡", "오토아이", "강원아이로", "코드잇", "클래스팅",
+    "클래스카드", "리딩게이트", "리딩앤", "매쓰홀릭T", "마타수학", "알공",
+    "e-NIE", "띵커벨", "젭(ZEP)", "Notion", "Zoom", "Google Workspace", "Canva",
+    "Padlet", "ChatGPT", "Adobe", "북크리에이터(Bookcreator)", "메이저맵", "원아워",
+    "학과계열선정검사", "링스쿨", "Ghost", "부커스", "AI CLASS",    # 인공지능 히어로는 뺐다 — 체험 서비스라 '체험'이 곧 구매다(2026-09-28)
+    "코딩스쿨", "자작자작", "네오쏘코",          # 이지메이커는 뺐다 — 만들기 키트라 '재료'가 곧 제품이다(2026-09-28)
+    # 2026-09-28 외부 검증에서 사업·행사 이름으로 붙은 것이 확인된 서비스
+    "듀오링고", "심스페이스", "유클래스", "클리포(CLIPO)", "투닝", "소프트웨어야 놀자", "퀴즈앤", "DBpia",
+    "Gemini", "Claude", "미리캔버스", "이음AI", "젠스파크", "코스페이시스(CoSpaces)", "엘리스", "클래스툴",
+    "Microsoft Copilot", "스쿨톡", "아이알리미", "e알리미", "리로스쿨", "Snorkl",
+}
+# 구독형 구매 낱말 — 이름 뒤 30자 안에 있으면 그 서비스를 산 것이다('AI(ChatGPT) 활용을 위한 구독 서비스 구입')
+_SVC_BUY_SUB = re.compile(r"구독|사용료|이용료|이용권|사용권|라이선스|라이센스|계정|프로\b|플러스|Plus\b|Pro\b|연간|\d+ ?개월|"
+                          r"솔루션|수업 ?관리|프로그램\s*(?:\([^)]*\))?\s*(?:구입|구매|대여)|CEU|\S*앱\s*구[입매]|서비스|위탁|유지보수|갱신|연장|재계약|"
+                          r"스쿨|Edu\b|Education|Workspace|Team|Business|Enterprise|아카데미\s*라이|소프트웨어|S/?W\b|공동구매|코스웨어|LXP|플랫폼", re.I)
+# 강한 문맥 — 이름 바로 뒤에 오면 뗀다(사업·행사의 이름): '하이러닝 거점교', '듀오링고 우수아 시상', '클래스팅 우수 참여'
+_SVC_CTX_STRONG = re.compile(r"\)?\s*(?:거점교|거점학교|기반|선도학교|연구학교|중점학교|클러스터|우수 ?운영교|시스템 ?활용|"
+                             r"챌린지|인증제|서·?논술형|논술형|우수|전달|연구회|반(?=\s|\)|$)|해커톤)")
+# 중간 문맥 — 이름 뒤에 오면 떼되, 구독형 구매 낱말이 창 안에 있으면 산 것으로 본다('ChatGPT 활용을 위한 구독 서비스 구입')
+_SVC_CTX_MED = re.compile(r"\)?\s*(?:활용|연계|(?:을|를)\s*(?:위한|활용한|통한)|학습을\s*위한|아카데미|캠프|체험|및\s*(?:AI|창의|디지털))")
+# 중간 문맥일 때는 다른 것을 산 흔적(물품·재료·비용·협의회·수업·체험…)이 있어야 뗀다 — '논문검색사이트(DBpia) 활용'은 DBpia를 산 것이다
+_SVC_OTHER = re.compile(r"물품|재료|기자재|비품|장비|용품|준비물|소모품|비용|비\s*지[급출]|협의회|연수|교육|수업|체험|프로그램|운영|만들기|키우기|제작|상품|선물|시상|현수막|크롬북|노트북|태블릿|헤드셋|카메라|스피커")
+# 이름 뒤 어딘가에 오면 산 것은 그 물건·자리다 — 구입·구매가 있어도 뗀다('하이러닝 구축에 필요한 모니터 구입')
+_SVC_CTX_ANY = re.compile(r"협의회|간담회|워크숍|워크샵|공개수업|수업공개|지도안|식사|식비|현수막|판넬|패널|배너|격려품|시상|수상|"
+                          r"기자재|비품|장비|헤드셋|태블릿|노트북(?!\s*LM|엘엠)|모니터|키보드|케이스|스피커|프린터|카메라|"
+                          r"다과|간식|빙과|체험활동|체험비")
+def _service_ctx_off(name, tags):
+    """계약명에서 사업·활동의 이름으로만 쓰인 서비스 태그 목록"""
+    off = []
+    for t in SERVICE_TAGS & set(tags):
+        pat = _RULE_PAT_I.get(t)
+        if not pat:
+            continue
+        ms = list(pat.finditer(name))
+        if not ms:
+            continue
+        afters = [name[m.end():m.end() + 30] for m in ms]      # 이름이 두 번 적혔으면('구글 제미나이 Gemini PRO') 어느 쪽이든 본다
+        if any(_SVC_CTX_STRONG.match(a) for a in afters):
+            off.append(t); continue
+        if any(_SVC_BUY_SUB.search(a) for a in afters):
+            continue
+        if any(_SVC_CTX_MED.match(a) and _SVC_OTHER.search(a) for a in afters):   # 산 것은 이름 뒤에 적힌다 — '운영을 위한 (DBpia) 활용'의 앞쪽 '운영'은 보지 않는다
+            off.append(t); continue
+        m2 = _SVC_CTX_ANY.search(name)
+        if m2 and all(m.start() < m2.start() for m in ms):
+            off.append(t)
+    return off
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     if not os.path.exists(_src):
         continue
@@ -1332,6 +1412,7 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
                     _ot = refine_aidt(tags_of(strip_school(row["계약명"], row["학교명"]), ""),
                                       row["계약명"], row.get("업체명", ""))
                     _osp = [t for t in _ot if t not in GENERIC_SET and t not in _gen]
+                    _osp = [t for t in _osp if t not in _service_ctx_off(row["계약명"], _osp)]   # 사업 이름으로만 쓰인 서비스는 옮기지 않는다(2026-09-28)
                     if _osp:
                         _c["tags"] = sorted((set(_c["tags"]) | set(_osp)) - set(_gen) - GENERIC_SET
                                             | {t for t in _c["tags"] if t in GENERIC_SET and not
@@ -1397,18 +1478,6 @@ print(f"금액·업체로 찾은 교육청 계약공개 중복: {_office_dup_amt
 # 하위 이름 안에 상위 이름이 통째로 들어 있어서 생기는 일이지 두 제품을 산 것이 아니다.
 # 다만 '리딩앤과 리딩앤스쿨 구입'처럼 진짜로 둘 다 적힌 계약도 있으므로,
 # 하위 이름을 지우고도 상위 규칙이 여전히 걸리면 그대로 둔다.
-_RULE_PAT = {}
-for _t, _p in SPECIFIC_RULES:
-    try:
-        _RULE_PAT.setdefault(_t, re.compile(_p))
-    except re.error:
-        pass
-_RULE_PAT_I = {}                    # 업체 이름에 대 볼 때는 대소문자를 가리지 않는다
-for _t, _p in SPECIFIC_RULES:
-    try:
-        _RULE_PAT_I.setdefault(_t, re.compile(_p, re.I))
-    except re.error:
-        pass
 _ntag = lambda x: re.sub(r"[\s·\-_()]+", "", x).lower()
 _parents = {}                       # 하위 태그 → 이름이 그 안에 든 상위 태그들
 for _b in _RULE_PAT:
@@ -1506,33 +1575,38 @@ OPER_GOODS = re.compile(
     # 행사 홍보물 — '디지털교과서 연구학교 운영보고회 현수막 및 배너 구입'처럼 산 것은 현수막이고
     # 제품 이름은 행사 이름일 뿐이다(2026-09-12). '패널'은 전자칠판 부품을 가리켜 넣지 않는다.
     r"현수막|배너|홍보용품|기념품|시상품|트로피|족자|어깨띠)")
-OPER_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|사용료|이용료|소프트웨어|플랫폼|S/?W|"
-                       r"계정|콘텐츠|설치|재계약|및 ?물품 ?구[입매]")
-SERVICE_TAGS = {
-    "하이러닝", "AI 펭톡", "아이톡톡", "오토아이", "강원아이로", "코드잇", "클래스팅",
-    "클래스카드", "리딩게이트", "리딩앤", "매쓰홀릭T", "마타수학", "알공",
-    "e-NIE", "띵커벨", "젭(ZEP)", "Notion", "Zoom", "Google Workspace", "Canva",
-    "Padlet", "ChatGPT", "Adobe", "북크리에이터(Bookcreator)", "메이저맵", "원아워",
-    "학과계열선정검사", "링스쿨", "Ghost", "부커스", "AI CLASS", "인공지능 히어로",
-    "코딩스쿨", "자작자작", "네오쏘코", "이지메이커",
-}
-_oper = 0
+_oper, _oper_drop = 0, []
 for r in records:
     hit = SERVICE_TAGS & set(r["tags"])
     if not hit:
         continue
     name = r["product"]
+    off = set()
     g = OPER_GOODS.search(name)
-    if not g or OPER_KEEP.search(name):
-        continue
-    cut = g.end(1)
-    off = [t for t in hit
-           if t in _RULE_PAT_I
-           and (ms := list(_RULE_PAT_I[t].finditer(name))) and all(m.start() < cut for m in ms)]
+    if g and not OPER_KEEP.search(name):
+        cut = g.end(1)
+        off |= {t for t in hit
+                if t in _RULE_PAT_I
+                and (ms := list(_RULE_PAT_I[t].finditer(name))) and all(m.start() < cut for m in ms)}
+    off |= set(_service_ctx_off(name, r["tags"]))
     if off:
-        r["tags"] = sorted(set(r["tags"]) - set(off))
+        r["tags"] = sorted(set(r["tags"]) - off)
         _oper += 1
-print(f"활동 이름일 뿐인 제품 태그 뗌: {_oper:,}건")
+        if not r["tags"]:
+            # '하이러닝 기반 선도학교 생성형 AI 구독'처럼 산 것이 소프트웨어이긴 한 기록은 제품군 태그로 되돌린다
+            _gen = [t for t in refine_aidt(tags_of(strip_school(name, r["school"]), ""), name, r.get("vendor") or "")
+                    if t in GENERIC_SET or t in ("SW·플랫폼", "코스웨어(기타)", "AI·디지털 교육자료")]
+            _gen = [t for t in _gen if t not in off]
+            if not _gen and re.search(r"에듀테크|구독권|소프트웨어|프로그램\s*구[입매]|앱\s*구[입매]|AI\s*(?:도구|구독)", name):
+                _gen = ["SW·플랫폼"]          # '하이러닝 거점교 에듀테크 구입 계약(Grok)' — 무엇인지 모르는 소프트웨어를 산 기록
+            if _gen:                          # 기기·소프트웨어 같은 제품군이 남으면 그 기록으로 둔다(태블릿·모니터를 산 것은 기기 기록이다)
+                r["tags"] = sorted(set(_gen))
+            else:
+                _oper_drop.append(r)      # 남는 태그가 없으면 서비스 이름만 빌린 부대 지출이다 — 기록째 뺀다
+if _oper_drop:
+    _ids = {id(x) for x in _oper_drop}
+    records = [r for r in records if id(r) not in _ids]
+print(f"활동 이름일 뿐인 제품 태그 뗌: {_oper:,}건 (그중 {len(_oper_drop)}건은 남는 태그가 없어 기록째 제외)")
 
 # 행사·캠프 용역 등 비제품 계약 제외
 before = len(records)
@@ -1557,7 +1631,7 @@ records = [r for r in records
 # 위탁 용역'은 미리캔버스를 산 게 아니라 미리캔버스를 가르치는 연수를 산 것이다(2026-09-22 사용자). 제품 태그가 있으면
 # 연수 판정을 건너뛰던 것을, 계약명이 연수 자체(운영·실시·용역·강사료·연수비·연수로 끝남)를 가리키고 구매 낱말이 없을 때는
 # 빼도록 한다. 구매 낱말이 있으면(연수용 소프트웨어 구독, 교사 연수 교구, 연수 물품 구입) 제품을 산 것이므로 남긴다.
-TRAIN_SVC = re.compile(r"연수\s*(?:운영|용역|실시|위탁|프로그램|강좌|비|를|에|\(|및|$)|(?:특강|강좌|워크숍|워크샵|연수)\s*(?:용역|경비|비\b|식사|프로그램)|"
+TRAIN_SVC = re.compile(r"찾아오는\s*체험|체험활동\s*(?:\([^)]*\))?\s*비|연수\s*(?:운영|용역|실시|위탁|프로그램|강좌|비|를|에|\(|및|$)|(?:특강|강좌|워크숍|워크샵|연수)\s*(?:용역|경비|비\b|식사|프로그램)|"
                        r"강사료|강사비|외부\s*강사|강사\s*초청|강사\s*지급|(?:활용|교육|자격취득|교사|교원|학부모|사용자|역량\s*강화|기초|심화)\s*연수"
                        r"(?!\s*(?:교구|물품|지원|키트|세트|용|포함))|연수\s*\)|특강\s*$|워크숍\s*$|연수\s*$")
 TRAIN_KEEP = re.compile(r"구입|구매|구독|라이선스|라이센스|사용권|이용권|사용료|이용료|계정|시트|연수\s*포함|서비스\s*위탁|사용\s*위탁|구축|설치|"
@@ -1621,7 +1695,7 @@ print(f"계약일 없는 기록의 연도를 계약명에서 채움: {_yr_filled
 # '하이러닝 소프트웨어 구독 및 도서 구입비'처럼 제품 자체를 산 기록이기 때문이다.
 BOOK_ONLY = re.compile(r"(?:연구도서|도서|문헌|서적|교재|워크북|문제집|참고서|학습지)"
                        r"\s*(?:\([^)]*\))?\s*(?:외 ?\d+ ?[종권])?\s*"
-                       r"(?:구[입매]|구매|납품|대금|지급|지출|계약|비 ?지급)|"
+                       r"(?:구[입매]|구매|납품|대금|지급|지출|계약|비\s*(?:\([^)]*\))?\s*(?:지급|대금|지출|확정))|"
                        r"외 ?\d+ ?권|^\[도서\]")
 # 도서 구매라도 태그를 그대로 두는 제품 — 사람이 하나씩 판정했다(2026-09-13).
 # 전자책·온라인 독서·학술DB처럼 '도서'라는 말이 붙어도 서비스 자체가 온라인인 것,
@@ -1640,10 +1714,10 @@ BOOK_TAG_KEEP = {
     "클래스카드", "토도한글", "젭(ZEP)", "플랭스쿨", "투닝",       # 온라인 학습 서비스
 }
 
-BOOK_KEEP = re.compile(r"교구|키트|기자재|본체|장비|라이선스|라이센스|구독|이용권|이용료|사용료|"
+BOOK_KEEP = re.compile(r"교구|키트(?!\s*전용)|기자재|본체|장비|라이선스|라이센스|구독|이용권|이용료|사용료|"
                        r"계정|플랫폼|소프트웨어|S/?W\b|태블릿|노트북|세트|"
                        # '마이크로비트 및 교재 구입'처럼 제품과 교재를 함께 산 것은 제품 구매다
-                       r"및 ?(?:교재|도서)|(?:교재|도서) ?및", re.I)
+                       r"및 ?(?:교재|도서)(?!\s*(?:연계|활용))|(?:교재|도서) ?및", re.I)   # 'DBpia 및 도서 연계 …'는 책(2026-09-28)
 # BOOK_ONLY는 '교재 구입'처럼 뒤에 구매 동사가 붙을 때만 잡아 '모두의 마이크로비트 교재',
 # '핑퐁로봇 엔트리 코딩 (교재)', '챗GPT 교사 마스터플랜'이 제품 도입으로 남았다(2026-09-14 전수검사).
 # 책이라는 말이 있고 본체·이용권을 함께 산 신호가 없으면 책을 산 것으로 본다.
@@ -1664,14 +1738,18 @@ _book_cut = 0
 _book_drop = []
 # 'SW 수업용 도서(챗GPT 교육혁명 외) 구입'은 SW라는 말이 있어도 책이다 — 수업 이름이 SW이지 산 것이 아니다.
 # 괄호 안이 책 제목인 '도서(…)'도 마찬가지. 다만 '도서 구입 및 GPT5 구독료'처럼 구독을 함께 산 것은 남긴다(2026-09-18 외부 검증).
-_BOOK_TITLED = re.compile(r"(?:수업|교육)용\s*도서|도서\s*\(")
+_BOOK_TITLED = re.compile(r"(?:수업|교육)용\s*도서|도서\s*\(|(?:교재|도서)\s*구[입매]\s*\(")   # '교재 구입(…코딩키트)'의 괄호 안은 책 제목(2026-09-28)
 for _r in records:
     if not _book_only(_r["product"]):
         continue
     if BOOK_KEEP.search(_r["product"]) and not (_BOOK_TITLED.search(_r["product"])
                                              and not re.search(r"구독|라이선스|라이센스|사용권|이용권", _r["product"])):
         continue
-    _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or t in BOOK_TAG_KEEP]
+    # 'DBpia 및 도서 연계 주제탐구 … 도서 구입'처럼 온라인 서비스 이름이 책 구매의 문맥으로만 쓰인 것은 책이다(2026-09-28)
+    _svc_ctx = re.search(r"(?:및|연계|활용|관련)\s*(?:독서|도서)|연계\s*주제탐구", _r["product"])
+    # 로봇·교구는 본체 낱말(코어·세트·키트·교구·팩)이 없이 '교재'로 끝나면 책이다('물품 구입(스파이크 프라임 교재)', 2026-09-28)
+    _book_end = re.search(r"(?:교재|도서)\s*(?:\)|$)", _r["product"]) and not re.search(r"코어|세트|키트|교구|본체|팩|로봇|보드", _r["product"])
+    _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or (t in BOOK_TAG_KEEP and not _svc_ctx and not _book_end)]
     if len(_keep) != len(_r["tags"]):
         _book_cut += 1
         _r["tags"] = _keep
@@ -1687,7 +1765,7 @@ if _book_drop:
 # 협의회·회의 부대 지출에서 제품 태그를 뗀다 — 남는 태그가 없으면 기록째 뺀다(도서와 같은 처리)
 _meet_cut, _meet_drop = 0, []
 for _r in records:
-    if not (MEET_COST.search(_r["product"]) or BANNER_MADE.search(_r["product"])) \
+    if not (MEET_COST.search(_r["product"]) or BANNER_MADE.search(_r["product"]) or AWARD_COST.search(_r["product"])) \
             or MEET_KEEP.search(_r["product"]):
         continue
     _keep = [t for t in _r["tags"] if t in BOOK_GENERIC]
@@ -2025,7 +2103,9 @@ for r in records:
     r["maker"] = name
     _mk_n += 1
     _mk_companies.add(name)
-    if tag and not [t for t in r["tags"] if t not in BOOK_GENERIC]:
+    # 판매 업체가 곧 제품인 회사라도, 산 것이 교재·다과·상품이면 제품 도입이 아니다('창신초 방과후 컴퓨터코딩 교재 구매 / 이지에듀', 2026-09-28)
+    if tag and not [t for t in r["tags"] if t not in BOOK_GENERIC] \
+            and not (_book_only(r["product"]) or REFRESHMENT.search(r["product"]) or AWARD_COST.search(r["product"])):
         r["tags"] = sorted((set(r["tags"]) | {tag}) - _GENERIC_SW)
         r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체명이 제품명({tag})"
         _mk_tag += 1
@@ -2105,6 +2185,7 @@ for r in records:
         _auto_sp = [t for t in a2["tags"] if t not in BOOK_GENERIC]
         if len(_seed_sp) != 1 or _auto_sp:
             gained = []
+        gained = [t for t in gained if t not in _service_ctx_off(r["product"], gained)]   # 씨앗의 제품이 사업 이름일 뿐이면 옮기지 않는다(2026-09-28)
         if gained:
             a2["tags"] = sorted((set(a2["tags"]) | set(gained)) - {"SW·플랫폼", "코스웨어"})
             a2["note"] = (a2["note"] + " · " if a2.get("note") else "") + "제품 확인 완료"
