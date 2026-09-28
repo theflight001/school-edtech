@@ -31,7 +31,8 @@ par_run 경남 region_경남 python3 collect_gne.py --years $Y --keyword-file $K
 par_run 강원 region_강원 python3 collect_gwe.py --keyword-file $KF --refresh &
 par_run 광주 region_광주 python3 collect_gen.py --years $Y --keyword-file $KF &
 par_run 울산 region_울산 python3 collect_use.py --keyword-file $KF &
-par_run 대구 region_대구 python3 collect_dge.py --keyword-file $KF &
+# 대구는 2026-09-28 전수 스윕(collect_dge_sweep.py)으로 81개월을 다 받았다 — 검색어 방식 보충은 더 필요 없다. 월간 갱신(update_monthly.sh)이 새 달을 받는다.
+# par_run 대구 region_대구 python3 collect_dge.py --keyword-file $KF &
 
 wait
 echo "══ 이번 몫 끝 $(date '+%Y-%m-%d %H:%M')"
