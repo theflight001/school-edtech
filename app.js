@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260928a";
+  s.src = "/data_detail.js?b=20260929a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260928a";
+    s2.src = "/data_detail_old.js?b=20260929a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260928a";
+  s.src = "/data_old.js?b=20260929a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1076,8 +1076,13 @@ function sim(a, b) {
 // 이름으로만 고르면 서울 동북초와 전북 동북초의 기록이 한 화면에 섞여 '기록 94건'이 된다.
 // 학교코드를 알면 코드로 고르고, 모르면 어느 학교인지 먼저 고르게 한다.
 function schoolView(name, code) {
-  let all = code ? R.filter(r => r.schoolCode === code) : R.filter(r => r.school === name);
-  if (!all.length) {
+  const pick = rs => code ? rs.filter(r => r.schoolCode === code) : rs.filter(r => r.school === name);
+  const allR = pick(R);
+  // 목록 화면과 같은 조건(조사 기간·지역·'미확인 제품 포함')을 상세에도 적용한다 — 목록 187건, 상세 268건처럼
+  // 어긋나 보였다(2026-09-28 외부 학교 검증). 조건 밖 기록 수는 따로 적는다.
+  let all = pick(baseRecs());
+  if (SCOPE === "product") all = all.filter(hasProduct);
+  if (!allR.length) {
     // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
     const old = R.find(r => r.origSchool === name);
     if (old) return schoolView(old.school);
@@ -1085,10 +1090,11 @@ function schoolView(name, code) {
     return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
   }
   if (!code) {
-    const codes = uniq(all.filter(r => r.schoolCode).map(r => r.schoolCode));
+    const codes = uniq(allR.filter(r => r.schoolCode).map(r => r.schoolCode));
     if (codes.length > 1) return sameNameView(name, codes);
   }
-  const info = fillDetail([all[0]])[0];
+  const info = fillDetail([allR[0]])[0];
+  const outN = allR.length - all.length;
   // 기록에 나온 순서대로 두면 기준이 없다 — 제품을 앞에, 제품군을 뒤에 두고
   // 그 안에서는 이 학교의 기록이 많은 것부터 보인다.
   const tagN = new Map();
@@ -1098,13 +1104,13 @@ function schoolView(name, code) {
     return ga - gb || tagN.get(b) - tagN.get(a) || tagName(a).localeCompare(tagName(b), "ko");
   });
   // 개명 전 이름으로 계약된 기록 — 어느 이름으로 몇 건인지 밝힌다
-  const oldNames = count(all.filter(r => r.origSchool), r => r.origSchool);
+  const oldNames = count(allR.filter(r => r.origSchool), r => r.origSchool);
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
   const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
-      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건
+      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}
         ${OLD_STATE === "done" ? "" : `<div class="conf"><a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a></div>`}
         ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
@@ -2024,7 +2030,7 @@ function modeToggle() {
 function mapFromRecs(recs) {
   const by = new Map(); let lost = 0;
   for (const r of recs) {
-    if (r.dup) continue;
+    if (!isCounted(r)) continue;                       // 도입 통계와 같은 기준 — 중복·입찰 공고는 세지 않는다(2026-09-28)
     const s = r.schoolCode && idxByCode.get(r.schoolCode);
     if (!s) { lost++; continue; }
     const e = by.get(s) || {k: 0, name: r.school};
@@ -2095,7 +2101,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260928a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260929a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };

@@ -8,6 +8,8 @@ MASTER = "school_master.json"
 
 # 개명 확인된 학교 별칭 (DB 표기 → NEIS 현재 교명). NEIS 대조로 확정된 것만 넣을 것.
 ALIAS = {
+    # 같은 계약이 다른 표기로 두 번 실리던 것(2026-09-28 외부 학교 검증)
+    "서울사대부설초등학교": "서울대학교사범대학부설초등학교", "연평초중고등학교": "연평고등학교",
     "한국과학영재학교(KSA)": "한국과학영재학교",
     "미림여자정보과학고등학교": "미림마이스터고등학교",
     "부산자동차고등학교": "부산자동차마이스터고등학교",
@@ -400,8 +402,8 @@ SPECIFIC_RULES = [
     ("Notion",             r"노션|Notion"),
         # ZOOM은 오디오 장비 상표이기도 하다 — 녹음기·믹서·렌즈가 걸렸다(21건)
         # '줌 라이선스'·'줌 X 체더스'가 안 잡혔다(14건)
-    ("Zoom",                r"(?<!Air )(?<!에어 )(?<!매빅2 줌 )(?<!Mavic2 )(?<![A-Za-z])Zoom(?![A-Za-z])(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
-                            r"(?<!닥)줌\s*(?:유료|연간|1년|정품)?\s*(?:프로|라이선스|라이센스|미팅|회의|계정|구독|사용료)(?!.*(?:레코더|녹음|믹서|렌즈|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
+    ("Zoom",                r"(?<!Air )(?<!에어 )(?<!매빅2 줌 )(?<!Mavic2 )(?<![A-Za-z])Zoom(?![A-Za-z])(?!.*(?:레코더|녹음|믹서|렌즈|카메라|케이블|헤드폰|헤드셋|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
+                            r"(?<!닥)줌\s*(?:유료|연간|1년|정품)?\s*(?:프로|라이선스|라이센스|미팅|회의|계정|구독|사용료)(?!.*(?:레코더|녹음|믹서|렌즈|카메라|케이블|헤드폰|헤드셋|마이크|H\d|매빅|Mavic|드론|현미경|쌍안경|스파이크|나이키|Nike|Maxfly|크로마키|스크린|웹캠|웹 ?카메라|화상 ?카메라|헤드셋|이어폰|마우스|캡[쳐처]보드|허브|LIGHT|조명|LiveTrak|Live ?Trak|수리|장비 ?구[입매]|카메라 ?연결|회의용|회의 ?진행))|"
                             r"줌\s?X\s?체더스"),
     ("미리캔버스",          r"미리캔버스"),
     ("Padlet",             r"Padlet|패들렛"),
@@ -560,7 +562,7 @@ SPECIFIC_RULES = [
     ("클립스튜디오",          r"클립 ?스튜디오|Clip ?Studio"),
     ("쿨메신저",             r"쿨메신저|Cool ?Messenger"),
     ("하드보안관",            r"하드보안관"),
-    ("리딩앤",               r"리딩앤(?!드)|Reading& ?"),
+    ("리딩앤",               r"리딩앤(?!드|석세스|리딩|파닉스)|Reading& ?"),   # 리딩앤석세스·리딩앤리딩·영어리딩앤파닉스는 활동 이름(2026-09-28)
     # 네프론은 콩팥의 단위이기도 하다 — 생물 실험 키트·모형이 로봇으로 잡혔다(57건).
     ("네프론",               r"(?!.*(?:모형|사구체|콩팥|신장|생물|해부|인체|과학 ?교구|현미경|"
                              r"원리|만들기|구조|실험|관찰))^.*(?:네프론|Nephron)"),
@@ -721,6 +723,9 @@ AIDT_ACCESSORY = re.compile(r"부속품|부속 ?물품|활용 ?물품|태블릿|
 AIDT_TAG = "AI·디지털 교육자료"
 
 def refine_aidt(tags, name, vendor):
+    # '플라우드노트 ChatGPT AI 블루투스 장시간 녹음기'는 녹음기다 — 어순이 여러 가지라 규칙이 아니라 여기서 뗀다(2026-09-28)
+    if "ChatGPT" in tags and re.search(r"녹음기|보이스\s*레코더|플라우드|PLAUD", name or "", re.I):
+        tags = [("기기(PC·태블릿·전자칠판 등)" if t == "ChatGPT" else t) for t in tags]
     if AIDT_TAG not in tags:
         return tags
     if AIDT_ACCESSORY.search(name or ""):
@@ -760,8 +765,9 @@ REFRESH_WITH_GOODS = re.compile(r"(?:재료|교구|기기|장비|용품|단말|�
 # 제품을 함께 산 것은 남긴다 — '네오봇 에듀 및 사무용품 구입', '상품(와콤PTH-460) 구입'.
 # 현수막·배너·족자는 '구입'만이 아니라 '제작·설치'로도 산다. OPER_GOODS의 뒷낱말을
 # 넓히면 '물품 구입' 전체가 걸려 제품 구매 2,299건을 흔들었다(2026-09-13) — 따로 좁게 둔다.
-BANNER_MADE = re.compile(r"(?:현수막|배너|홍보용품|족자|어깨띠|리플릿|브로슈어)\s*"
-                         r"(?:(?:제작|설치|출력)(?:비|료)?\s*(?:구[입매]|지급|지출|대금|계약)?|구[입매]\s*(?:제작)?)")   # '현수막 구입 제작'(2026-09-28)
+BANNER_MADE = re.compile(r"(?:현수막|배너|홍보용품|족자|어깨띠|리플릿|브로슈어)\s*(?:외\s*\d+\s*종)?\s*"
+                         r"(?:(?:제작|설치|출력)(?:비|료)?\s*(?:구[입매]|지급|지출|대금|계약)?|구[입매]\s*(?:제작)?)|"
+                         r"물품\s*구[입매]\s*\((?:현수막|배너)\)")   # '현수막 구입 제작'(2026-09-28)
 # 우수 학생 시상·격려품·챌린지 상품은 제품을 산 것이 아니다 — '듀오링고 우수아 시상 상품(젤리)', '마타수학 우수학생 격려품',
 # '리딩앤 챌린지 상품', '해커톤 수상 지출'(2026-09-28 외부 검증)
 AWARD_COST = re.compile(r"(?:시상|수상|격려|우수아?|인증제|챌린지|참여 ?우수자?|영어왕|선정에 따른)[^,()]{0,14}?(?:상품|격려품|시상품|기념품|선물|경품)|"
@@ -770,10 +776,10 @@ AWARD_COST = re.compile(r"(?:시상|수상|격려|우수아?|인증제|챌린지
 MEET_COST = re.compile(r"(?:협의회|회의|간담회|워크숍|워크샵|연수회|위원회)\s*(?:비|용|운영)?\s*"
                        r"(?:지출|지급|구[입매]|비용|경비|대금|실시|용품)|"
                        r"회의비|간담회비|협의회비|"
-                       r"(?:학생|교직원|교사)\s*식[비대]|식비 ?지[급출]|"
+                       r"(?:학생|교직원|교사)\s*식[비대]|식비 ?지[급출]|식사비|식대|"
                        r"사무용품\s*구[입매]")
 MEET_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|이용료|사용료|계정|플랫폼 ?구[입매]|"
-                       r"소프트웨어 ?구[입매]|태블릿|노트북|전자칠판|로봇|키트|교구|"
+                       r"소프트웨어 ?구[입매]|(?:태블릿|노트북|전자칠판|로봇|키트|교구)\s*(?:구[입매]|및|외)|"
                        r"및 ?사무용품|사무용품 ?및", re.I)
 
 EXCLUDE_WORK = re.compile(r"공사\s*(?:비|대금|계약|건)?\s*$|공사\s*\(?[^)]{0,12}\)?\s*(?:계약|입찰|발주)\s*$")
@@ -1090,13 +1096,61 @@ def reattribute(row):
         row["급별"], row["시도"] = cands[0]["level"], cands[0]["sido"]
     return row
 
+
+# 계약명에 다른 학교의 온전한 이름이 적혀 있으면 그 학교의 계약이다 — '2026학년도 대구금포초등학교 클래스팅 …'이
+# 대구하빈초 명의로, '전주해성고등학교 Windows 11 설치'가 거제 해성고로, '용인초당초등학교 … 물품'이 안산 초당초로
+# 실렸다(2026-09-28 외부 학교 검증). 조달 명의 학교는 _원학교명으로 남긴다. 지역 접두어만 붙은 이름('전주'+'해성고등학교')은
+# 시도가 달라도 옮기고, 그 밖에는 같은 시도에 하나뿐일 때만 옮긴다. 자기 이름이 따로 적혀 있거나 학교가 둘 이상 적혔으면 손대지 않는다.
+_TITLE_FULL = re.compile(r"([가-힣]{2,}(?:초등학교|중학교|고등학교))")
+def title_reattr(row):
+    me, title = (row.get("학교명") or "").strip(), row.get("계약명") or ""
+    if not me or not title:
+        return row
+    names = [n for n in dict.fromkeys(_TITLE_FULL.findall(title)) if n != me]
+    if len(names) != 1 or re.search(r"(?<![가-힣])" + re.escape(me), title):
+        return row
+    x = names[0]
+    cands = master_by_name.get(x, [])
+    if not cands:
+        return row
+    sido = row.get("시도") or ""
+    pick = None
+    if len(cands) == 1 and (cands[0]["sido"] == sido or not sido or x.endswith(me)):
+        pick = cands[0]
+    elif len(cands) > 1:
+        same = [c for c in cands if c["sido"] == sido]
+        pick = same[0] if len(same) == 1 else None
+    if not pick:
+        return row
+    row = dict(row)
+    row["_원학교명"] = me
+    row["학교명"], row["학교코드"], row["급별"], row["시도"] = x, pick["code"], pick["level"], pick["sido"]
+    return row
+
+# 같은 계약번호가 '서울공덕초등학교'와 '공덕초등학교'처럼 이름만 다르게 두 번 실리던 것(11쌍) — 접두어만 다른 이름이면
+# 한 건으로 본다. 코드가 있는 행을 먼저 처리해 그쪽이 남는다.
+_ctrt_names = collections.defaultdict(list)
+def ctrt_variant_seen(row):
+    no, me = (row.get("계약번호") or "").strip(), (row.get("학교명") or "").strip()
+    if not no or not me:
+        return False
+    for other in _ctrt_names[no]:
+        if other != me and (other.endswith(me) or me.endswith(other)):
+            return True
+    _ctrt_names[no].append(me)
+    return False
+def coded_first(rows, fn):
+    out = [fn(r) for r in rows]
+    out.sort(key=lambda r: 0 if r.get("학교코드") else 1)
+    return out
+
 pilot_count = 0
 seen_pilot = set()
 for path in sorted(glob.glob("refined_*.csv")):
-    for row in csv.DictReader(open(path, encoding="utf-8-sig")):
-        row = resolve_school(reattribute(row))
+    for row in coded_first(csv.DictReader(open(path, encoding="utf-8-sig")),
+                           lambda r: title_reattr(resolve_school(reattribute(r)))):
         key = (row["계약번호"], row["학교명"])
-        if key in seen_pilot:
+        if key in seen_pilot or ctrt_variant_seen(row):
             continue
         seen_pilot.add(key)
         m = master_by_code.get(row["학교코드"])
@@ -1169,13 +1223,12 @@ s2b_count, s2b_dup = 0, 0
 for _s2b_src, _s2b_label, _s2b_idbase in [("s2b_refined.csv", "S2B 학교장터", 200000),
                                           ("s2b_bid_refined.csv", "S2B 학교장터(입찰)", 1850000)]:
     _s2b_n0 = s2b_count
-    for row in (csv.DictReader(open(_s2b_src, encoding="utf-8-sig")) if os.path.exists(_s2b_src) else []):
+    for row in coded_first(csv.DictReader(open(_s2b_src, encoding="utf-8-sig")) if os.path.exists(_s2b_src) else [],
+                           lambda r: title_reattr(r if r.get("학교코드") else resolve_school(r))):
         _bid_stage = (row.get("계약구분") or "")            # '입찰(계약)'·'입찰(낙찰)'·''(수의계약)
         _s2b_kind = ("입찰 낙찰" if "낙찰" in _bid_stage else "입찰 계약") if _bid_stage.startswith("입찰") else "수의계약"
-        if not row.get("학교코드"):
-            row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
         key = (row["계약번호"], row["학교명"])
-        if key in seen_pilot:
+        if key in seen_pilot or ctrt_variant_seen(row):
             continue
         seen_pilot.add(key)
         ym = int(row["계약일"][:7].replace("-", "")) if row.get("계약일") and len(row["계약일"]) >= 7 else None
@@ -1310,18 +1363,20 @@ SERVICE_TAGS = {
     "e-NIE", "띵커벨", "젭(ZEP)", "Notion", "Zoom", "Google Workspace", "Canva",
     "Padlet", "ChatGPT", "Adobe", "북크리에이터(Bookcreator)", "메이저맵", "원아워",
     "학과계열선정검사", "링스쿨", "Ghost", "부커스", "AI CLASS",    # 인공지능 히어로는 뺐다 — 체험 서비스라 '체험'이 곧 구매다(2026-09-28)
-    "코딩스쿨", "자작자작", "네오쏘코",          # 이지메이커는 뺐다 — 만들기 키트라 '재료'가 곧 제품이다(2026-09-28)
+    "코딩스쿨",          # 이지메이커·네오쏘코·자작자작은 뺐다 — 만질 수 있는 교구라 '교구·재료'가 곧 제품이다(2026-09-28/29)
     # 2026-09-28 외부 검증에서 사업·행사 이름으로 붙은 것이 확인된 서비스
     "듀오링고", "심스페이스", "유클래스", "클리포(CLIPO)", "투닝", "소프트웨어야 놀자", "퀴즈앤", "DBpia",
     "Gemini", "Claude", "미리캔버스", "이음AI", "젠스파크", "코스페이시스(CoSpaces)", "엘리스", "클래스툴",
-    "Microsoft Copilot", "스쿨톡", "아이알리미", "e알리미", "리로스쿨", "Snorkl",
-}
+    "Microsoft Copilot", "스쿨톡", "아이알리미", "e알리미", "리로스쿨", "Snorkl", "Google Colab", "이지에듀",
+    # AI·디지털 교육자료(AIDT) — '전문적 학습공동체(디지털교과서) 교구 및 도서 구입'은 교재를 산 것(2026-09-28 학교 검증)
+    "AI·디지털 교육자료",
+} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 # 구독형 구매 낱말 — 이름 뒤 30자 안에 있으면 그 서비스를 산 것이다('AI(ChatGPT) 활용을 위한 구독 서비스 구입')
 _SVC_BUY_SUB = re.compile(r"구독|사용료|이용료|이용권|사용권|라이선스|라이센스|계정|프로\b|플러스|Plus\b|Pro\b|연간|\d+ ?개월|"
                           r"솔루션|수업 ?관리|프로그램\s*(?:\([^)]*\))?\s*(?:구입|구매|대여)|CEU|\S*앱\s*구[입매]|서비스|위탁|유지보수|갱신|연장|재계약|"
                           r"스쿨|Edu\b|Education|Workspace|Team|Business|Enterprise|아카데미\s*라이|소프트웨어|S/?W\b|공동구매|코스웨어|LXP|플랫폼", re.I)
 # 강한 문맥 — 이름 바로 뒤에 오면 뗀다(사업·행사의 이름): '하이러닝 거점교', '듀오링고 우수아 시상', '클래스팅 우수 참여'
-_SVC_CTX_STRONG = re.compile(r"\)?\s*(?:거점교|거점학교|기반|선도학교|연구학교|중점학교|클러스터|우수 ?운영교|시스템 ?활용|"
+_SVC_CTX_STRONG = re.compile(r"\)?\s*(?:AI\s*)?(?:\d+\s*월\s*)?(?:거점교|거점학교|기반|선도학교|연구학교|중점학교|클러스터|우수 ?운영교|시스템 ?활용|"
                              r"챌린지|인증제|서·?논술형|논술형|우수|전달|연구회|반(?=\s|\)|$)|해커톤)")
 # 중간 문맥 — 이름 뒤에 오면 떼되, 구독형 구매 낱말이 창 안에 있으면 산 것으로 본다('ChatGPT 활용을 위한 구독 서비스 구입')
 _SVC_CTX_MED = re.compile(r"\)?\s*(?:활용|연계|(?:을|를)\s*(?:위한|활용한|통한)|학습을\s*위한|아카데미|캠프|체험|및\s*(?:AI|창의|디지털))")
@@ -1330,21 +1385,25 @@ _SVC_OTHER = re.compile(r"물품|재료|기자재|비품|장비|용품|준비물
 # 이름 뒤 어딘가에 오면 산 것은 그 물건·자리다 — 구입·구매가 있어도 뗀다('하이러닝 구축에 필요한 모니터 구입')
 _SVC_CTX_ANY = re.compile(r"협의회|간담회|워크숍|워크샵|공개수업|수업공개|지도안|식사|식비|현수막|판넬|패널|배너|격려품|시상|수상|"
                           r"기자재|비품|장비|헤드셋|태블릿|노트북(?!\s*LM|엘엠)|모니터|키보드|케이스|스피커|프린터|카메라|"
+                          r"거치대|프로젝터|충전기|케이블|충전함|단말기|교구|(?:재료|교재)\s*및\s*도서|연수|교육비|교재비|재료비|교구비|수강료|"
                           r"다과|간식|빙과|체험활동|체험비")
 def _service_ctx_off(name, tags):
     """계약명에서 사업·활동의 이름으로만 쓰인 서비스 태그 목록"""
     off = []
     for t in SERVICE_TAGS & set(tags):
         pat = _RULE_PAT_I.get(t)
+        if not pat and t.endswith(AIDT_TAG):          # 출판사별 AIDT 태그는 계약명의 '디지털교과서·AIDT' 자리에서 본다
+            pat = re.compile(r"AIDT|AI\s*·?\s*디지털\s*(?:교과서|교육자료)|디지털\s*교과서|디지털\s*교육자료", re.I)
         if not pat:
             continue
-        ms = list(pat.finditer(name))
+        ms = list(pat.finditer(name)) or list(re.finditer(re.escape(t), name, re.I))   # 'zoom카메라'처럼 붙어 쓴 것
         if not ms:
             continue
         afters = [name[m.end():m.end() + 30] for m in ms]      # 이름이 두 번 적혔으면('구글 제미나이 Gemini PRO') 어느 쪽이든 본다
+        befores = [name[max(0, m.start() - 25):m.start()] for m in ms]
         if any(_SVC_CTX_STRONG.match(a) for a in afters):
             off.append(t); continue
-        if any(_SVC_BUY_SUB.search(a) for a in afters):
+        if any(_SVC_BUY_SUB.search(a) for a in afters) or any(re.search(r"프로그램\s*구[입매]|소프트웨어\s*구[입매]|구독|라이선스|라이센스|이용권|사용권\s*\(?$", b) for b in befores):
             continue
         if any(_SVC_CTX_MED.match(a) and _SVC_OTHER.search(a) for a in afters):   # 산 것은 이름 뒤에 적힌다 — '운영을 위한 (DBpia) 활용'의 앞쪽 '운영'은 보지 않는다
             off.append(t); continue
@@ -1367,6 +1426,7 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
     for row in csv.DictReader(open(_src, encoding="utf-8-sig")):
         if not row.get("학교코드"):
             row = resolve_school(row)        # 개명 별칭·시도 한정 별칭·동명 학교 판별 (2026-09-13)
+        row = title_reattr(row)              # 계약명에 적힌 다른 학교로(2026-09-28)
         key = (row["계약번호"], row["학교명"])
         if key in seen_pilot:
             continue
@@ -1595,10 +1655,17 @@ for r in records:
         if not r["tags"]:
             # '하이러닝 기반 선도학교 생성형 AI 구독'처럼 산 것이 소프트웨어이긴 한 기록은 제품군 태그로 되돌린다
             _gen = [t for t in refine_aidt(tags_of(strip_school(name, r["school"]), ""), name, r.get("vendor") or "")
-                    if t in GENERIC_SET or t in ("SW·플랫폼", "코스웨어(기타)", "AI·디지털 교육자료")]
+                    if t in GENERIC_SET or t in ("SW·플랫폼", "코스웨어(기타)")]
             _gen = [t for t in _gen if t not in off]
-            if not _gen and re.search(r"에듀테크|구독권|소프트웨어|프로그램\s*구[입매]|앱\s*구[입매]|AI\s*(?:도구|구독)", name):
-                _gen = ["SW·플랫폼"]          # '하이러닝 거점교 에듀테크 구입 계약(Grok)' — 무엇인지 모르는 소프트웨어를 산 기록
+            if not _gen:
+                if re.search(r"크롬북|노트북|태블릿|모니터|전자칠판|충전함|키보드|프린터|카메라|스피커|헤드셋|데스크톱|컴퓨터|\bPC\b|기자재|장비|거치대|충전기|디지털\s*기기|정보화\s*기기|스마트\s*기기", name, re.I):
+                    _gen = ["기기(PC·태블릿·전자칠판 등)"]  # '디지털교과서 코딩교육용 크롬북' — 산 것은 크롬북
+                elif re.search(r"코스웨어", name):
+                    _gen = ["코스웨어"]
+                elif re.search(r"교구|키트|로봇", name):
+                    _gen = ["로봇·교구·키트"]
+                elif re.search(r"에듀테크|구독권|소프트웨어|프로그램\s*구[입매]|앱\s*구[입매]|AI\s*(?:도구|구독)", name):
+                    _gen = ["SW·플랫폼"]          # '하이러닝 거점교 에듀테크 구입 계약(Grok)' — 무엇인지 모르는 소프트웨어를 산 기록
             if _gen:                          # 기기·소프트웨어 같은 제품군이 남으면 그 기록으로 둔다(태블릿·모니터를 산 것은 기기 기록이다)
                 r["tags"] = sorted(set(_gen))
             else:
@@ -1620,10 +1687,14 @@ if _before_rf - len(records):
 # 교육·연수 운영 용역 제외 — 단, 특정 제품명 태그나 명시적 SW 구입 문구가 있으면 유지
 SPECIFIC_TAGS = {t for t, _ in SPECIFIC_RULES} | {f"{lab} {AIDT_TAG}" for lab, _ in AIDT_PUBLISHERS}
 SW_BUY = re.compile(r"(?:소프트웨어|플랫폼|라이선스|라이센스|S/?W|구독권?)\s*구[입매]")
+# 연수·특강이 적혀 있어도 산 것이 물품·비품·노트북이면 물건 기록이다 — 'AIDT 교원연수 거점학교 물품(노트북컴퓨터) 구입'이
+# AIDT 태그를 뗀 뒤 제품군만 남자 연수 용역으로 빠졌다(2026-09-29). 물건 낱말이 있으면 남긴다.
+GOODS_NOUN = re.compile(r"물품|비품|기자재|노트북|전자칠판|모니터|프린터|태블릿|컴퓨터|크롬북|충전함|장비")
 records = [r for r in records
            if not (EDU_SERVICE.search(r["product"])
                    and not (SPECIFIC_TAGS & set(r["tags"]))
-                   and not SW_BUY.search(r["product"]))]
+                   and not SW_BUY.search(r["product"])
+                   and not (GOODS_NOUN.search(r["product"]) and not REFRESHMENT.search(r["product"])))]
 records = [r for r in records
            if not (HARD_SERVICE.search(r["product"]) and not SW_BUY.search(r["product"])
                    and not re.search(r"플랫폼|시스템", r["product"]))]
@@ -1631,14 +1702,19 @@ records = [r for r in records
 # 위탁 용역'은 미리캔버스를 산 게 아니라 미리캔버스를 가르치는 연수를 산 것이다(2026-09-22 사용자). 제품 태그가 있으면
 # 연수 판정을 건너뛰던 것을, 계약명이 연수 자체(운영·실시·용역·강사료·연수비·연수로 끝남)를 가리키고 구매 낱말이 없을 때는
 # 빼도록 한다. 구매 낱말이 있으면(연수용 소프트웨어 구독, 교사 연수 교구, 연수 물품 구입) 제품을 산 것이므로 남긴다.
-TRAIN_SVC = re.compile(r"찾아오는\s*체험|체험활동\s*(?:\([^)]*\))?\s*비|연수\s*(?:운영|용역|실시|위탁|프로그램|강좌|비|를|에|\(|및|$)|(?:특강|강좌|워크숍|워크샵|연수)\s*(?:용역|경비|비\b|식사|프로그램)|"
+TRAIN_SVC = re.compile(r"찾아오는\s*체험|체험활동\s*(?:\([^)]*\))?\s*비|온라인\s*강좌|강좌\s*(?:수강|등록)|(?<!학생)교육비(?!\s*(?:지원|보조))|자격\s*(?:교육|시험)|인증시험\s*수수료|"
+                       r"연수\s*(?:운영|용역|실시|위탁|프로그램|강좌|비(?!품)|를|에|\(|및|$)|(?:특강|강좌|워크숍|워크샵|연수)\s*(?:용역|경비|비\b|식사|프로그램)|"
                        r"강사료|강사비|외부\s*강사|강사\s*초청|강사\s*지급|(?:활용|교육|자격취득|교사|교원|학부모|사용자|역량\s*강화|기초|심화)\s*연수"
                        r"(?!\s*(?:교구|물품|지원|키트|세트|용|포함))|연수\s*\)|특강\s*$|워크숍\s*$|연수\s*$")
 TRAIN_KEEP = re.compile(r"구입|구매|구독|라이선스|라이센스|사용권|이용권|사용료|이용료|계정|시트|연수\s*포함|서비스\s*위탁|사용\s*위탁|구축|설치|"
-                        r"교구|키트|세트|패키지|외\s*\d+\s*종|물품|재료|소모품|준비물|로봇|통합형|교재|다과|기자재|검사")
+                        r"교구|키트|세트|패키지|외\s*\d+\s*종|물품|비품|재료|소모품|준비물|로봇|통합형|교재|다과|기자재|노트북|전자칠판|모니터|프린터")
+# 연수비·교육비·강사비·수수료가 적히면 구독·라이선스·프로그램 구입이 함께 있지 않은 한 서비스다('[노션 올인원 클래스 외 8종] 교원 연수비')
+TRAIN_HARD = re.compile(r"연수비|강사비|강사료|수강료")   # 방과후 재료비는 넣지 않는다 — 로봇·드론 방과후 재료 3,500건이 빠졌다(2026-09-29)   # 교육비·수수료는 넣지 않는다 — '학생교육비 대리구매(노트북)', '전자칠판 및 조달수수료'가 빠졌다
+TRAIN_HARD_KEEP = re.compile(r"구독|라이선스|라이센스|이용권|사용권|계정|프로그램\s*구[입매]|사용료|이용료")
 _before_train = len(records)
 records = [r for r in records
-           if not (TRAIN_SVC.search(r["product"].rstrip()) and not TRAIN_KEEP.search(r["product"]))]
+           if not ((TRAIN_SVC.search(r["product"].rstrip()) and not TRAIN_KEEP.search(r["product"]))
+                   or (TRAIN_HARD.search(r["product"]) and not TRAIN_HARD_KEEP.search(r["product"])))]
 print(f"연수·강사 계약 제외(제품명이 있어도): {_before_train - len(records):,}건")
 # 용역 계약인데 계약명이 교육 실행이고 물품 신호가 없으면, 제품군 태그만으로는 도입 근거가 못 된다.
 # (예: '드론 교육', '메타버스 진로체험' — 제품을 산 게 아니라 교육을 산 것)
@@ -1695,7 +1771,7 @@ print(f"계약일 없는 기록의 연도를 계약명에서 채움: {_yr_filled
 # '하이러닝 소프트웨어 구독 및 도서 구입비'처럼 제품 자체를 산 기록이기 때문이다.
 BOOK_ONLY = re.compile(r"(?:연구도서|도서|문헌|서적|교재|워크북|문제집|참고서|학습지)"
                        r"\s*(?:\([^)]*\))?\s*(?:외 ?\d+ ?[종권])?\s*"
-                       r"(?:구[입매]|구매|납품|대금|지급|지출|계약|비\s*(?:\([^)]*\))?\s*(?:지급|대금|지출|확정))|"
+                       r"(?:구[입매]|구매|납품|대금|지급|지출|계약|비\s*(?:\([^)]*\))?\s*(?:지급|대금|지출|확정|요구|요청))|"
                        r"외 ?\d+ ?권|^\[도서\]")
 # 도서 구매라도 태그를 그대로 두는 제품 — 사람이 하나씩 판정했다(2026-09-13).
 # 전자책·온라인 독서·학술DB처럼 '도서'라는 말이 붙어도 서비스 자체가 온라인인 것,
@@ -1714,7 +1790,9 @@ BOOK_TAG_KEEP = {
     "클래스카드", "토도한글", "젭(ZEP)", "플랭스쿨", "투닝",       # 온라인 학습 서비스
 }
 
-BOOK_KEEP = re.compile(r"교구|키트(?!\s*전용)|기자재|본체|장비|라이선스|라이센스|구독|이용권|이용료|사용료|"
+# 온라인 도서 서비스 — '리딩게이트 도서 구입', '교보문고 전자도서관 도서 구입'은 그 서비스를 산 것이다(사용자 판정 2026-09-13)
+BOOK_SERVICE_TAGS = {"교보문고 전자도서관", "리딩게이트", "리딩앤", "DBpia", "밀리의서재", "스쿨북스", "누리놀이", "YBM 리딩팜", "쿨메신저"}
+BOOK_KEEP = re.compile(r"교구|키트(?!\s*(?:전용|관련))|기자재|본체|장비|라이선스|라이센스|구독|이용권|이용료|사용료|Teacher\+|\bPro\b|Plus|시트|"
                        r"계정|플랫폼|소프트웨어|S/?W\b|태블릿|노트북|세트|"
                        # '마이크로비트 및 교재 구입'처럼 제품과 교재를 함께 산 것은 제품 구매다
                        r"및 ?(?:교재|도서)(?!\s*(?:연계|활용))|(?:교재|도서) ?및", re.I)   # 'DBpia 및 도서 연계 …'는 책(2026-09-28)
@@ -1743,13 +1821,19 @@ for _r in records:
     if not _book_only(_r["product"]):
         continue
     if BOOK_KEEP.search(_r["product"]) and not (_BOOK_TITLED.search(_r["product"])
-                                             and not re.search(r"구독|라이선스|라이센스|사용권|이용권", _r["product"])):
+                                             and not re.search(r"구독|라이선스|라이센스|사용권|이용권|Teacher\+|\bPro\b|Plus|계정|앱|세트|키트|코어", _r["product"])):
         continue
     # 'DBpia 및 도서 연계 주제탐구 … 도서 구입'처럼 온라인 서비스 이름이 책 구매의 문맥으로만 쓰인 것은 책이다(2026-09-28)
     _svc_ctx = re.search(r"(?:및|연계|활용|관련)\s*(?:독서|도서)|연계\s*주제탐구", _r["product"])
     # 로봇·교구는 본체 낱말(코어·세트·키트·교구·팩)이 없이 '교재'로 끝나면 책이다('물품 구입(스파이크 프라임 교재)', 2026-09-28)
-    _book_end = re.search(r"(?:교재|도서)\s*(?:\)|$)", _r["product"]) and not re.search(r"코어|세트|키트|교구|본체|팩|로봇|보드", _r["product"])
-    _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or (t in BOOK_TAG_KEEP and not _svc_ctx and not _book_end)]
+    # 교재·도서로 끝나거나 '교재 구입(…)'이면 책이다. 다만 괄호 안에 세트·키트·코어·교구가 있으면 본체를 함께 산 것('교재 구입(스파이크프라임코어세트외2종)')이고,
+    # 본문에 '로봇 및 교재'처럼 본체가 적혀 있어도 그렇다. 괄호 안의 '로봇'은 책 제목이기 쉬워 세지 않는다('도서 구입 (EV3 로봇 창작 프로젝트 외 8종)').
+    _head = re.sub(r"\([^)]*\)", "", _r["product"])
+    _paren = " ".join(re.findall(r"\(([^)]*)\)", _r["product"]))
+    _book_end = re.search(r"(?:교재|도서)\s*(?:\)|$|구[입매]|구매|납품|대금|지급)", _r["product"]) \
+        and not re.search(r"코어|세트|키트|교구|본체|팩|로봇|보드|및\s*(?:관련\s*)?(?:교재|도서)|(?:교재|도서)\s*및", _head) \
+        and not re.search(r"코어|세트|키트|교구|본체|팩", _paren)
+    _keep = [t for t in _r["tags"] if t in BOOK_GENERIC or (t in BOOK_TAG_KEEP and not _svc_ctx and not (_book_end and t not in BOOK_SERVICE_TAGS))]
     if len(_keep) != len(_r["tags"]):
         _book_cut += 1
         _r["tags"] = _keep
@@ -2105,7 +2189,8 @@ for r in records:
     _mk_companies.add(name)
     # 판매 업체가 곧 제품인 회사라도, 산 것이 교재·다과·상품이면 제품 도입이 아니다('창신초 방과후 컴퓨터코딩 교재 구매 / 이지에듀', 2026-09-28)
     if tag and not [t for t in r["tags"] if t not in BOOK_GENERIC] \
-            and not (_book_only(r["product"]) or REFRESHMENT.search(r["product"]) or AWARD_COST.search(r["product"])):
+            and not (_book_only(r["product"]) or BOOK_WORD.search(r["product"]) or REFRESHMENT.search(r["product"]) or AWARD_COST.search(r["product"])) \
+            and not ({"기기(PC·태블릿·전자칠판 등)", "로봇·교구·키트", "인프라(교실·설비)"} & set(r["tags"])):   # 엘리스쿨에서 산 모니터는 엘리스가 아니다
         r["tags"] = sorted((set(r["tags"]) | {tag}) - _GENERIC_SW)
         r["note"] = (r["note"] + " · " if r.get("note") else "") + f"계약 업체명이 제품명({tag})"
         _mk_tag += 1
