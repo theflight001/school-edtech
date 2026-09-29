@@ -1424,6 +1424,10 @@ def _service_ctx_off(name, tags):
             off.append(t); continue
         m2 = _SVC_CTX_ANY.search(name)
         if m2 and all(m.start() < m2.start() for m in ms):
+            # '물품 구입(챗지피티,망고보드,이어폰)'처럼 이름과 부속품이 쉼표로 나란히 적힌 품목 나열이면 둘 다 산 것이다 —
+            # 'ChatGPT 활용 전용 노트북 구입'과 다르다(2026-09-30 외부 재검증, 문원초)
+            if any(re.fullmatch(r"(?:[^,()]*[,、·/])+\s*", name[m.end():m2.start()]) for m in ms):
+                continue
             off.append(t)
     return off
 for _src, _sido, _label, _idbase in OFFICE_SOURCES:
