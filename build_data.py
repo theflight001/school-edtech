@@ -1068,7 +1068,9 @@ def reattribute(row):
         row = _switch(row, ALIAS[row["학교명"]])
     for org, real in REATTR_PAIRS:
         if row["학교명"] == org and real in row["계약명"].replace(" ", ""):
-            return _switch(row, real)
+            row = _switch(row, real)
+            row["_재귀속"] = "조달명의"
+            return row
     mo = TITLE_SCHOOL.fullmatch(row["학교명"] or "")
     if not mo:
         return row
@@ -1123,9 +1125,14 @@ def title_reattr(row):
     if not pick:
         return row
     row = dict(row)
-    row["_원학교명"] = me
+    row["_원학교명"], row["_재귀속"] = me, "조달명의"
     row["학교명"], row["학교코드"], row["급별"], row["시도"] = x, pick["code"], pick["level"], pick["sido"]
     return row
+
+def _orig(row):
+    """공개 자료의 origSchool — 개명 전 옛 이름은 그대로, 실사용 학교로 옮긴 것은 '조달명의:' 표식을 붙여 화면이 구분한다(2026-09-29 외부 재검증)"""
+    o = row.get("_원학교명") or ""
+    return (f"조달명의:{o}" if o and row.get("_재귀속") else o)
 
 # 같은 계약번호가 '서울공덕초등학교'와 '공덕초등학교'처럼 이름만 다르게 두 번 실리던 것(11쌍) — 접두어만 다른 이름이면
 # 한 건으로 본다. 코드가 있는 행을 먼저 처리해 그쪽이 남는다.
@@ -1193,7 +1200,7 @@ for path in sorted(glob.glob("refined_*.csv")):
             "hsType": (m.get("hsType") or "") if m else "",
             "founding": (m.get("founding") or "") if m else "",
             "neisAddress": (m.get("address") or "") if m else "",
-            "origSchool": row.get("_원학교명") or "",
+            "origSchool": _orig(row),
         })
         pilot_count += 1
 print(f"파일럿 자동수집분 병합: {pilot_count}건")
@@ -1252,6 +1259,7 @@ for _s2b_src, _s2b_label, _s2b_idbase in [("s2b_refined.csv", "S2B 학교장터"
         s_short = NEIS_SIDO_SHORT.get(row["시도"], row["시도"] or "미상")
         records.append({
             "id": _s2b_idbase + s2b_count,
+            "origSchool": _orig(row),
             "school": row["학교명"], "type": stype,
             "region": s_short, "sido": s_short,
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
@@ -1405,6 +1413,8 @@ def _service_ctx_off(name, tags):
             off.append(t); continue
         if any(_SVC_BUY_SUB.search(a) for a in afters) or any(re.search(r"프로그램\s*구[입매]|소프트웨어\s*구[입매]|구독|라이선스|라이센스|이용권|사용권\s*\(?$", b) for b in befores):
             continue
+        if any(re.search(r"(?:코스웨\S{0,3}|소프트웨어|프로그램|에듀테크|플랫폼|도구|앱)\s*\(?\s*$", b) for b in befores):   # '코스웨dj(' 같은 오타도
+            continue                                   # '코스웨어(마타수학AI) 및 태블릿 대여' — 제품 낱말 바로 뒤의 이름은 산 제품이다(2026-09-29 외부 재검증)
         if any(_SVC_CTX_MED.match(a) and _SVC_OTHER.search(a) for a in afters):   # 산 것은 이름 뒤에 적힌다 — '운영을 위한 (DBpia) 활용'의 앞쪽 '운영'은 보지 않는다
             off.append(t); continue
         m2 = _SVC_CTX_ANY.search(name)
@@ -1501,6 +1511,7 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
         amt_txt = f"({amt/10000:,.0f}만원)" if amt >= 10000 else (f"({amt:,}원)" if amt else "")
         records.append({
             "id": _idbase + office_count,
+            "origSchool": _orig(row),
             "school": row["학교명"], "type": stype,
             "region": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),
             "sido": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),

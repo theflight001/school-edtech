@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260929a";
+  s.src = "/data_detail.js?b=20260929b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -372,7 +372,7 @@ function recordTable(recs, {showSchool = true} = {}) {
   if (!recs.length) return `<div class="empty">해당 기록이 없습니다</div>`;
   return `<div class="tablewrap"><table${showSchool ? "" : ' class="noschool"'}><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
-      ${showSchool ? `<td><a href="${r.schoolCode ? `/code/${encodeURIComponent(r.schoolCode)}` : `/school/${encodeURIComponent(r.school)}`}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? ` · 계약 당시 ${esc(r.origSchool)}` : ""}</div></td>` : ""}
+      ${showSchool ? `<td><a href="${r.schoolCode ? `/code/${encodeURIComponent(r.schoolCode)}` : `/school/${encodeURIComponent(r.school)}`}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? (r.origSchool.startsWith("조달명의:") ? ` · 조달 명의 ${esc(r.origSchool.slice(5))}` : ` · 계약 당시 ${esc(r.origSchool)}`) : ""}</div></td>` : ""}
       <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260929a";
+    s2.src = "/data_detail_old.js?b=20260929b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260929a";
+  s.src = "/data_old.js?b=20260929b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1084,7 +1084,7 @@ function schoolView(name, code) {
   if (SCOPE === "product") all = all.filter(hasProduct);
   if (!allR.length) {
     // 옛 이름으로 들어온 경우 — 지금 교명의 화면을 보여 준다
-    const old = R.find(r => r.origSchool === name);
+    const old = R.find(r => r.origSchool === name || r.origSchool === "조달명의:" + name);
     if (old) return schoolView(old.school);
     const wait = loadingOld("이 학교의"); if (wait) return wait;
     return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
@@ -1104,7 +1104,9 @@ function schoolView(name, code) {
     return ga - gb || tagN.get(b) - tagN.get(a) || tagName(a).localeCompare(tagName(b), "ko");
   });
   // 개명 전 이름으로 계약된 기록 — 어느 이름으로 몇 건인지 밝힌다
-  const oldNames = count(allR.filter(r => r.origSchool), r => r.origSchool);
+  // 개명 전 옛 이름과, 조달 명의만 빌린 다른 학교(실사용 학교로 옮긴 기록)는 구분해 적는다(2026-09-29 외부 재검증)
+  const oldNames = count(allR.filter(r => r.origSchool && !r.origSchool.startsWith("조달명의:")), r => r.origSchool);
+  const viaNames = count(allR.filter(r => r.origSchool && r.origSchool.startsWith("조달명의:")), r => r.origSchool.slice(5));
   if (SCHOOL_TAG && !schoolTags.includes(SCHOOL_TAG)) SCHOOL_TAG = "";
   const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
@@ -1114,6 +1116,7 @@ function schoolView(name, code) {
         ${OLD_STATE === "done" ? "" : `<div class="conf"><a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a></div>`}
         ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
+        ${viaNames.length ? `<div class="conf">${viaNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")} 명의로 조달됐지만 계약명에 이 학교가 적혀 있어 이 학교 기록으로 둔 것이 있습니다</div>` : ""}
         <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
           onclick="setSchoolTag('${t.replace(/'/g, "\\'")}')"
           title="${SCHOOL_TAG === t ? "누르면 전체 기록으로 돌아갑니다" : "이 학교의 해당 기록만 봅니다"}">${tagLabel(t)}</button>`).join("")}</div>
@@ -2101,7 +2104,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260929a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260929b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
