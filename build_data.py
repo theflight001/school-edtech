@@ -528,7 +528,7 @@ SPECIFIC_RULES = [
     ("알티노",             r"알티노"),
     ("파이보츠",           r"파이보츠"),
     # 페더러 라켓·셔틀콕이 걸렸다(10건). 배드민턴 용품 낱말이 함께 있으면 제품이 아니다.
-    ("페더",               r"페더(?!럴|레|러)(?!.*(?:라켓|셔틀콕|배드민턴|텀블러|파우치))"),
+    ("페더",               r"(?<!카)페더(?!럴|레|러)(?!.*(?:라켓|셔틀콕|배드민턴|텀블러|파우치))"),   # '카페더이룸·카페더리얼'은 카페 이름이다(2026-09-30 외부 검증)
     ("스마트올",           r"스마트올"),
     # 웨이메이커는 메이저맵(주)의 진로 앱 이름 — 태그는 브랜드명 메이저맵으로 통일한다(사용자 판정 2026-09-14).
     # '주제선택활동(웨이메이커스)'는 동아리 이름
@@ -1394,7 +1394,9 @@ _SVC_OTHER = re.compile(r"물품|재료|기자재|비품|장비|용품|준비물
 _SVC_CTX_ANY = re.compile(r"협의회|간담회|워크숍|워크샵|공개수업|수업공개|지도안|식사|식비|현수막|판넬|패널|배너|격려품|시상|수상|"
                           r"기자재|비품|장비|헤드셋|태블릿|노트북(?!\s*LM|엘엠)|모니터|키보드|케이스|스피커|프린터|카메라|"
                           r"거치대|프로젝터|충전기|케이블|충전함|단말기|교구|(?:재료|교재)\s*및\s*도서|연수|교육비|교재비|재료비|교구비|수강료|"
-                          r"다과|간식|빙과|체험활동|체험비")
+                          r"다과|간식|빙과|체험활동|체험비|이어폰|이어셋|파우치")   # 'AI디지털교과서 이어셋 및 보관 파우치 구입'(2026-09-30 외부 검증)
+# 이름 뒤 '~을 위한 헤드셋'·'전용 노트북'·'물품구입비(헤드셋)' — 서비스 이름이 제품 낱말 뒤에 있어도 산 것은 부속품이다
+_SVC_ACC_AFTER = re.compile(r"(?:위한|전용)\s*(?:\S+\s+){0,2}?(?:헤드셋|이어폰|이어셋|노트북(?!\s*LM|엘엠)|태블릿|크롬북|모니터|스피커|카메라|파우치|충전함|거치대|기자재|비품|장비)|물품\s*구입비")
 def _service_ctx_off(name, tags):
     """계약명에서 사업·활동의 이름으로만 쓰인 서비스 태그 목록"""
     off = []
@@ -1413,8 +1415,11 @@ def _service_ctx_off(name, tags):
             off.append(t); continue
         if any(_SVC_BUY_SUB.search(a) for a in afters) or any(re.search(r"프로그램\s*구[입매]|소프트웨어\s*구[입매]|구독|라이선스|라이센스|이용권|사용권\s*\(?$", b) for b in befores):
             continue
-        if any(re.search(r"(?:코스웨\S{0,3}|소프트웨어|프로그램|에듀테크|플랫폼|도구|앱)\s*\(?\s*$", b) for b in befores):   # '코스웨dj(' 같은 오타도
+        if any(re.search(r"(?:코스웨\S{0,3}|소프트웨어|프로그램|에듀테크|플랫폼|도구|앱)\s*\(?\s*$", b) for b in befores) \
+                and not any(_SVC_ACC_AFTER.search(a) for a in afters):   # '코스웨dj(' 같은 오타도
             continue                                   # '코스웨어(마타수학AI) 및 태블릿 대여' — 제품 낱말 바로 뒤의 이름은 산 제품이다(2026-09-29 외부 재검증)
+                                                       # 다만 '에듀테크(Chat GPT) 활용 전용 노트북컴퓨터'·'영어독서프로그램(리딩게이트) 물품구입비(헤드셋)'처럼
+                                                       # 이름 뒤에 '위한·전용 + 부속품'이나 '물품구입비'가 오면 산 것은 그 부속품이다(2026-09-30 외부 검증)
         if any(_SVC_CTX_MED.match(a) and _SVC_OTHER.search(a) for a in afters):   # 산 것은 이름 뒤에 적힌다 — '운영을 위한 (DBpia) 활용'의 앞쪽 '운영'은 보지 않는다
             off.append(t); continue
         m2 = _SVC_CTX_ANY.search(name)
@@ -2714,7 +2719,11 @@ if os.path.exists("product_origin.csv"):
 # 제품 화면에 따로 놓아 '조달에 안 보인다 = 안 쓴다'는 오해만 막는다.
 _office_buy = {}
 if os.path.exists("office_refined.csv"):
-    _ob_train = 0
+    _ob_train, _ob_rel = 0, 0
+    # 제품을 사서 보급한 것이 아니라 그 제품을 두고 벌인 사업 — 자료·영상·캐릭터 제작, 홍보, 컨설팅, 만족도 조사, 캠페인, 토론회,
+    # 공모전·공유회·부스 운영, 영향평가, 원가산정, 물품 대여. 화면에 '관련 사업'으로 갈라 보인다(2026-09-30 외부 검증: 하이러닝 22건·ChatGPT 3건 등)
+    _OB_RELATED = re.compile(r"제작|홍보|컨설팅|만족도\s*조사|캠페인|캐릭터|이모티콘|토론회|공유회|부스\s*운영|영향평가|원가산정|장학자료|자료집|워크북|"
+                             r"가이드|공모전|패밀리\s*데이|(?:튜토리얼|둘러보기|콘텐츠|자료)\s*개발|프로그램\s*위탁|(?<!동)영상|물품\s*대여|리더교사|양성\s*과정|역량\s*강화")   # '동영상 편집프로그램'은 제품이다
     for _r in csv.DictReader(open("office_refined.csv", encoding="utf-8-sig")):
         # 교육청이 산 것이 연수라면 제품 도입이 아니다 — 학교 기록과 같은 규칙(2026-09-22 사용자, 경북 미리캔버스 교원 연수 위탁 용역)
         _nm = (_r.get("계약명") or "").rstrip()
@@ -2724,18 +2733,26 @@ if os.path.exists("office_refined.csv"):
         if (TRAIN_SVC.search(_nm) and not TRAIN_KEEP.search(_nm)) or _ob_svc:
             _ob_train += 1
             continue
+        # 사업 이름에 공모전이 있어도 '마인크래프트 교육용 계정 구입'처럼 계정·라이선스·이용권을 산 계약은 구입이다
+        _rel = bool(_OB_RELATED.search(_nm)) and not re.search(r"(?:계정|라이선스|라이센스|이용권|사용권|구독)\s*(?:구입|구매|계약)", _nm)
         for _t in (_r.get("태그") or "").split("|"):
             _t = _t.strip()
             if not _t:
                 continue
-            _office_buy.setdefault(_t, []).append({
-                "sido": _r.get("시도", ""), "n": _r.get("계약명", "")[:120],
-                "d": (_r.get("계약일") or "")[:7], "amt": _r.get("금액", ""),
-                "by": _r.get("업체명", "")})
+            _row = {"sido": _r.get("시도", ""), "n": _r.get("계약명", "")[:120],
+                    "d": (_r.get("계약일") or "")[:7], "amt": _r.get("금액", ""),
+                    "by": _r.get("업체명", "")}
+            # 관련 사업이라도 '에듀테크 도구(퀴즈앤) 구입'처럼 제품 낱말 뒤에 이름이 적혀 있으면 그 제품은 산 것이다(2026-09-30 외부 검증, 하이러닝 공모전의 퀴즈앤)
+            _tp = _RULE_PAT_I.get(_t)
+            _bought = bool(_tp and re.search(r"(?:도구|프로그램|플랫폼|소프트웨어|코스웨어|계정|라이선스)\s*\(\s*(?:" + _tp.pattern + r")\s*\)\s*(?:구입|구매|대여)", _nm, re.I))
+            if _rel and not _bought:
+                _row["k"] = "관련"
+                _ob_rel += 1
+            _office_buy.setdefault(_t, []).append(_row)
     for _t in _office_buy:
         _office_buy[_t].sort(key=lambda x: x["d"], reverse=True)
     print(f"시도교육청 일괄 도입: 제품 {len(_office_buy):,}종 · "
-          f"기록 {sum(len(v) for v in _office_buy.values()):,}건 · 연수 계약 제외 {_ob_train}건")
+          f"기록 {sum(len(v) for v in _office_buy.values()):,}건 · 연수 계약 제외 {_ob_train}건 · 관련 사업 표시 {_ob_rel}건")
 
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("// build_data.py가 생성한 파일 — 직접 수정 금지\n")

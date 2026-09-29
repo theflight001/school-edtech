@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260929b";
+  s.src = "/data_detail.js?b=20260930a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -506,7 +506,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260929b";
+    s2.src = "/data_detail_old.js?b=20260930a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +518,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260929b";
+  s.src = "/data_old.js?b=20260930a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1205,20 +1205,14 @@ function tagView(tag) {
 // 학교 수·막대에 섞지 않고 따로 놓는다.
 const OFFICE_BUY = DB.officeBuy || {};
 function officeBuyCard(tag) {
-  const rows = OFFICE_BUY[tag];
-  if (!rows || !rows.length) return "";
-  const sidos = uniq(rows.map(r => r.sido).filter(Boolean));
+  const all = OFFICE_BUY[tag];
+  if (!all || !all.length) return "";
   const won = a => { const n = +a; return !n ? "" : n >= 1e8
     ? `${(n / 1e8).toFixed(1)}억원` : n >= 1e4 ? `${Math.round(n / 1e4).toLocaleString()}만원` : `${n.toLocaleString()}원`; };
-  return `<div class="card"><h2>시도교육청이 직접 구매한 기록
-      <span class="note">학교 계약이 아니라 시도 단위입니다 — 위 학교 수에는 들어 있지 않습니다</span></h2>
-    <p class="cv" style="margin:0 0 10px">교육청이 관내 학교에 한꺼번에 보급한 것으로 보이는 계약입니다.
-      계약명에 학교 이름이 없어 어느 학교가 쓰는지는 알 수 없습니다 ·
-      ${rows.length.toLocaleString()}건${sidos.length ? ` · ${sidos.length}개 시도(${sidos.slice(0, 6).map(esc).join(" · ")}${sidos.length > 6 ? " 외" : ""})` : ""}</p>
-    <div class="tablewrap"><table><thead><tr>
+  const table = (rows, id) => `<div class="tablewrap"><table><thead><tr>
         <th>시도</th><th>계약명</th><th>시기</th><th>금액</th><th>업체</th>
       </tr></thead><tbody>
-      ${rows.slice(0, 12).map(r => `<tr>
+      ${rows.map((r, i) => `<tr${i >= 12 ? ` class="ob-more ${id}" hidden` : ""}>
         <td style="white-space:nowrap">${esc(r.sido || "—")}</td>
         <td>${esc(r.n)}</td>
         <td class="conf" style="white-space:nowrap">${esc((r.d || "").replace("-", "."))}</td>
@@ -1226,8 +1220,26 @@ function officeBuyCard(tag) {
         <td class="conf">${esc(r.by || "")}</td>
       </tr>`).join("")}
       </tbody></table></div>
-    ${rows.length > 12 ? `<p class="cv" style="margin:10px 0 0">가장 최근 12건만 보여 줍니다 (전체 ${rows.length.toLocaleString()}건)</p>` : ""}
+    ${rows.length > 12 ? `<p class="cv" style="margin:10px 0 0">가장 최근 12건을 먼저 보여 줍니다 (전체 ${rows.length.toLocaleString()}건)
+      <button class="linkbtn" onclick="obMore('${id}', this)">나머지 ${(rows.length - 12).toLocaleString()}건 더 보기</button></p>` : ""}`;
+  // 관련 사업(자료·영상 제작, 홍보, 컨설팅, 만족도 조사, 캠페인…)은 제품을 사서 보급한 계약이 아니다 — 따로 놓는다(2026-09-30 외부 검증)
+  const buy = all.filter(r => r.k !== "관련"), rel = all.filter(r => r.k === "관련");
+  const sidos = uniq(buy.map(r => r.sido).filter(Boolean));
+  return `<div class="card"><h2>시도교육청이 직접 구매한 기록
+      <span class="note">학교 계약이 아니라 시도 단위입니다 — 위 학교 수에는 들어 있지 않습니다</span></h2>
+    ${buy.length ? `<p class="cv" style="margin:0 0 10px">교육청이 계약 당사자로 산 기록입니다. 라이선스·계정을 관내 학교에 나눠 준 것일 수 있지만,
+      계약명에 학교 이름이 없어 어느 학교가 쓰는지는 알 수 없습니다 ·
+      ${buy.length.toLocaleString()}건${sidos.length ? ` · ${sidos.length}개 시도(${sidos.slice(0, 6).map(esc).join(" · ")}${sidos.length > 6 ? " 외" : ""})` : ""}</p>
+    ${table(buy, "ob-buy")}` : ""}
+    ${rel.length ? `<h3 style="margin:${buy.length ? 18 : 0}px 0 6px">이 제품을 두고 벌인 관련 사업 <span class="note">${rel.length.toLocaleString()}건</span></h3>
+    <p class="cv" style="margin:0 0 10px">자료·영상 제작, 홍보, 컨설팅, 만족도 조사, 캠페인, 공모전·공유회 운영 같은 계약입니다.
+      제품을 사서 학교에 보급한 기록이 아니므로 도입 근거로 세지 않고, 제품이 쓰이고 있다는 정황으로만 남겨 둡니다.</p>
+    ${table(rel, "ob-rel")}` : ""}
   </div>`;
+}
+function obMore(id, btn) {
+  document.querySelectorAll(`tr.ob-more.${id}`).forEach(tr => { tr.hidden = false; });
+  if (btn) btn.remove();
 }
 
 function vendorsOfTag(recs) {
@@ -1848,7 +1860,8 @@ function recordsView() {
 }
 function productsView() {
   const cnt = {}, sch = {};
-  const src = SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs();
+  // 상세·지도와 같은 기준으로 센다 — 중복·입찰 공고를 빼지 않으면 목록 84개교가 상세에서 80개교로 달라진다(2026-09-30 외부 검증, 레이저사격시스템)
+  const src = (SCOPE === "product" ? baseRecs().filter(hasProduct) : baseRecs()).filter(isCounted);
   for (const r of src) for (const t of r.tags) {
     if (SCOPE === "product" && GENERIC_TAGS.has(t)) continue;
     cnt[t] = (cnt[t] || 0) + 1;
@@ -2104,7 +2117,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260929b").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
