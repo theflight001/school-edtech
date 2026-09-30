@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260930c";
+  s.src = "/data_detail.js?b=20260930d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -192,31 +192,9 @@ for (const e of VENDORS.values()) {           // 가장 많이 쓰인 표기를 
 VMERGE = new Map();
 {
   const list = [...VENDORS.values()].sort((a, b) => b.n - a.n);
-  // 앞부분이 같은 회사가 둘 이상이면 어디에 붙일지 알 수 없다 —
-  // '아이스크림'은 아이스크림에듀·아이스크림미디어 둘 다일 수 있고,
-  // '지란지교'는 지란지교컴즈·지란지교테크 둘 다일 수 있다. 이런 것은 합치지 않는다.
-  // 9천 곳을 서로 견주면 8천만 번이라 1초가 넘게 걸린다 — 앞부분을 미리 세어 둔다.
-  const prefN = new Map(), prefOne = new Map();
-  for (const v of list) {
-    for (let i = 4; i < v.key.length; i++) {
-      const p = v.key.slice(0, i);
-      const c = (prefN.get(p) || 0) + 1;
-      prefN.set(p, c);
-      if (c === 1) prefOne.set(p, v);
-    }
-  }
-  for (const small of list) {
-    if (small.key.length < 4) continue;
-    if (prefN.get(small.key) !== 1) continue;
-    const big = prefOne.get(small.key);
-    // 한 글자만 잘린 것만 합친다 — 두 글자('메가스터디'→'메가스터디교육', '나래정보'→'나래정보통신')는 다른 법인일 수 있다(2026-09-30 외부 검증 V01)
-    if (big && big.n >= small.n * 10 && big.key.length - small.key.length <= 1)
-      VMERGE.set(small.key, big.key);
-  }
-  // 한 글자만 어긋난 오타 표기도 합친다 ('다이얼커퓨티케이션즈' → '다이얼커뮤니케이션즈').
-  // 앞 두 글자는 회사를 가르는 자리라 거기서 어긋나면 합치지 않는다 —
-  // '이레·이안·이현·한솔정보통신'은 '이솔정보통신'의 오타가 아니라 저마다 다른 회사다.
-  // 그래서 앞 두 글자가 같은 것끼리만 묶어 견준다(전부 견주면 또 8천만 번이다).
+  // 끝 글자가 잘린 표기를 긴 이름에 붙이던 규칙은 걷었다 — '새한측기(주)'(부산)와 '새한측기사'(대구)는 다른 회사다
+  // (2026-09-30 외부 재검증 R01). 잘린 표기는 검증된 별칭 없이는 합치지 않는다. 5건이 안 되는 표기는 목록에 안 보일 뿐 제 기록은 남는다.
+  // 두 표기가 정확히 한 글자만 다를 때 그 자리를 돌려준다(아니면 -1). 앞 두 글자는 회사를 가르는 자리라 거기서 어긋나면 합치지 않는다.
   const diffAt = (a, b) => {
     if (Math.abs(a.length - b.length) > 1) return -1;
     if (a.length === b.length) {
@@ -548,7 +526,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260930c";
+    s2.src = "/data_detail_old.js?b=20260930d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -560,7 +538,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260930c";
+  s.src = "/data_old.js?b=20260930d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2171,7 +2149,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930c").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930d").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2489,7 +2467,10 @@ function render() {
   else if (kind === "code") view.innerHTML = codeView(arg);
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
-  else if (kind === "drill2") view.innerHTML = drillTagView(seg[2], decodeURIComponent(seg[3] || ""), decodeURIComponent(seg[4] || ""));
+  else if (kind === "drill2") {
+    view.innerHTML = drillTagView(seg[2], decodeURIComponent(seg[3] || ""), decodeURIComponent(seg[4] || ""));
+    if (/^v/.test(seg[2] || "") && OLD_STATE !== "done") withOld("", () => render());   // 회사 막대 목록도 회사 화면과 같은 전 기간
+  }
   else if (kind === "search") {
     // 검색은 늘 전 기간을 본다. 통계는 최근만 봐도 뜻이 통하지만, 검색은 기간에 걸려
     // 0건이 나오면 '그런 기록이 없다'는 잘못된 답을 주게 된다(호랑에듀가 그랬다).
@@ -2506,7 +2487,11 @@ function render() {
     if (OLD_STATE !== "done") withOld("", () => render());
   }
   else if (kind === "regions") view.innerHTML = regionsView();
-  else if (kind === "vendor") view.innerHTML = vendorView(arg);
+  else if (kind === "vendor") {
+    // 회사 화면은 전 기간이 기본이다 — 전에는 전체보기를 거쳐 들어오면 전 기간, 주소로 바로 열면 올해만 보였다(2026-09-30 외부 재검증 R02)
+    view.innerHTML = vendorView(arg);
+    if (OLD_STATE !== "done") withOld("", () => render());
+  }
   else if (kind === "contact") view.innerHTML = contactView();
   else {
     view.innerHTML = homeView();

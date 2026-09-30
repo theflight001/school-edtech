@@ -21,7 +21,8 @@ Adobe,개발사(해외),Adobe,Adobe / Adobe Systems Software Ireland Ltd / Adobe
 클라썸,개발사,클라썸,주식회사 클라썸 / 클라썸,134,23,단일 제품
 스쿨닥터,개발사,스쿨닥터,(주)스쿨닥터 / 스쿨닥터,117,2,단일 제품 100%
 컴시간,개발사,컴시간,(주)컴시간 / 주식회사 컴시간,118,72,단일 제품 100%
-ChatGPT,개발사(해외),ChatGPT,"CHAT GPT / CHATGPT / CHATGPT SUBSCRIPTION / Chat GPT / Chat GPT (생성형 인공지능) / ChatGPT / OPENAI *CHATGPT / OPENAI *CHATGPT SUBSCR / OPENAI*CHATGPT SUBSCR / Open AI ChatGPT / chatGPT / chatgpt / openAIchatGPT(챗지피티) / OpenAI / OPENAI / Open AI / OpenAI, LLC / Open AI. LLC / openai",277,0,해외 서비스 — 결제 표기가 곧 제품명(기존 VENDOR_RULES) · 외부 검증 V05(2026-09-30): 명확한 표기인데 정식명이 안 붙던 것
+OpenAI,개발사(해외),ChatGPT,CHAT GPT / CHATGPT / CHATGPT SUBSCRIPTION / Chat GPT / Chat GPT (생성형 인공지능) / ChatGPT / OPENAI *CHATGPT / OPENAI *CHATGPT SUBSCR / OPENAI*CHATGPT SUBSCR / Open AI ChatGPT / chatGPT / chatgpt / openAIchatGPT(챗지피티),277,0,해외 서비스 — 결제 표기가 곧 제품명(기존 VENDOR_RULES) · 외부 검증 V05(2026-09-30): 명확한 표기인데 정식명이 안 붙던 것
+OpenAI,개발사(해외),,"OpenAI / OPENAI / Open AI / OpenAI, LLC / Open AI. LLC / openai",,,외부 재검증 R03(2026-09-30): 회사명(OpenAI·Anthropic)으로만 적힌 계약은 제품을 추정하지 않는다 — 회사 연결만
 슈퍼스쿨,개발사,슈퍼스쿨,주식회사 슈퍼스쿨 / 주식회사 슈퍼스쿨이노베이션,79,10,단일 제품 96%
 Zoom,개발사(해외),Zoom,"ZOOM / ZOOM US / ZOOM(줌) / ZOOM.US / Zoom Video Communications / Zoom Video Communications Inc / Zoom Video Communications Inc. / zoom / zoom video communications inc. / 줌 / 줌(zoom video communications) / 줌(ZOOM) / 줌(zoom) / 줌(Zoom) / 줌(Zoom Communications) / 줌(ZOOM US) / 줌(화상회의) / zoom.us(줌) / ZOOM.US(줌) / zoom(줌 비디오 커뮤니케이션) / ZOOM(zoom, 줌) / ZOOM(해외사이트)",178,37,해외 서비스 — 결제 표기가 곧 제품명(기존 VENDOR_RULES) · 외부 검증 V06(2026-09-30): '줌' 94건은 Zoom 결제 표기
 넷클래스,개발사,넷클래스,주식회사 넷클래스,65,17,단일 제품 98%
@@ -32,7 +33,8 @@ Zoom,개발사(해외),Zoom,"ZOOM / ZOOM US / ZOOM(줌) / ZOOM.US / Zoom Video C
 지학사,개발사,,(주)지학사 / 주식회사 지학사,34,0,AI교과서 외 교재 등
 트라이디스,개발사,트라이디스,(주)트라이디스,26,6,단일 제품 95%
 밀리의서재,개발사,밀리의서재,(주)밀리의서재 / 주식회사 케이티밀리의서재,29,17,단일 제품
-Claude,개발사(해외),Claude,"CLAUDE / CLAUDE.AI / CLAUDE.AI SUBSCRIPTION / claude / ANTHROPIC / Anthropic / Anthropic, PBC / ANTHROPIC.COM",54,8,해외 서비스 — 결제 표기가 곧 제품명(기존 VENDOR_RULES) · 외부 검증 V05(2026-09-30): 명확한 표기인데 정식명이 안 붙던 것
+Anthropic,개발사(해외),Claude,CLAUDE / CLAUDE.AI / CLAUDE.AI SUBSCRIPTION / claude,54,8,해외 서비스 — 결제 표기가 곧 제품명(기존 VENDOR_RULES) · 외부 검증 V05(2026-09-30): 명확한 표기인데 정식명이 안 붙던 것
+Anthropic,개발사(해외),,"ANTHROPIC / Anthropic / Anthropic, PBC / ANTHROPIC.COM",,,외부 재검증 R03(2026-09-30): 회사명(OpenAI·Anthropic)으로만 적힌 계약은 제품을 추정하지 않는다 — 회사 연결만
 리로소프트,개발사,리로스쿨,주식회사 리로스쿨,21,0,단일 제품 100% · 외부 검증 V06(2026-09-30): 제품명(결제 표기)과 개발 법인을 한 회사로. 회사명으로 적힌 계약은 제품을 추정하지 않는다
 리로소프트,개발사,,주식회사 리로소프트 / (주)리로소프트 / 리로소프트 / 주식회사리로소프트 / (주) 리로소프트 / 리로소프트(주),,,외부 검증 V06(2026-09-30): 제품명(결제 표기)과 개발 법인을 한 회사로. 회사명으로 적힌 계약은 제품을 추정하지 않는다
 북크리에이터,개발사,북크리에이터(Bookcreator),북크리에이터 / 북크리에이터(BookCreator) / 북크리에이터(해외) / 북크리에이터(Book Creator),16,9,단일 제품 · 외부 검증 V05(2026-09-30): 명확한 표기인데 정식명이 안 붙던 것
