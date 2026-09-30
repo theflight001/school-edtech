@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260930b";
+  s.src = "/data_detail.js?b=20260930c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -176,7 +176,7 @@ let VENDORS, VMERGE;
 function buildVendorIndex() {
 VENDORS = new Map();                    // 정규화 이름 → {name, n, forms}
 for (const r of R) {
-  const v = vnorm(r.vendor);
+  const v = r._vn = vnorm(r.vendor);
   if (!v) continue;
   let e = VENDORS.get(v);
   if (!e) VENDORS.set(v, e = {key: v, n: 0, forms: new Map()});
@@ -209,7 +209,8 @@ VMERGE = new Map();
     if (small.key.length < 4) continue;
     if (prefN.get(small.key) !== 1) continue;
     const big = prefOne.get(small.key);
-    if (big && big.n >= small.n * 10 && big.key.length - small.key.length <= 2)
+    // 한 글자만 잘린 것만 합친다 — 두 글자('메가스터디'→'메가스터디교육', '나래정보'→'나래정보통신')는 다른 법인일 수 있다(2026-09-30 외부 검증 V01)
+    if (big && big.n >= small.n * 10 && big.key.length - small.key.length <= 1)
       VMERGE.set(small.key, big.key);
   }
   // 한 글자만 어긋난 오타 표기도 합친다 ('다이얼커퓨티케이션즈' → '다이얼커뮤니케이션즈').
@@ -230,6 +231,28 @@ VMERGE = new Map();
     }
     return at >= 0 ? at : s2.length - 1;
   };
+  // 글자 하나가 어긋났다고 다 오타는 아니다 — '남부교육지원청/서부교육지원청', '삼보컴퓨터 일산센터/경산센터',
+  // '제이엘코리아/제이엠코리아'는 서로 다른 곳이다(2026-09-30 외부 검증 V01, 13쌍). 그래서 한글은 '바꿔 적은 한 글자'만 보되
+  //   ① 그 글자의 자모(초성·중성·종성)가 둘 이상 같아야 하고('윅↔웍', '리↔러', '티↔니' 같은 오타 모양),
+  //   ② 두 글자 다 한글로 적은 알파벳('에스엔지'의 '지'와 '에스엔티'의 '티')이면 다른 회사 이름이라 합치지 않고,
+  //   ③ 지역 이름 안의 글자('네오피아 경북지사'의 '경'과 '강북지사'의 '강')도 합치지 않는다.
+  // 한 글자를 빠뜨리거나 덧붙인 한글 표기는 합치지 않는다. 영문·숫자 표기는 어느 한 글자든 어긋나면 오타로 본다('openal', 'bookcreater').
+  const jamo = ch => { const c = ch.charCodeAt(0) - 0xac00; return c < 0 || c > 11171 ? null : [Math.floor(c / 588), Math.floor((c % 588) / 28), c % 28]; };
+  const LETTER = new Set("에비씨디이프지치아제케엘엠엔오피큐알스티유브더와엑".split(""));
+  const REGION = /경북|강북|경남|강남|경기|강서|강동|충북|충남|전북|전남|남부|북부|동부|서부|중부/g;
+  const inRegion = (key, i) => { for (const m of key.matchAll(REGION)) if (i >= m.index && i < m.index + m[0].length) return true; return false; };
+  const typoLike = (a, b) => {
+    const ascii = /^[a-z0-9]+$/.test(a) && /^[a-z0-9]+$/.test(b);
+    const at = diffAt(a, b);
+    if (at < 2) return false;
+    if (ascii) return true;
+    if (a.length !== b.length) return false;
+    const ja = jamo(a[at]), jb = jamo(b[at]);
+    if (!ja || !jb) return false;
+    if (LETTER.has(a[at]) && LETTER.has(b[at])) return false;
+    if (inRegion(a, at) || inRegion(b, at)) return false;
+    return ja.filter((x, i) => x === jb[i]).length >= 2;
+  };
   const bucket = new Map();
   for (const v of list) {
     if (v.key.length < 6) continue;
@@ -240,7 +263,7 @@ VMERGE = new Map();
     for (const small of group) {
       if (VMERGE.has(small.key)) continue;
       const big = group.find(b => b !== small && !VMERGE.has(b.key)
-        && b.n >= small.n * 10 && diffAt(small.key, b.key) >= 2);
+        && b.n >= small.n * 10 && typoLike(small.key, b.key));
       if (big) VMERGE.set(small.key, big.key);
     }
   }
@@ -252,10 +275,11 @@ VMERGE = new Map();
     VENDORS.delete(from);
   }
 }
+for (const r of R) r.vk = r._vn ? (VMERGE.get(r._vn) || r._vn) : "";   // 기록마다 업체 키를 한 번만 매긴다 — 목록·상세·막대·지도가 같은 키를 쓴다
 }
 buildVendorIndex();
 const vkey = n => { const k = vnorm(n); return VMERGE.get(k) || k; };
-const vendorRecs = key => R.filter(r => vkey(r.vendor) === key);
+const vendorRecs = key => R.filter(r => r.vk === key);
 // 공급사 명부(vendors.csv) — 에듀테크 제조·개발사. 빌드가 기록마다 정식 회사명(maker)을 붙여 보낸다.
 // 표기가 여럿인 회사(아이스크림미디어 7가지)는 정식명으로 한데 모은다. '제품 태그'(t)가 있는 회사는
 // 제품 하나만 파는 곳이라 계약명에 제품이 없는 기록도 빌드가 그 제품으로 붙였다(데이터 안내 참조).
@@ -264,11 +288,26 @@ let MAKER_KEY;                                                          // 업�
 function buildMakerKey() {
   MAKER_KEY = new Map();
   for (const m of MAKERS.values()) for (const sp of (m.s || [])) MAKER_KEY.set(vkey(sp), m.n);
-  for (const r of R) if (r.maker && r.vendor) MAKER_KEY.set(vkey(r.vendor), r.maker);
+  // 기록에 붙은 정식명으로도 열쇠를 잇되, 그 열쇠의 기록 대부분(8할)이 같은 정식명일 때만 —
+  // 'United states(WWW.ZOOM.US)' 한 건 때문에 'United states' 22건이 통째로 Zoom이 됐었다(2026-09-30 외부 검증 V07)
+  const cnt = new Map();
+  for (const r of R) {
+    if (!r.vk) continue;
+    const e = cnt.get(r.vk) || cnt.set(r.vk, {n: 0, m: new Map()}).get(r.vk);
+    e.n++;
+    if (r.maker) e.m.set(r.maker, (e.m.get(r.maker) || 0) + 1);
+  }
+  for (const [k, e] of cnt) {
+    if (MAKER_KEY.has(k) || !e.m.size) continue;
+    const [name, c] = [...e.m.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (c >= e.n * 0.8) MAKER_KEY.set(k, name);
+  }
 }
 buildMakerKey();
 const makerOf = key => MAKER_KEY.get(key) || null;
-const makerRecs = name => R.filter(r => r.maker === name);
+// 명부 회사의 기록 — 빌드가 정식명을 붙인 것과, 업체 키가 그 회사로 이어지는 것을 합친다.
+// 전에는 앞의 것만 써서 'OpenAI'·'패들렛'·'어도비'로 적힌 기록이 회사 상세에서 빠졌다(2026-09-30 외부 검증 V05, 367건)
+const makerRecs = name => R.filter(r => r.maker === name || MAKER_KEY.get(r.vk) === name);
 // 온라인몰·조달 대행·대형 제조사는 '에듀테크 공급사'가 아니라 사는 창구다 — 꼬리표를 달아 구분한다
 // '이웃닷컴'은 온라인몰이 아니라 e알리미를 만드는 회사다(에듀집: e알리미 = 주식회사 이웃닷컴).
 // 이름이 닷컴으로 끝난다고 창구로 보면 만든 회사가 공급 기업에서 통째로 빠진다.
@@ -277,9 +316,12 @@ const makerRecs = name => R.filter(r => r.maker === name);
 // 정규화된 이름을 검사하므로 소문자 s2b로 적는다. 교직원공제회는 S2B를 운영하는 기관이다.
 // 키는 소문자로 정규화돼 있으므로 대소문자를 가리지 않는다 — LG전자·한국HP가 제조사로 안 잡혔다(2026-09-15 구조검증 S11)
 // 결제 대행·카드사 표기(NHN한국사이버결제·KCP·NICE 통신판매·비씨카드 해외결제·정기과금)도 사는 창구일 뿐 공급사가 아니다(2026-09-15)
-const CHANNEL = /지마켓|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|학교장터|s2b|교직원공제회|다나와|하이마트|사이버결제|kcp|nice통신판매|통신판매|해외결제|카드결제|인터넷쇼핑몰결제|정기과금|^결제$/i;
+// g마켓·gmarket·나라장터·g2b·한글 케이씨피·페이먼츠·카드사 표기가 빠져 981건이 공급 기업에 남았다(2026-09-30 외부 검증 V02)
+const CHANNEL = /지마켓|g마켓|gmarket|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|나라장터|g2b|학교장터|s2b|교직원공제회|다나와|하이마트|사이버결제|사이버결재|kcp|케이씨피|페이먼츠|나이스정보통신|nice통신판매|통신판매|해외결제|카드결제|인터넷쇼핑몰결제|정기과금|^결제$|(?:비씨|bc|삼성|신한|국민|kb|하나|롯데|현대|우리|nh|농협|씨티)카드/i;
 const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/i;
-const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : "공급 기업";
+// 교육청·교육지원청은 공동구매 대금을 받은 기관이지 공급 기업이 아니다(2026-09-30 외부 검증 V03, 30개 표기 741건)
+const PUBLIC = /교육청|교육지원청|시청$|군청$|구청$|도청$/;
+const vendorKind = k => CHANNEL.test(k) ? "구매 창구" : MAKER.test(k) ? "제조사" : PUBLIC.test(k) ? "공공기관" : "공급 기업";
 
 const IDX = DB.schoolIndex || [];
 const idxByCode = new Map(IDX.filter(s => s.c).map(s => [s.c, s]));   // 코드 없는 학교(설립 예정)는 이름으로만 찾는다
@@ -506,7 +548,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260930b";
+    s2.src = "/data_detail_old.js?b=20260930c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -518,7 +560,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260930b";
+  s.src = "/data_old.js?b=20260930c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1279,7 +1321,9 @@ function vendorView(key) {
     <div class="crumb"><a href="/">홈</a> › <a href="/vendors">공급 기업</a></div>
     <div class="pagehead"><h2>${esc(e ? e.name : key)}</h2>
       <div class="meta">${kind}입니다 — 공급 기업으로 다루지 않습니다</div></div>
-    <div class="page"><p class="lead">${kind === "구매 창구"
+    <div class="page"><p class="lead">${kind === "공공기관"
+      ? "교육청·교육지원청 같은 공공기관입니다. 공동구매 대금을 납부하거나 통합 계약을 맺은 기록이라 학교의 구매 사실은 남기되, 이 기관이 제품을 만들거나 공급한 것은 아니어서 공급 기업으로 다루지 않습니다."
+      : kind === "구매 창구"
       ? "온라인몰·조달 대행처럼 여러 회사의 물건을 파는 창구입니다. 학교가 무엇을 샀는지는 기록에 남지만, 그 물건을 이 업체가 만든 것은 아니어서 공급 기업 통계에서 뺐습니다."
       : "여러 종류의 기기를 만드는 제조사입니다. 계약명에 제품이 적혀 있으면 그 제품으로 집계되므로, 제조사 단위로 묶어 보여 주지 않습니다."}</p>
       <p>기록은 <a href="/products">제품별</a>이나 학교 화면에서 그대로 보실 수 있습니다.</p></div>`;
@@ -1302,7 +1346,9 @@ function vendorView(key) {
         기록 ${nd.length.toLocaleString()}건${amt ? ` · 계약금액 합계 ${won(amt)}` : ""}</div>
       ${maker && maker.t ? `<span class="fnote">회사명이 곧 제품명(${esc(maker.t)})인 회사입니다 —
         계약명에 제품이 적히지 않은 기록도 ${esc(maker.t)}로 보았습니다</span>` : ""}
-      ${maker && !maker.t ? `<span class="fnote">여러 제품을 만드는 회사입니다 —
+      ${maker && !maker.t && maker.pt ? `<span class="fnote">계약 상대자가 제품명(${esc(maker.pt)})으로 적힌 기록만 그 제품으로 보았습니다 —
+        회사명으로 적힌 계약은 제품군으로만 남기고 제품을 추정하지 않았습니다</span>` : ""}
+      ${maker && !maker.t && !maker.pt ? `<span class="fnote">여러 제품을 만드는 회사입니다 —
         계약명에 제품이 없는 기록은 제품군으로만 남기고 회사명으로 추정하지 않았습니다</span>` : ""}
       ${kind !== "공급 기업" ? `<span class="fnote">여러 회사의 물건을 파는 창구입니다 —
         여기 묶인 기록이 이 업체가 만든 제품이라는 뜻은 아닙니다</span>` : ""}
@@ -1326,19 +1372,21 @@ function vendorsView() {
   // 명부에 오른 제조·개발사는 정식명으로 묶어 맨 위에 따로 보인다 — 아래 일반 목록에서는 뺀다
   const makerRows = [...MAKERS.values()].map(m => {
     const recs = makerRecs(m.n).filter(r => isCounted(r));
-    const key = [...MAKER_KEY.entries()].find(([k, n]) => n === m.n && VENDORS.has(k));
-    return {n: m.n, t: m.t, cnt: recs.length, sch: uniq(recs.map(skey)).length, key: key ? key[0] : vkey(m.n)};
+    // 그 회사로 이어지는 업체 키 가운데 기록이 가장 많은 것으로 연결한다
+    const keys = [...MAKER_KEY.entries()].filter(([k, n]) => n === m.n && VENDORS.has(k)).map(([k]) => VENDORS.get(k)).sort((a, b) => b.n - a.n);
+    return {n: m.n, t: m.t, cnt: recs.length, sch: uniq(recs.map(skey)).length, key: keys.length ? keys[0].key : vkey(m.n)};
   }).filter(m => m.cnt).sort((a, b) => b.cnt - a.cnt);
   const rows = all.filter(v => v.kind === "공급 기업" && !MAKER_KEY.has(v.key)).sort((a, b) => b.n - a.n);
-  const dropped = all.length - rows.length - makerRows.length;
+  // 제외 수는 창구·제조사·공공기관으로 분류된 키만 센다 — 전에는 명부 회사의 표기 차이(13개 키)까지 제외로 셌다(2026-09-30 외부 검증 V08)
+  const dropped = all.filter(v => v.kind !== "공급 기업" && !MAKER_KEY.has(v.key)).length;
   const shown = rows;
   return `
     <div class="crumb"><a href="/">홈</a> › 공급 기업 전체</div>
     ${allSwitch("/vendors")}
     <div class="pagehead"><h2>공급 기업</h2>
-      <div class="sub2">계약 상대자로 5건 이상 나온 ${rows.length.toLocaleString()}곳 ·
+      <div class="sub2">계약 상대자로 5건 이상 나온 곳 — 명부에 오른 제조·개발사 ${makerRows.length}곳과 그 밖의 ${rows.length.toLocaleString()}곳 ·
         이름을 선택하면 정보를 볼 수 있습니다<br>
-        온라인몰·조달 대행·대형 제조사 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
+        온라인몰·조달 대행·결제 대행·대형 제조사·교육청 같은 기관 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
         보기 어려워 제외되었습니다</div></div>
 
     ${makerRows.length ? `<div class="card"><h2>에듀테크 제조·개발사<span class="note">명부에 오른 ${makerRows.length}곳 · 표기가 달라도 한 회사로 모았습니다</span></h2>
@@ -1348,19 +1396,25 @@ function vendorsView() {
         나머지는 여러 제품을 만드는 회사라 제품을 추정하지 않았습니다.</p></div>
     <h2 style="margin:18px 0 8px">그 밖의 계약 상대자</h2>` : ""}
     <div class="plist">
-      ${shown.slice(0, 400).map(v => `<a href="/vendor/${encodeURIComponent(v.key)}">${esc(v.name)}
+      ${shown.map((v, i) => `<a href="/vendor/${encodeURIComponent(v.key)}"${i >= 400 ? ` class="v-more" hidden` : ""}>${esc(v.name)}
         <span class="n">${v.n.toLocaleString()}건</span></a>`).join("")}
     </div>
-    ${shown.length > 400 ? `<p class="sub2" style="margin-top:12px">기록이 많은 400곳만 보여 줍니다 — 나머지는 검색으로 찾을 수 있습니다</p>` : ""}`;
+    ${shown.length > 400 ? `<p class="sub2" style="margin-top:12px">기록이 많은 400곳을 먼저 보여 줍니다
+      <button class="linkbtn" onclick="vMore(this)">나머지 ${(shown.length - 400).toLocaleString()}곳 더 보기</button></p>` : ""}`;
 }
 
+function vMore(btn) {
+  document.querySelectorAll("a.v-more").forEach(a => { a.hidden = false; });
+  if (btn) btn.remove();
+}
 function drillTagView(kind, tag, value) {
   // 회사 화면의 막대 — 그 회사가 그 제품(지역·계열)으로 판 기록만 보여 준다.
   // 제품 화면으로 보내면 전국 것이 다 나와 '이 회사가 무엇을 팔았나'를 잃는다.
   if (kind === "vt" || kind === "vs" || kind === "vy") {
     const e = VENDORS.get(tag);
-    const nm = e ? e.name : tag;
-    const recs = vendorRecs(tag).filter(r =>
+    const mk = makerOf(tag);                        // 회사 상세와 같은 묶음 — 전에는 막대는 업체 키 하나만 봐서 그래프와 목록 수가 달랐다(2026-09-30 외부 검증 V04)
+    const nm = mk || (e ? e.name : tag);
+    const recs = (mk ? makerRecs(mk) : vendorRecs(tag)).filter(r =>
       kind === "vt" ? r.tags.includes(value)
       : kind === "vs" ? r.sido === value
       : (r => { const g = recLeaf(r); return (g ? parentLabel[parentOf[g]] : "기타·미분류") === value; })(r));
@@ -2117,7 +2171,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930b").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930c").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };

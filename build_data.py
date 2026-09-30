@@ -2216,9 +2216,21 @@ for r in records:
         _mk_tag += 1
         _mk_tag_companies.add(name)
 print(f"공급사 명부: 회사 {len(_mk_companies)}곳 · 기록 {_mk_n:,}건에 정식명 · 단일 제품 회사 {len(_mk_tag_companies)}곳의 {_mk_tag:,}건에 제품 태그")
-_makers = [{"n": _vb["정식명"].strip(), "k": _vb["구분"].strip(), "t": (_vb.get("제품 태그") or "").strip(),
-            "s": [x for x in _vb["표기"].split(" / ") if x.strip()]}
-           for _vb in (csv.DictReader(open("vendors.csv", encoding="utf-8-sig")) if os.path.exists("vendors.csv") else [])]
+# 같은 정식명이 여러 줄이면(미리디: 제품명 '미리캔버스' 표기 줄 + 회사명 줄) 한 회사로 합친다 — 제품 태그(t)는 모든 줄이 같을 때만,
+# 일부 표기에만 붙는 제품 태그는 pt로 따로 보낸다(2026-09-30 외부 검증 V06)
+_makers, _mk_by = [], {}
+for _vb in (csv.DictReader(open("vendors.csv", encoding="utf-8-sig")) if os.path.exists("vendors.csv") else []):
+    _n, _t = _vb["정식명"].strip(), (_vb.get("제품 태그") or "").strip()
+    _sp = [x for x in _vb["표기"].split(" / ") if x.strip()]
+    if _n in _mk_by:
+        _m = _mk_by[_n]
+        _m["s"] += _sp
+        if _m["t"] != _t:
+            _m["pt"] = " · ".join(sorted({x for x in (_m["t"], _t) if x} | set(_m.get("pt", "").split(" · ")) - {""}))
+            _m["t"] = ""
+        continue
+    _mk_by[_n] = {"n": _n, "k": _vb["구분"].strip(), "t": _t, "s": _sp}
+    _makers.append(_mk_by[_n])
 
 # 업체 기반 통계 추론(어떤 업체의 계약 다수가 한 제품이면 나머지도 그 제품으로 봄)은 폐기했다.
 # 근거: 데이터 안내에 "업체명으로 제품을 추정하지 않는다"고 공개해 온 원칙과 어긋나고,
