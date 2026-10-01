@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261002c";
+  s.src = "/data_detail.js?b=20261002d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261002c";
+    s2.src = "/data_detail_old.js?b=20261002d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261002c";
+  s.src = "/data_old.js?b=20261002d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1763,14 +1763,14 @@ function aboutView() {
       <h3>기타</h3>
       <ul>
         <li><b>갱신 주기</b> — 수록되는 정보는 매월 10일에 업데이트됩니다.</li>
-        <li><b>전남광주 통합</b> — 2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 통합되면서 교육청도 같은 날
-        <b>전남광주통합특별시교육청</b>으로 변경됐습니다
+        <li><b>전남광주 통합</b> — 2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 통합되면서 교육청도
+        <b>전남광주통합특별시교육청</b>으로 변경되었습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
         2026.3.5. 공포 · 2026.7.1. 시행).
-          <span style="display:block; margin-top:6px">나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은 2028년 완전 통합을 목표로
+        나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은 2028년 완전 통합을 목표로
         단계적으로 개편되므로
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
-        정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</span></li>
+        정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</li>
         <li><b>주의사항</b> — 만원대 이하(경기·인천·충북·세종 등), 100만원 이상(부산·경북·제주·충남·대전·광주·전북 등), 금액 미공개(강원) 등
         시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이하여 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다.
         즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다. 이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만,
@@ -2138,7 +2138,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002c").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002d").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
