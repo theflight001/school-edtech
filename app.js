@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20260930d";
+  s.src = "/data_detail.js?b=20261001a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -526,7 +526,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20260930d";
+    s2.src = "/data_detail_old.js?b=20261001a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -538,7 +538,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20260930d";
+  s.src = "/data_old.js?b=20261001a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1702,7 +1702,7 @@ function aboutView() {
         <div>
           <h2>데이터 안내</h2>
           <p>이 서비스는 수집된 공개 조달 기록을 바탕으로 전국 초·중·고등학교의 에듀테크 도입 현황을 제공합니다.
-          학교의 계약여부는 공개 정보이지만 여러 곳에 흩어져 있어 찾기 어렵기 때문에, 한곳에서 검색할 수 있게 정리했습니다.</p>
+          학교의 계약여부는 공개 정보이지만 여러 곳에 흩어져 있어 찾기 어려우므로, 한곳에서 검색하고 확인할 수 있도록 정리했습니다.</p>
         </div>
         <img src="/hero_person_m.png?v=2" width="239" height="186" alt="">
       </div>
@@ -1710,64 +1710,48 @@ function aboutView() {
       <h3>어디에서 수집했나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
-        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수와 입찰 계약·낙찰 결과(2020년~) · 계약대상자(공급 업체)와 계약 금액을 함께 싣습니다</span></div>
-        <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함 (${n(m.officeCount, 16)}개 시도교육청${(m.officeCount || 16) < 17 ? " · 전북은 아직 수집 전" : ""})</span></div>
-        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 빼고 ${n(m.idxCount, 12540)}개교를 싣습니다</span></div>
+        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수와 입찰 계약 결과 · 계약대상자(공급 업체)와 계약 금액 정보를 제공합니다</span></div>
+        <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함</span></div>
+        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 제외한 ${n(m.idxCount, 12540)}개교의 정보가 제공됩니다</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — ${n(m.mediaCount, 44)}건(${m.mediaPct == null ? "0.01" : m.mediaPct}%)</span></div>
-        <div class="srccard aux"><b>학교 위치(지도)</b><span>계약 자료가 아니라 지도 표시용 — 한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
+        <div class="srccard aux"><b>학교 위치(지도)</b><span>한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
       </div>
 
       <h3>어떻게 판단하나</h3>
-      <p>계약명 원문에서 제품명을 찾아 태그를 붙입니다.</p>
+      <p>계약명 원문에 표기된 제품명에 태그를 부여합니다.</p>
       <ul>
         <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 판단하였습니다.
-          공급사 명부에 오른 제조·개발사 ${(DB.meta.makerCompanies || 0).toLocaleString()}곳 중
-          ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 그런 회사이며, 이 규칙으로 제품이 정해진 기록은
-          ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명부는 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
-        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 남습니다. 이런 계약은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
-        <li>교육·연수 운영, 행사·캠프, 차량 임차처럼 제품 도입이 아닌 계약은 규칙으로 걸러 냅니다. 여러 품목을 한 계약에 적은 경우나 규칙이 못 가린 경우가 남아 있을 수 있어, 예외 없이 걸러졌다고 보장하지는 않습니다.</li>
-        <li>학교가 이름을 바꾼 경우 옛 이름으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
+          공급사 명단에 있는 제조·개발사 ${(DB.meta.makerCompanies || 0).toLocaleString()}곳 중
+          ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 해당되며, 이 규칙으로 제품이 표시된 기록은 현재
+          ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명단은 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
+        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 표시됩니다. 이같은 계약 유형은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
+        <li>학교의 이름이 변경된 경우 과거의 학교명으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
       </ul>
 
       <div class="example">
         <p class="ex-q"><b>예)</b> OO초등학교 · <span>“챗GPT 플러스 (ChatGPT Plus) 챗지피티4 3개월 구독 <b>외 3종</b>”</span></p>
         <ul>
-          <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 붙습니다.</li>
-          <li>같은 제품이라도 표기가 서로 다른 경우가 있습니다(챗GPT · ChatGPT · 챗지피티). 어느 쪽으로 적혀 있든 <b>ChatGPT</b>로 태그를 설정하고, 한글로 검색하든 영문으로 검색하든 동일한 결과를 제공합니다.</li>
-          <li><b>“외 3종”은 기록하지 않습니다.</b> 무엇을 함께 샀는지 계약명에 없어 확인할 수 없습니다.</li>
+          <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 표시됩니다.</li>
+          <li>같은 제품이라도 표기가 서로 다른 경우가 있습니다(챗GPT · ChatGPT · 챗지피티). 이러한 경우들은 모두 <b>ChatGPT</b>로 태그가 표시되고, 한글 또는 영문으로 검색하는 방법 모두 동일한 결과를 제공합니다.</li>
+          <li><b>“외 3종”은 기록하지 않습니다.</b> 어떤 에듀테크 제품을 구매하였는지 정보가 없으므로 확인이 되지 않습니다.</li>
         </ul>
       </div>
 
-      <h3>무엇이 빠지나</h3>
-      <p>여기 실린 숫자는 <b>확보한 공개 기록을 규칙으로 분류한 결과</b>입니다. 받지 못한 계약(누락)과 잘못 붙은 제품 태그(분류 오류)가 모두 있을 수 있어
-        수학적 최소값이나 최대값이 아닙니다. 기록이 없다는 것이 그 학교가 에듀테크를 쓰지 않는다는 뜻은 아닙니다.</p>
+      <h3>무엇이 제외되나</h3>
+      <p>본 서비스에서 제공되는 정보는 공개된 기록을 바탕으로 합니다. 누락된 계약, 해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매 등
+        실제로 활용하지만 공개되지 않은 정보가 있을 수 있으므로 기록이 없는 경우에도 그 학교가 에듀테크를 쓰지 않는다는 의미는 아닐 수 있습니다.</p>
       <ul>
-        <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 구매 기록이 남지 않습니다.</li>
-        <li>해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매는 조달 기록에 포함되지 않습니다. 다만 시도교육청 계약공개 자료를 수집한 지역에서는 일부 확인됩니다.</li>
-        <li><b>“외 3종”처럼 묶어 적은 계약</b>은 함께 산 제품을 알 수 없습니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이런 형태이고, 그 안에 <b>약 ${(m.buriedProducts || 0).toLocaleString()}개</b>의 품목 표기(“외 N종”의 N을 더한 추정치)가 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
-        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교 이름이 없어 어느 학교가 쓰는지 알 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
+        <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 기록에 제시되지 않습니다.</li>
+        <li><b>“외 3종”처럼 묶어 표시된 계약</b> 내용은 해당 정보가 누락됩니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이러한 형태로 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
+        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
       </ul>
 
-      <h3>시도별 공개 기준이 다릅니다</h3>
-      <p>시도교육청 계약공개는 「지방자치단체를 당사자로 하는 계약에 관한 법률」 제43조와 같은 법 시행령 제124조에 따른 것이지만,
-        <b>소액 계약을 어디까지 공개하는지는 교육청마다 다릅니다.</b> 경기·인천·충북·세종처럼 수만 원짜리 계약까지 공개하는 곳이 있고,
-        부산·경북·제주·충남·대전·광주·전북처럼 100만 원 이상만 공개하는 곳이 있습니다. 강원은 금액을 공개하지 않습니다.
-        그래서 <b>시도 간 기록 건수를 그대로 비교하면 안 됩니다.</b> 건수가 많은 시도는 에듀테크를 더 많이 산 곳이 아니라 더 작은 계약까지 공개한 곳일 수 있습니다.
-        나라장터·S2B 학교장터가 시도교육청 자료를 일부 보완하지만, 지역·금액대별로 얼마나 빠짐없이 잡히는지는 측정된 수집률이 없어 보장하지 못합니다.</p>
-      <p>또 하나의 한계는 <b>수집 방식</b>입니다. 시도교육청 15곳은 계약명에 검색어(기본 19개와 에듀집 제품명 3,964개)를 넣어 조회하므로,
-        그 낱말이 계약명에 없는 에듀테크 계약은 원자료 자체가 수집되지 않습니다. 전수로 받는 곳은 나라장터·S2B·제주·서울(수의계약공개)뿐입니다.</p>
-      ${(m.officePolicy || []).length ? `<div class="tablewrap"><table class="policy"><thead><tr><th>시도</th><th>받은 화면</th><th>계약방법</th><th>안내문의 공개 범위</th><th>실제 자료의 최소 금액</th><th>100만 원 미만 비율</th><th>첫 연도</th><th>비고</th></tr></thead><tbody>
-        ${m.officePolicy.map(p => `<tr><td>${esc(p.sido)}</td><td>${esc(p.screen)}</td><td>${esc(p.methods)}</td><td>${esc(p.notice)}</td>
-          <td>${p.minAmt == null ? "금액 없음" : p.minAmt.toLocaleString() + "원"}</td><td>${p.under1m == null ? "—" : p.under1m + "%"}</td><td>${p.firstYear || "—"}</td><td>${esc(p.note)}</td></tr>`).join("")}
-      </tbody></table></div>
-      <p class="cv">안내문은 각 교육청 공개 화면에서 ${esc((m.officePolicy[0] || {}).checked || "")}에 확인했고, 최소 금액·비율·첫 연도는 이 서비스에 실린 기록에서 센 값입니다. 법령 조문 원문은 국가법령정보센터에서 확인하세요.</p>` : ""}
       <h3>수록 범위</h3>
       <ul>
-        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKo(m.ymPartial)}은 수집 중이라 일부만 실려 있습니다)</span>` : ""}
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKo(m.ymPartial)}은 수집 중)</span>` : ""}
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 제공됩니다.
           <b>조사 기간</b>에서 2020년 1월부터 선택할 수 있습니다.` : ""}</li>
-        <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b> <span class="cv">(전 기간 기준 — 첫 화면 숫자는 조사 기간에 따라 달라집니다)</span></li>
-        <li>검색 가능 학교: <b>${n(m.idxCount, 12540)}개교</b> — 국내 공교육 전체</li>
+        <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 검색 가능 학교: <b>${n(m.idxCount, 12540)}개교</b>(국내 공교육 전체) · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 ${n(mix["초·중·고"], 12078)}개교에 더해
           ${mixText}를 포함합니다.
           등재된 ${n(m.neisTotal, 12666)}개교 중 <b>재외한국학교 ${n(exc["재외한국학교"], 79)}개교, 외국인·국제학교 ${n(exc["외국인·국제학교"], 33)}개교</b>는 국내 공교육이 아니어서,
@@ -1785,6 +1769,10 @@ function aboutView() {
         단계적으로 개편되므로
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
         정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</span></li>
+        <li><b>주의사항</b> — 만원대 이하(경기·인천·충북·세종 등), 100만원 이상(부산·경북·제주·충남·대전·광주·전북 등), 금액 미공개(강원) 등
+        시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이하여 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다.
+        즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다. 이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만,
+        그럼에도 이 한계점에 유의하시기 바랍니다.</li>
         <li><b>정정 요청</b> — 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
@@ -1966,7 +1954,7 @@ function regionsView() {
       <div class="sub2">전국 ${rows.length}개 시도 ·
         ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다
         <div class="conf">시도교육청마다 소액 계약을 공개하는 기준이 달라(경기는 수만 원, 부산·경북 등은 100만 원 이상) 시도 간 건수를 그대로 비교하면 안 됩니다 —
-          <a href="/about">데이터 안내 › 시도별 공개 기준</a></div></div>${filterNote()}</div>
+          <a href="/about">데이터 안내 › 기타 · 주의사항</a></div></div>${filterNote()}</div>
     <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
     <div class="plist" style="margin-top:14px">
       ${rows.map(([s, n]) => `<a href="/drill/sido/${encodeURIComponent(s)}">${esc(s)}
@@ -2149,7 +2137,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20260930d").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
