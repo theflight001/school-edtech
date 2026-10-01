@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261002g";
+  s.src = "/data_detail.js?b=20261002h";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261002g";
+    s2.src = "/data_detail_old.js?b=20261002h";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261002g";
+  s.src = "/data_old.js?b=20261002h";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -980,6 +980,12 @@ function filterNote() {
 }
 // 전 기간으로 넓힌다 — 2020~2025년 기록은 따로 있어 그때 받아 온다
 window.showAllPeriod = () => { PF = ""; PT = ""; PF_TOUCHED = true; withOld("", () => render()); };
+// 학교 상세의 '이 학교의 전체 기록 보기' — 조사 기간·지역·계열·'미확인 제품' 조건을 모두 풀어 그 학교의 기록을 다 보여 준다(2026-10-02 사용자 요청)
+window.showAllSchool = () => {
+  PF = ""; PT = ""; PF_TOUCHED = true; SF = new Set(); ES = new Set(); RG = new Set(); SCOPE = "all";
+  const box = document.getElementById("inclUnknown"); if (box) box.checked = true;
+  withOld("", () => render());
+};
 
 function homeView() {
   const active = periodOn();
@@ -1132,9 +1138,9 @@ function schoolView(name, code) {
   const recs = SCHOOL_TAG ? all.filter(r => r.tags.includes(SCHOOL_TAG)) : all;
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
-    <div class="pagehead"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
+    <div class="pagehead" style="position:relative"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
+      ${outN || OLD_STATE !== "done" ? `<a class="allrec" href="javascript:void(0)" onclick="showAllSchool()" title="조사 기간·지역·계열·미확인 제품 조건을 모두 풀고 이 학교의 기록을 전부 봅니다">이 학교의 전체 기록 보기 ›</a>` : ""}
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}
-        ${OLD_STATE === "done" ? "" : `<div class="conf"><a href="javascript:void(0)" onclick="showAllPeriod()">전 기간(2020.1~) 보기</a></div>`}
         ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         ${viaNames.length ? `<div class="conf">${viaNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")} 명의로 조달됐지만 계약명에 이 학교가 적혀 있어 이 학교 기록으로 둔 것이 있습니다</div>` : ""}
@@ -2106,7 +2112,7 @@ function showMapSel(spec, rows) {
     const nd = rs.filter(r => isCounted(r)).length;
     return `<div class="mapsel"><div class="mapsel-h"><b>${esc(p.n)}</b>
         <span>${esc(p.s)} · ${esc(p.l)} · ${nd ? `기록 ${nd.toLocaleString()}건` : "기록 없음"}</span>
-        <a href="${esc(p.href)}">${nd ? "이 학교의 전체 기록 보기 ›" : "학교 정보 ›"}</a></div>
+        <a href="${esc(p.href)}${nd ? "#all" : ""}">${nd ? "이 학교의 전체 기록 보기 ›" : "학교 정보 ›"}</a></div>
       ${rs.length ? recordTable(fillDetail(rs.slice(0, MAX)), {showSchool: false}) : ""}
       ${rs.length > MAX ? `<p class="cv">최근 ${MAX}건만 보여 줍니다 — 전체는 학교 화면에서 볼 수 있습니다</p>` : ""}</div>`;
   }).join("") + (rows.length > 8 ? `<p class="cv">이 자리의 다른 ${rows.length - 8}곳은 더 확대해 눌러 보세요</p>` : "");
@@ -2138,7 +2144,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002g").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002h").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2447,12 +2453,21 @@ function mountMap() {
 }
 
 function render() {
+  // '#all'을 달고 들어온 학교 화면은 조사 기간·지역·계열·'미확인 제품' 조건을 모두 풀고 보여 준다 —
+  // 지도 패널의 '이 학교의 전체 기록 보기'가 기본 기간(올해) 때문에 '기록 0건'으로 떨어졌다(2026-10-02 사용자, 대청중)
+  if (location.hash === "#all" && /^\/(school|code)\//.test(location.pathname)) {   // 해시는 서버로 안 가서 어느 호스팅에서도 남는다
+    PF = ""; PT = ""; PF_TOUCHED = true; SF = new Set(); ES = new Set(); RG = new Set(); SCOPE = "all";
+    const box = document.getElementById("inclUnknown"); if (box) box.checked = true;
+    history.replaceState(null, "", location.pathname);
+  }
   const seg = (location.pathname || "/").split("/");
   const kind = seg[1];
   const arg = seg.length > 2 ? decodeURIComponent(seg.slice(2).join("/")) : undefined;
   const view = $("#view");
-  if (kind === "school") view.innerHTML = schoolView(arg);
-  else if (kind === "code") view.innerHTML = codeView(arg);
+  if (kind === "school" || kind === "code") {
+    view.innerHTML = kind === "school" ? schoolView(arg) : codeView(arg);
+    if (PF === "" && PF_TOUCHED && OLD_STATE !== "done") withOld("", () => render());   // 전 기간을 보기로 한 학교 화면은 옛 기록을 마저 읽는다
+  }
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
   else if (kind === "drill2") {
