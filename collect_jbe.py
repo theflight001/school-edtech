@@ -10,6 +10,7 @@ PAGE = f"{BASE}/open/index.jbe?menuCd={MENU}"   # 2026-09 이전: /index.jbe (�
 ACT = f"{BASE}/open/edufine/eduCntrlist1.jbe"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 SPACING = float(os.environ.get("EDTECH_SPACING", "3"))   # 2026-09-15: 1초는 너무 잦다
+PER_PAGE = 100
 OUT = "전북_candidates.csv"
 CKPT = ".ckpt_전북.json"
 FIELDS = ["회계연도", "기관명", "계약명", "계약일", "계약금액", "계약방법", "계약상대자", "키워드"]
@@ -43,7 +44,10 @@ def fetch(keyword, year, page):
          "inst_clss_div": "2,3,4", "cntr_mthd_div_nm": "",
          "fscl_y": year, "cntr_inst_nm": "", "cntr_nm": keyword, "cntr_prtnr_nm": "",
          "schoolIn": "Y", "_schoolIn": "on",
-         "startDate": "", "endDate": "", "cntr_amt": "0", "estb_div": ""}
+         "startDate": "", "endDate": "", "cntr_amt": "0", "estb_div": "",
+         # 화면은 한 쪽에 10줄이지만 pageUnit을 주면 100줄씩 돌려준다(2026-10-02 확인) — 요청이 10분의 1로 줄고
+         # '라이선스|2025'처럼 300쪽 상한에 닿던 넓은 검색어도 다 받는다
+         "pageUnit": str(PER_PAGE), "pageSize": str(PER_PAGE)}
     for wait in [5, 20, 60, None]:
         try:
             req = urllib.request.Request(ACT + "?" + urllib.parse.urlencode(q),
@@ -138,7 +142,7 @@ def main():
                     w.writerow(r)
                     kept += 1
                 f.flush()
-                if len(rows) < 10:
+                if len(rows) < PER_PAGE:
                     break
                 page += 1
                 # 넓은 검색어는 수백 쪽이라 한 검색어가 끝날 때만 적으면 15분 넘게 조용해져
