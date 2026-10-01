@@ -27,7 +27,8 @@ else
   echo "▷ 대전 — 10월 1일까지 쉰다(9/11부터 409 거부가 이어진다)"
 fi
 par_run 충남 region_충남 python3 collect_dje.py --office 충남 --years $Y --keyword-file $KF &
-par_run 경남 region_경남 python3 collect_gne.py --years $Y --keyword-file $KF &
+# 경남은 2026-10-02부터 확정 목록(keywords_final.txt)으로 recollect_run.sh가 이어 받는다 — 옛 목록 보충은 더 돌리지 않는다(멈춤 원인은 collect_gne.py 주석 참조).
+# par_run 경남 region_경남 python3 collect_gne.py --years $Y --keyword-file $KF &
 par_run 강원 region_강원 python3 collect_gwe.py --keyword-file $KF --refresh &
 par_run 광주 region_광주 python3 collect_gen.py --years $Y --keyword-file $KF &
 par_run 울산 region_울산 python3 collect_use.py --keyword-file $KF &

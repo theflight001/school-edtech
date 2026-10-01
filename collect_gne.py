@@ -165,12 +165,21 @@ def main():
                             time.sleep(0.3)
                         except Exception as e:
                             print(f"  상세 실패({e}) — 업체명 없이 저장", flush=True)
+                        # 상세를 한 줄씩 부르는 동안은 아무것도 안 찍혀 '전자칠판|2023'처럼 수백 줄짜리 조합에서 15분 넘게
+                        # 조용해지고, 멈춤 감시가 끊은 뒤 체크포인트(조합 단위)에서 같은 자리를 되풀이했다(2026-09-20~10-01, 열하루).
+                        # 20줄마다 숨소리를 내고(아래), 쪽마다 체크포인트를 적는다(아래) — 끊겨도 받은 줄은 다시 부르지 않는다.
+                        if kept % 20 == 0:
+                            print(f"  …상세 {kept}건째 (요청 {req_n}회)", flush=True)
                     r.pop("_seq", None)
                     r["계약상대자"] = vendor
                     r["키워드"] = kw
                     w.writerow(r)
                     kept += 1
                 f.flush()
+                ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]   # 쪽마다 — 끊겨도 받은 줄은 건너뛴다
+                with open(CKPT + ".tmp", "w") as cf:
+                    json.dump(ckpt, cf, ensure_ascii=False)
+                os.replace(CKPT + ".tmp", CKPT)
                 if len(rows) < a.page_size:
                     break
                 page += 1
