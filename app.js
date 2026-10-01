@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261001d";
+  s.src = "/data_detail.js?b=20261001e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261001d";
+    s2.src = "/data_detail_old.js?b=20261001e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261001d";
+  s.src = "/data_old.js?b=20261001e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1840,8 +1840,7 @@ function schoolsView() {
     <div class="crumb"><a href="/">홈</a> › 학교 전체 보기</div>
     ${allSwitch("/schools")}
     <div class="pagehead"><h2>학교 전체 보기</h2>
-      <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 그중 기록이 있는 곳 ${withRec.toLocaleString()}곳 ·
-        이름을 선택하면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
+      <div class="sub2">학교 ${list.length.toLocaleString()}곳 · 이름을 선택하면 그 학교의 기록을 볼 수 있습니다</div>${filterNote()}</div>
     ${VMODE === "map" ? `<div class="alpha">${modeToggle()}</div>` + mapBox({items: list.map(x => ({s: x, k: n(x)})), lost: 0, unit: "idx", recs: src}) : `
     <div class="alpha">${modeToggle()}<span class="alpha-gap"></span>
       <span class="alab">정렬</span>
@@ -2140,7 +2139,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001d").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001e").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2184,7 +2183,6 @@ function mountMap() {
     const N = v => v.toLocaleString();
     const sum = document.getElementById("mapsum");
     if (sum) sum.textContent = `지도 표시 ${N(feats.length)}개교${noXY ? ` · 미개교·휴교 ${N(noXY)}개교` : ""}`
-      + (spec.unit === "idx" ? ` · 기록 있는 곳 ${N(withRec)}개교(지도 위 ${N(withRecOnMap)}개교)` : "")
       + (spec.lost ? ` · 학교 미특정 기록 ${N(spec.lost)}건` : "")
       + (spec.nrec != null ? ` · 결과 ${N(spec.nrec)}건` : "");
     el.innerHTML = "";
