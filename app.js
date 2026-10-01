@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261002a";
+  s.src = "/data_detail.js?b=20261002b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261002a";
+    s2.src = "/data_detail_old.js?b=20261002b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261002a";
+  s.src = "/data_old.js?b=20261002b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1704,7 +1704,7 @@ function aboutView() {
         <div>
           <h2>데이터 안내</h2>
           <p>이 서비스는 수집된 공개 조달 기록을 바탕으로 전국 초·중·고등학교의 에듀테크 도입 현황을 제공합니다.
-          학교의 계약여부는 공개 정보이지만 여러 곳에 흩어져 있어 찾기 어려우므로, 한곳에서 검색하고 확인할 수 있도록 정리했습니다.</p>
+          학교의 계약여부는 공개 정보이지만 여러 곳에 흩어져 있어 찾기 어려우므로, 한곳에서 검색하고 확인할 수 있는 서비스를 제공합니다.</p>
         </div>
         <img src="/hero_person_m.png?v=2" width="239" height="186" alt="">
       </div>
@@ -2138,7 +2138,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
