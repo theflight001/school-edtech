@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261001c";
+  s.src = "/data_detail.js?b=20261001d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261001c";
+    s2.src = "/data_detail_old.js?b=20261001d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261001c";
+  s.src = "/data_old.js?b=20261001d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2108,7 +2108,7 @@ function showMapSel(spec, rows) {
     const nd = rs.filter(r => isCounted(r)).length;
     return `<div class="mapsel"><div class="mapsel-h"><b>${esc(p.n)}</b>
         <span>${esc(p.s)} · ${esc(p.l)} · ${nd ? `기록 ${nd.toLocaleString()}건` : "기록 없음"}</span>
-        <a href="${esc(p.href)}">${nd ? "학교 화면에서 보기 ›" : "학교 정보 ›"}</a></div>
+        <a href="${esc(p.href)}">${nd ? "이 학교의 전체 기록 보기 ›" : "학교 정보 ›"}</a></div>
       ${rs.length ? recordTable(fillDetail(rs.slice(0, MAX)), {showSchool: false}) : ""}
       ${rs.length > MAX ? `<p class="cv">최근 ${MAX}건만 보여 줍니다 — 전체는 학교 화면에서 볼 수 있습니다</p>` : ""}</div>`;
   }).join("") + (rows.length > 8 ? `<p class="cv">이 자리의 다른 ${rows.length - 8}곳은 더 확대해 눌러 보세요</p>` : "");
@@ -2140,7 +2140,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001c").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001d").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
