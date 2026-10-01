@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261001g";
+  s.src = "/data_detail.js?b=20261002a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261001g";
+    s2.src = "/data_detail_old.js?b=20261002a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261001g";
+  s.src = "/data_old.js?b=20261002a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1364,8 +1364,8 @@ function vendorsView() {
     ${allSwitch("/vendors")}
     <div class="pagehead"><h2>공급 기업</h2>
       <div class="sub2">계약 건수가 5건 이상인 기업의 명단입니다.<br>
-        온라인몰·조달 대행·결제 대행·대형 제조사·교육청 같은 기관 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
-        보기 어려워 제외되었습니다</div></div>
+        온라인몰·조달 대행·결제 대행·대형 제조사·교육청 등의 기관 ${dropped.toLocaleString()}곳은 에듀테크를 공급한 곳으로
+        보기 어려워 제외되었습니다.</div></div>
 
     ${makerRows.length ? `<div class="card"><h2>에듀테크 제조·개발사<span class="note">명부에 오른 ${makerRows.length}곳 · 표기가 달라도 한 회사로 모았습니다</span></h2>
       <div class="plist">${makerRows.map(m => `<a href="/vendor/${encodeURIComponent(m.key)}">${esc(m.n)}
@@ -2138,7 +2138,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001g").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
