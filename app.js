@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261002h";
+  s.src = "/data_detail.js?b=20261002i";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261002h";
+    s2.src = "/data_detail_old.js?b=20261002i";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261002h";
+  s.src = "/data_old.js?b=20261002i";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -925,6 +925,7 @@ const tagLabel = t => GENERIC_TAGS.has(t)
   ? `<span class="gbadge" title="계약명에 제품 이름이 없어 제품군으로만 분류된 기록입니다">제품군</span><span class="gtag">${esc(tagName(t))}</span>`
   : esc(t);
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
+let SCHOOL_EXPANDED = false;                 // 학교 상세가 조건 밖 기록까지 펼쳐 보이는 중 — 옛 기록도 마저 읽어야 한다
 function toggleTip(e) {
   e.preventDefault();
   const t = document.getElementById("inclTip");
@@ -1121,6 +1122,14 @@ function schoolView(name, code) {
     if (codes.length > 1) return sameNameView(name, codes);
   }
   const info = fillDetail([allR[0]])[0];
+  // 지금 조건(조사 기간·지역·계열·미확인 제품) 안에 기록이 하나도 없으면 조건 없이 전부 보여 준다 — 검색 결과(전 기간)나
+  // 지도에서 들어온 학교가 '기록 0건 · 조건 밖 6건'으로 떨어졌다(2026-10-02 사용자, 대청중). 무엇을 풀었는지는 아래에 적는다
+  let expanded = false;
+  if (!all.length && allR.length) {
+    all = SCOPE === "product" ? allR.filter(hasProduct) : allR;
+    if (!all.length) all = allR;
+    expanded = true; SCHOOL_EXPANDED = true;
+  } else SCHOOL_EXPANDED = false;
   const outN = allR.length - all.length;
   // 기록에 나온 순서대로 두면 기준이 없다 — 제품을 앞에, 제품군을 뒤에 두고
   // 그 안에서는 이 학교의 기록이 많은 것부터 보인다.
@@ -1140,7 +1149,7 @@ function schoolView(name, code) {
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead" style="position:relative"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       ${outN || OLD_STATE !== "done" ? `<a class="allrec" href="javascript:void(0)" onclick="showAllSchool()" title="조사 기간·지역·계열·미확인 제품 조건을 모두 풀고 이 학교의 기록을 전부 봅니다">이 학교의 전체 기록 보기 ›</a>` : ""}
-      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}
+      <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}${expanded ? ` <span style="color:var(--muted)">· 지금 조사 기간·조건 안에는 기록이 없어 전체 기록을 보여 줍니다</span>` : ""}
         ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         ${viaNames.length ? `<div class="conf">${viaNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")} 명의로 조달됐지만 계약명에 이 학교가 적혀 있어 이 학교 기록으로 둔 것이 있습니다</div>` : ""}
@@ -2144,7 +2153,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002h").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002i").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2466,7 +2475,7 @@ function render() {
   const view = $("#view");
   if (kind === "school" || kind === "code") {
     view.innerHTML = kind === "school" ? schoolView(arg) : codeView(arg);
-    if (PF === "" && PF_TOUCHED && OLD_STATE !== "done") withOld("", () => render());   // 전 기간을 보기로 한 학교 화면은 옛 기록을 마저 읽는다
+    if (((PF === "" && PF_TOUCHED) || SCHOOL_EXPANDED) && OLD_STATE !== "done") withOld("", () => render());   // 전 기간을 보기로 했거나 조건 밖까지 펼친 학교 화면은 옛 기록을 마저 읽는다
   }
   else if (kind === "tag") view.innerHTML = tagView(arg);
   else if (kind === "drill") view.innerHTML = drillView(seg[2], decodeURIComponent(seg.slice(3).join("/")));
