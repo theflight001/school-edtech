@@ -1,5 +1,5 @@
 # 전북특별자치도교육청 1인 수의계약현황 수집기 — 학교 계약
-# 사용: python3 collect_jbe.py [--years 2023,2024,2025,2026]
+# 사용: python3 collect_jbe.py [--years 2020,2021,2022,2023,2024,2025,2026]
 # 특징: 폼이 GET 방식이다(POST로 보내면 조건이 통째로 무시된다).
 #       목록의 3번째 칸에 '계약기관+계약명'이 붙어 나와 기관명을 잘라내야 한다.
 import argparse, csv, html, json, os, re, time, urllib.error, urllib.parse, urllib.request
@@ -37,7 +37,10 @@ def opener():
 
 def fetch(keyword, year, page):
     q = {"menuCd": MENU, "pageIndex": str(page), "orderField": "", "eduIn": "N",
-         "inst_clss_div": "2,3,4", "cntr_mthd_div_nm": "1인수의",
+         # 계약방법 '1인수의' 필터는 걷었다 — 2020~2022 회계연도에서는 이 값으로 물으면 0건이고(목록의 계약방법 칸은 모든 해에 비어 있다),
+         # 2023 이후도 필터 없이 물으면 13% 더 나온다(FY2023 97,168 → 110,316건). 회계연도 선택지에 2023부터만 보여도
+         # 서버는 2020·2021·2022를 돌려준다(2026-10-02 확인: FY2020 83,000건·FY2021 99,821건·FY2022 101,560건)
+         "inst_clss_div": "2,3,4", "cntr_mthd_div_nm": "",
          "fscl_y": year, "cntr_inst_nm": "", "cntr_nm": keyword, "cntr_prtnr_nm": "",
          "schoolIn": "Y", "_schoolIn": "on",
          "startDate": "", "endDate": "", "cntr_amt": "0", "estb_div": ""}
