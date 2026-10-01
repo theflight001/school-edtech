@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261002e";
+  s.src = "/data_detail.js?b=20261002f";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261002e";
+    s2.src = "/data_detail_old.js?b=20261002f";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261002e";
+  s.src = "/data_old.js?b=20261002f";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1745,7 +1745,7 @@ function aboutView() {
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 기록에 제시되지 않습니다.</li>
         <li><b>“외 3종”처럼 묶어 표시된 계약</b> 내용은 해당 정보가 누락됩니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이러한 형태로 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
-        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 실었습니다.</li>
+        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 수록되었습니다.</li>
       </ul>
 
       <h3>수록 범위</h3>
@@ -2138,7 +2138,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002e").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261002f").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
