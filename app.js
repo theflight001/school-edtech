@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261001b";
+  s.src = "/data_detail.js?b=20261001c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -424,6 +424,7 @@ let pkS = null, pkE = null, pkBase = 2025;
 const periodOn = () => (PF !== BASE_FROM) || !!PT;
 const ymStr = ym => `${Math.floor(ym / 100)}-${String(ym % 100).padStart(2, "0")}`;
 const ymKo = ym => `${Math.floor(ym / 100)}.${String(ym % 100).padStart(2, "0")}`;
+const ymKoWord = ym => `${Math.floor(ym / 100)}년 ${ym % 100}월`;   // "2026년 9월" — 수집 중 안내에 쓴다(2026-10-01 사용자 요청)
 window.openPicker = () => {
   // 늘 빈 상태로 연다. 지금 기간을 물려받으면 달력은 2020년을 펴 놓고 위에는
   // '2026.01 ~ 종료 월 선택'이라고 적혀 서로 어긋나 보인다.
@@ -526,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261001b";
+    s2.src = "/data_detail_old.js?b=20261001c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -538,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261001b";
+  s.src = "/data_old.js?b=20261001c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -965,7 +966,7 @@ function filterNote() {
   // 전체 기록으로 읽힌다(2026-09-12).
   const ym = v => v.replace("-0", ".").replace("-", ".");     // 2026-01 → 2026.1
   const bits = [`조사 기간 ${ym(PF || "2020-01")} ~ ${ym(PT || YM_TO)}`];
-  if (DB.meta.ymPartial && (!PT || ymInt(PT) >= DB.meta.ymPartial)) bits.push(`${ymKo(DB.meta.ymPartial)}은 수집 중`);
+  if (DB.meta.ymPartial && (!PT || ymInt(PT) >= DB.meta.ymPartial)) bits.push(`${ymKoWord(DB.meta.ymPartial)}은 수집 중`);
   if (RG.size) bits.push(`지역 ${rgLabel()}`);
   if (SF.size) bits.push(`계열 ${sfLabel()}`);
   if (ES.size) bits.push(`설립 주체 ${esLabel()}`);
@@ -1022,7 +1023,7 @@ function homeView() {
         <!-- 칸에 적는 것은 지금 보고 있는 기간이다. 자료는 2020년까지 닿지만 기본은 2023년부터
              보여 주므로, 손대지 않았을 때 전체 범위를 적으면 없는 것을 보고 있다고 착각하게 된다. -->
         <div class="v">${active ? `${PF || "2020-01"} ~ ${PT || YM_TO}`.replaceAll("-", ".")
-          : (DB.meta.basePeriod || DB.meta.coveragePeriod)}${DB.meta.ymPartial ? `<div class="conf">${ymKo(DB.meta.ymPartial)}은 수집 중</div>` : ""}</div>
+          : (DB.meta.basePeriod || DB.meta.coveragePeriod)}${DB.meta.ymPartial ? `<div class="conf">${ymKoWord(DB.meta.ymPartial)}은 수집 중</div>` : ""}</div>
         <div class="l" style="margin-top:6px">조사 기간 <span class="hint">변경 ▾</span></div>
       </div>
     </div>
@@ -1750,7 +1751,7 @@ function aboutView() {
 
       <h3>수록 범위</h3>
       <ul>
-        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKo(m.ymPartial)}은 수집 중)</span>` : ""}
+        <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKoWord(m.ymPartial)}은 수집 중)</span>` : ""}
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 제공됩니다.
           <b>조사 기간</b>에서 2020년 1월부터 선택할 수 있습니다.` : ""}</li>
         <li>수록 기록: <b>${(m.total || 0).toLocaleString()}건</b> · 검색 가능 학교: <b>${n(m.idxCount, 12540)}개교</b>(국내 공교육 전체) · 기록 보유 학교: <b>${(m.schools || 0).toLocaleString()}개교</b></li>
@@ -2139,7 +2140,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001b").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001c").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
