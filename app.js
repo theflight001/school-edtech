@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261001a";
+  s.src = "/data_detail.js?b=20261001b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -526,7 +526,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261001a";
+    s2.src = "/data_detail_old.js?b=20261001b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -538,7 +538,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261001a";
+  s.src = "/data_old.js?b=20261001b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1695,8 +1695,10 @@ function aboutView() {
                              "방송통신 중·고": 66, "고등기술·고등공민학교": 8};
   const mixText = ["특수학교", "각종학교", "평생학교", "방송통신 중·고", "고등기술·고등공민학교"]
     .filter(k => mix[k]).map(k => `${k} ${mix[k].toLocaleString()}개교`).join(", ");
-  return `
-    <div class="crumb"><a href="/">홈</a> › 데이터 안내</div>
+  // 본문은 제목·소제목만 두드러지게 — 본문 속 굵은 글씨와 파란 링크는 걷어 낸다(2026-10-01 사용자 요청). 길잡이(crumb)의 홈 링크만 남긴다
+  const plain = html => html.replace(/<\/?b>/g, "").replace(/<a [^>]*>([\s\S]*?)<\/a>/g, "$1");
+  const crumb = `<div class="crumb"><a href="/">홈</a> › 데이터 안내</div>`;
+  return crumb + plain(`
     <div class="page">
       <div class="page-intro">
         <div>
@@ -1778,7 +1780,7 @@ function aboutView() {
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
         <a href="/contact">정정 요청</a>으로 알려 주세요.</li>
       </ul>
-    </div>`;
+    </div>`);
 }
 
 let VLIST_KIND = "";                    // 공급 기업 목록에서 고른 갈래
@@ -2137,7 +2139,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261001b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
