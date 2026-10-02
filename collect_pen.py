@@ -50,6 +50,10 @@ def months(begin, end):
         last = [31, 29 if (y % 4 == 0 and y % 100 != 0) or y % 400 == 0 else 28,
                 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
         out.append((f"{y}/{m:02d}/01", f"{y}/{m:02d}/{last}", y))
+        # 1·2월 계약은 대부분 전년도 회계연도 소속이다 — 회계연도를 달력 연도로만 물으면 1·2월이 거의 비었다
+        # (2026-10-02 확인: 부산 2024-01은 FY2024로 55건, FY2023으로 2,256건). 두 회계연도를 다 묻는다
+        if m in (1, 2):
+            out.append((f"{y}/{m:02d}/01", f"{y}/{m:02d}/{last}", y - 1))
         m += 1
         if m > 12:
             y, m = y + 1, 1
@@ -127,7 +131,7 @@ def main():
     kept = req_n = 0
     for kw in kws:
         for bdt, edt, year in wins:
-            key = (kw, bdt)
+            key = (kw, bdt) if year == int(bdt[:4]) else (kw, bdt, f"FY{year}")   # 전년도 회계연도로 묻는 1·2월 칸은 열쇠를 따로 둔다
             if key in done:
                 continue
             page = 1
