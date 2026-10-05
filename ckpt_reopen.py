@@ -20,7 +20,7 @@ import argparse, glob, json, os, re, shutil, time
 
 MONTHLY = [".ckpt_강원.json", ".ckpt_use.json", ".ckpt_ice.json", ".ckpt_충북.json", ".ckpt_전남.json",
            ".ckpt_세종.json", ".ckpt_dje.json", ".ckpt_충남.json", ".ckpt_경남.json", ".ckpt_gen.json",
-           ".ckpt_경기.json", ".ckpt_pen.json", ".ckpt_경북.json", ".ckpt_dge.json", ".ckpt_제주.json",
+           ".ckpt_경기.json", ".ckpt_pen.json", ".ckpt_경북.json", ".ckpt_dge.json", ".ckpt_제주.json", ".ckpt_전북.json",
            ".ckpt_s2b_excel.json", ".ckpt_s2b_bid.json", ".ckpt_nara_bid.json", ".ckpt_nara_office.json"]
 NO_PERIOD = {".ckpt_강원.json", ".ckpt_use.json"}
 
@@ -28,7 +28,8 @@ NO_PERIOD = {".ckpt_강원.json", ".ckpt_use.json"}
 def span(x):
     """표식 하나 → (첫 달, 끝 달) YYYYMM. 기간이 없으면 None"""
     if isinstance(x, list):
-        if len(x) == 3:
+        # 부산·경북의 1·2월 전년도 회계연도 칸은 ('', '2026/01/01', 'FY2025') 꼴이다(2026-10-02) — 날짜 칸으로 본다
+        if len(x) == 3 and not str(x[2]).startswith("FY"):
             return (int(x[1]) * 100 + int(x[2]),) * 2
         m = re.match(r"(\d{4})/(\d{2})", str(x[1]))
         return (int(m[1]) * 100 + int(m[2]),) * 2 if m else None
