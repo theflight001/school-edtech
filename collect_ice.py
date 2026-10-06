@@ -36,6 +36,14 @@ MAXREQ = int(os.environ.get("EDTECH_MAXREQ", "1200"))
 _req_used = [0]
 
 
+class Blocked(Exception):
+    """잇달아 못 받았다 — 막힌 것으로 보고 멈춘다. 계속 두드리면 더 오래 막힌다(2026-09-17 전남 새 IP, 노트북 수집기에서 가져옴 2026-10-07)"""
+
+
+BLOCK_STREAK = 3          # 연속 몇 칸을 못 받으면 막힌 것으로 볼지
+PAUSE_HOURS = 24          # 막히면 몇 시간 쉴지 — .pause_until 파일에 적어 둔다
+
+
 class BudgetOut(Exception):
     """이번 실행에서 받기로 한 양을 다 썼다 — 체크포인트를 남기고 곱게 끝낸다"""
 
@@ -161,7 +169,7 @@ def main():
         toks = [t for t in re.split(r"[\s\-–—/]+", k) if t and not RISKY.fullmatch(t)]
         return max(toks, key=len) if toks else ""
 
-    kept = req_n = 0
+    kept = req_n = streak = 0
     failed = set()                 # 오류로 못 받은 칸 — 완료로 적지 않는다
     kws = a.keywords.split(",")
     if a.keyword_file:
@@ -203,7 +211,11 @@ def main():
                 # (경기 2025년이 그렇게 묻혔다: 38칸이 완료로 찍혔는데 자료는 없었다)
                 print(f"  [{kw}] 건너뜀 ({e})", flush=True)
                 failed.add(tag)
+                streak += 1
+                if streak >= BLOCK_STREAK:
+                    raise Blocked(f"{streak}칸 연속 못 받음 (마지막: {e})")
                 break
+            streak = 0
             req_n += 1
             rows = parse(body)
             if not rows:
@@ -251,3 +263,15 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+    except Blocked as e:
+        # 인터넷 자체가 끊긴 것과 우리 IP가 막힌 것을 가른다. 끊긴 거면 15분, 막힌 거면 24시간 쉰다(.pause_until에 적는다)
+        try:
+            ip = urllib.request.urlopen("https://api.ipify.org", timeout=10).read().decode().strip()
+            hours, why = PAUSE_HOURS, "막힌 듯"
+        except Exception:
+            ip, hours, why = "none", 0.25, "인터넷 끊김"
+        until = time.time() + hours * 3600
+        with open(".pause_until", "a") as pf:
+            pf.write(f"{int(until)} {ip}\n")
+        print(f"\n■ {why}: {e} — {hours:g}시간 쉰다 (IP {ip}, 재개 가능 {time.strftime('%m-%d %H:%M', time.localtime(until))}, .pause_until)", flush=True)
+        sys.exit(2)

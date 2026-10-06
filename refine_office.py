@@ -1,7 +1,7 @@
 # 시도교육청 계약공개 수집분 정제 — 학교 매칭 + 에듀테크 판정 (시도 공통)
 # 사용: python3 refine_office.py [인천 부산 대구 ...]   (생략하면 수집 파일이 있는 시도 전부)
 # 판정 규칙은 build_data.py의 정본을 그대로 불러 쓴다(이중 관리 금지).
-import csv, hashlib, re, sys, collections
+import os, csv, hashlib, re, sys, collections
 
 csv.field_size_limit(10**7)
 
@@ -80,6 +80,14 @@ def match_school(name, prefix, sido_pat):
 def refine(sido):
     src, out_path, prefix, sido_pat = OFFICES[sido]
     rows = list(csv.DictReader(open(src, encoding="utf-8-sig")))
+    # 강원은 K-에듀파인 화면에 2023.11~2025.9가 없어 학교별 월간 게시판(PDF)에서 따로 받은 것을 합친다
+    # (collect_gwe_board.py, 2026-10-02). 같은 기관·계약명·계약일은 화면 쪽을 남긴다.
+    if sido == "강원" and os.path.exists("강원_board_candidates.csv"):
+        have = {(r["기관명"], r["계약명"], r["계약일"]) for r in rows}
+        add = [r for r in csv.DictReader(open("강원_board_candidates.csv", encoding="utf-8-sig"))
+               if (r["기관명"], r["계약명"], r["계약일"]) not in have]
+        print(f"   강원 게시판 보충 {len(add):,}행 합침")
+        rows += add
     out, drop = [], collections.Counter()
     matched = 0
     for r in rows:

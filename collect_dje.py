@@ -32,6 +32,11 @@ MAXREQ = int(os.environ.get("EDTECH_MAXREQ", "1200"))
 _req_used = [0]
 
 
+class Rejected(Exception):
+    """서버가 이 요청을 거부했다(400/403/409 …). 2026-09-29 확인: 409는 IP·세션이 아니라 **검색어**에 붙는다
+    ('Net Class'는 어떤 IP·새 세션에서도 409, '소프트웨어'는 같은 자리에서 OK). 재시도·세션 재생성 없이 건너뛴다."""
+
+
 class BudgetOut(Exception):
     """이번 실행에서 받기로 한 양을 다 썼다 — 체크포인트를 남기고 곱게 끝낸다"""
 
@@ -54,37 +59,85 @@ EXCLUDE = re.compile(r"전세버스|버스 ?임차|차량 ?임차|숙박|수송|
                      r"청소|방역|소독|교복|졸업앨범|정수기|승강기")
 RISKY = re.compile(r"\b(and|or|not|select|union|insert|update|delete|where|from|drop|exec)\b", re.I)
 
+# ── 세션(쿠키)을 파일에 이어 쓴다 ──────────────────────────────────────────
+# 2026-09-27~29 관찰: 같은 IP에서 세션(쿠키)을 새로 만든 직후의 요청이 409로 거부된다(확인 요청 OK →
+# 19분 뒤 새 세션의 첫 요청 409). 서버나 웹방화벽이 IP당 살아 있는 세션을 하나로 보는 듯하다.
+# 그래서 쿠키를 cookies.txt에 저장해 확인 요청·수집기·다음 실행이 한 세션을 이어 쓰고,
+# 409가 나도 곧바로 새 세션을 만들지 않는다(req_retry 참고).
+COOKIES = "cookies.txt"
 _opener = None
-def opener():
+_sess = {"t": 0.0, "n": 0}          # 세션 시작 시각·세션에서 보낸 요청 수 (로그용)
+def opener(new=False):
     global _opener
-    if _opener is None:
+    if _opener is None or new:
         import http.cookiejar
-        cj = http.cookiejar.CookieJar()
+        cj = http.cookiejar.MozillaCookieJar(COOKIES)
+        if not new and os.path.exists(COOKIES):
+            try:
+                cj.load(ignore_discard=True, ignore_expires=True)
+            except Exception:
+                pass
         _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         _opener.addheaders = [("User-Agent", UA)]
-        _opener.open(LIST, timeout=90).read()          # 세션 쿠키 확보
+        _opener._cj = cj
+        if new or len(cj) == 0:
+            _opener.open(LIST, timeout=90).read()      # 세션 쿠키 확보 — 저장된 게 없을 때만
+            cj.save(ignore_discard=True, ignore_expires=True)
+            print(f"  세션 새로 만듦 ({time.strftime('%H:%M:%S')})", flush=True)
+        else:
+            print(f"  저장된 세션 이어 씀 ({COOKIES}, 쿠키 {len(cj)}개)", flush=True)
+        _sess["t"], _sess["n"] = time.time(), 0
     return _opener
 
+_first_noted = [False]
+def _note_first(body):
+    """첫 성공 응답을 한 번만 저장하고 <input type="hidden"> 항목을 로그에 적는다 — 서버가 폼 토큰을
+    요구해서 두 번째 요청부터 409를 내는지 보려고(맥 스튜디오 요청, 2026-09-27)"""
+    if _first_noted[0] or os.path.exists("first_response.html"):
+        _first_noted[0] = True
+        return
+    _first_noted[0] = True
+    with open("first_response.html", "w", encoding="utf-8") as fh:
+        fh.write(body)
+    hid = re.findall(r"<input\b[^>]*type=[\"']?hidden[\"']?[^>]*>", body, re.I)
+    print(f"  ▣ 첫 응답 저장 first_response.html ({len(body):,}자) · hidden input {len(hid)}개", flush=True)
+    for h in hid[:40]:
+        name = re.search(r"name=[\"']?([^\"'\s>]+)", h, re.I)
+        val = re.search(r"value=[\"']([^\"']*)[\"']", h, re.I)
+        v = val.group(1) if val else ""
+        shape = f"길이 {len(v)}" + (" 숫자" if v.isdigit() else " 16진" if re.fullmatch(r"[0-9a-fA-F]+", v or "x") else " 영숫자" if v.isalnum() else "")
+        print(f"     hidden name={name.group(1) if name else '?'} value={v[:24]!r}{'…' if len(v)>24 else ''} ({shape})", flush=True)
+    for m_ in re.findall(r"(?i)(csrf|token|_token|X-CSRF[^\s\"'<>]*)[^\n<>]{0,80}", body)[:5]:
+        print(f"     본문에 token/csrf 문구: {m_[:100]!r}", flush=True)
+
 def req_retry(target, data=None):
-    # 409는 서버가 세션을 끊은 것이라 곧바로 새 세션으로 다시 물으면 같은 IP에서 세션이 잇따라 생겨 더 의심을 산다.
-    # 5분·15분·30분을 쉬고 나서 새 세션으로 묻는다(2026-09-27 노트북: 첫 요청 뒤 곧바로 409).
-    for wait in [300, 900, 1800, None]:
+    # 409면 (1) 5분 뒤 같은 세션으로, (2) 25분 더 기다려 새 세션으로, (3) 30분 더 기다려 새 세션으로 묻고, 그래도 안 되면 포기.
+    # 새 세션은 앞 세션이 서버에서 사라질 시간(30분)을 두고서만 만든다.
+    plan = [(300, False), (1500, True), (1800, True), (None, None)]
+    for wait, renew in plan:
         try:
             r = urllib.request.Request(target, data=data,
                                        headers={"User-Agent": UA, "Referer": LIST})
-            return opener().open(r, timeout=120).read().decode("utf-8", "replace")
+            body = opener().open(r, timeout=120).read().decode("utf-8", "replace")
+            _sess["n"] += 1
+            try:
+                opener()._cj.save(ignore_discard=True, ignore_expires=True)
+            except Exception:
+                pass
+            _note_first(body)
+            return body
         except Exception as e:
+            code = getattr(e, "code", None)
+            if code in (400, 403, 409, 419, 440):
+                raise Rejected(f"HTTP {code}")          # 검색어 거부 — 기다려도 세션을 바꿔도 같다
             if wait is None:
                 raise
-            # 대전 서버는 접속한 지 10분쯤 지나면 409(Conflict)로 끊는다(2026-09-11 확인 — 검색어가 달라도
-            # 네 번 모두 시작 7~11분 뒤, 요청 50~60번째에 죽었다). 예전엔 처음 받은 쿠키를 끝까지 써서
-            # 다시 물어도 똑같이 409였다. 거부 응답이면 세션을 버리고 새로 받아 묻는다.
-            global _opener
-            if isinstance(e, urllib.error.HTTPError) and e.code in (400, 403, 409, 419, 440):
-                _opener = None
-                print(f"  세션을 새로 받는다({e.code})", flush=True)
-            print(f"  재시도({e}) → {wait}초", flush=True)
+            print(f"  재시도({e}) → {wait}초 (세션 {(time.time()-_sess['t'])/60:.0f}분째, "
+                  f"세션 요청 {_sess['n']}회)", flush=True)
             time.sleep(wait)
+            if renew and code in (400, 403, 409, 419, 440):
+                print("  앞 세션이 사라졌을 시간 — 세션을 새로 만든다", flush=True)
+                opener(new=True)
 
 def search(keyword, year, page):
     d = {"realFsclY": "", "realCntrTargNO": "", "pageSize": "100",
@@ -171,6 +224,7 @@ def main():
     years = a.years.split(",")
     print(f"검색어 {len(kws)}종 × 회계연도 {len(years)}개 = {len(kws)*len(years)}조합", flush=True)
     kept = req_n = 0
+    rejected = []                  # 서버가 거부한 검색어 — 완료로 적지 않고 파일에 남긴다
     for kw in kws:
         q = safe_kw(kw)
         if not q:
@@ -179,9 +233,19 @@ def main():
             tag = f"{kw}|{year}"
             if tag in done:
                 continue
+            if kw in rejected:
+                continue           # 한 연도에서 거부됐으면 나머지 연도도 보내지 않는다
             page = 1
             while page <= a.max_pages:
-                rows = parse(search(q, year, page))
+                try:
+                    rows = parse(search(q, year, page))
+                except Rejected as e:
+                    rejected.append(kw)
+                    with open("rejected_keywords.txt", "a", encoding="utf-8") as rf:
+                        rf.write(f"{time.strftime('%F %T')}\t{kw}\t{year}\t{e}\n")
+                    print(f"  [{kw} {year}] 거부됨({e}) — 이 검색어는 건너뜀 (rejected_keywords.txt)", flush=True)
+                    polite()       # 거부도 요청 하나다 — 다음 검색어로 곧바로 넘어가지 않고 같은 간격을 둔다
+                    break
                 req_n += 1
                 if not rows:
                     break
@@ -214,6 +278,8 @@ def main():
                 if page % 10 == 0:
                     print(f"  …{page}페이지째", flush=True)
                 polite()
+            if kw in rejected:
+                continue           # 거부된 칸은 완료로 적지 않는다(체크포인트도 그대로)
             done.add(tag)
             ckpt["done"], ckpt["seen"] = sorted(done), [list(k) for k in seen]
             with open(CKPT + ".tmp", "w") as cf:
@@ -224,6 +290,8 @@ def main():
             polite()
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
+    if rejected:
+        print(f"   ※ 서버가 거부한 검색어 {len(rejected)}종 (rejected_keywords.txt) — 완료로 적지 않았다: {', '.join(rejected[:20])}{' …' if len(rejected)>20 else ''}")
 
 if __name__ == "__main__":
     try:

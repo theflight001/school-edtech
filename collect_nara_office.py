@@ -65,7 +65,7 @@ def windows(begin, end):
     e = date(int(end[:4]), int(end[4:6]), int(end[6:]))
     out = []
     while b <= e:
-        nxt = min(b + timedelta(days=89), e)
+        nxt = min(b + timedelta(days=30), e)   # 2026-10-07: 석 달 창(89일)은 '입력범위값 초과 에러'(resultCode 07)로 거부된다 — 한 달 창으로
         out.append((b.strftime("%Y%m%d"), nxt.strftime("%Y%m%d")))
         b = nxt + timedelta(days=1)
     return out
