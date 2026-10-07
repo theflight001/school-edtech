@@ -475,7 +475,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
 </main>
 <footer><span id="upd"></span>Crafted by Keol Lim</footer>
 <div id="pickerRoot"></div>
-<script src="/data_summary.js?b=20261008a"></script>
+<script src="/data_summary.js?b=20261008b"></script>
 <script>
 // 첫 화면은 요약 자료(수십 KB)만으로 그린다. 13만 건 원자료(data.js)는 그림이 나온 뒤에 받는다.
 (function () {
@@ -488,9 +488,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   }
   var view = document.getElementById("view");
   var q = document.getElementById("q");
-  // 검색창은 잠그지 않는다 — 미리 쳐 두면 자료가 도착하는 즉시 반영된다(app.js 끝에서 처리).
-  // '불러오는 중'이라고만 적으면 칠 수 없는 것처럼 읽혀 기다리게 만든다(2026-09-13).
-  if (q) { q.dataset.ph = q.placeholder; q.placeholder = "먼저 입력해 두세요 — 자료가 준비되면 바로 찾습니다"; }
+  // 검색창은 잠그지도, 안내문을 바꾸지도 않는다 — 미리 쳐 둔 글자는 자료가 도착하면 app.js가 되살린다(2026-10-08 사용자 요청).
   // 옛 주소(school-edtech.kr/#/tag/ChatGPT)로 들어오면 진짜 경로로 바꿔 준다.
   // 이미 나눠 쓰신 링크가 끊기지 않게 하려는 것 — 한 번 바꾸면 뒤로 가기에도 남지 않는다.
   if (location.hash.indexOf("#/") === 0) {
@@ -543,8 +541,8 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var go = function () {
     if (started) return;
     started = true;
-    load("/data.js?b=20261008a");
-    load("/app.js?b=20261008a");
+    load("/data.js?b=20261008b");
+    load("/app.js?b=20261008b");
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

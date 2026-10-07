@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261008a";
+  s.src = "/data_detail.js?b=20261008b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261008a";
+    s2.src = "/data_detail_old.js?b=20261008b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261008a";
+  s.src = "/data_old.js?b=20261008b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1711,7 +1711,7 @@ function aboutView() {
   const mixText = ["특수학교", "각종학교", "평생학교", "방송통신 중·고", "고등기술·고등공민학교"]
     .filter(k => mix[k]).map(k => `${k} ${mix[k].toLocaleString()}개교`).join(", ");
   // 본문은 제목·소제목만 두드러지게 — 본문 속 굵은 글씨와 파란 링크는 걷어 낸다(2026-10-01 사용자 요청). 길잡이(crumb)의 홈 링크만 남긴다
-  const plain = html => html.replace(/<\/?b>/g, "").replace(/<a [^>]*>([\s\S]*?)<\/a>/g, "$1");
+  const plain = html => html.replace(/<\/?b>/g, "").replace(/<a (?![^>]*class="keep")[^>]*>([\s\S]*?)<\/a>/g, "$1");   // 정정 요청 링크만 남긴다(2026-10-08 사용자 요청)
   const crumb = `<div class="crumb"><a href="/">홈</a> › 데이터 안내</div>`;
   return crumb + plain(`
     <div class="page">
@@ -1782,18 +1782,18 @@ function aboutView() {
         <b>전남광주통합특별시교육청</b>으로 변경되었습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
         2026.3.5. 공포 · 2026.7.1. 시행).
-        나이스(NEIS)와 학교 회계·계약을 다루는 <b>K-에듀파인</b> 등 주요 시스템은 2028년 완전 통합을 목표로
-        단계적으로 개편되므로
+        나이스(NEIS)와 K-에듀파인 등 주요 시스템은 2028년 통합을 목표로 단계적으로 개편되므로
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
-        정보시스템은 당분간 전남과 광주 체계를 그대로 유지합니다.</li>
-        <li><b>주의사항</b> — 소액까지 공개(경기·인천·충북·세종·대구·경남·울산, 서울은 2022년 이후), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 서울은 2020~2021년), 금액 미공개(강원) 등
-        시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이하여 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다.
-        즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다. 이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만,
-        그럼에도 이 한계점에 유의하시기 바랍니다. 아울러 공개 화면이 갖고 있는 기간도 교육청마다 달라, 부산은 2023년 3월 이후, 광주는 2021년 이후, 서울 수의계약공개는 2021년 12월 이후만 있고(서울 2020~2021년은 에듀파인연계 화면으로 보충), 강원은 2023년 11월~2025년 9월이 비어 있어 학교별 월간 게시판으로 보충하고 있으며, 전남은 2026년 7월 25일~8월 31일분이 원천 화면에 올라오지 않았습니다. 그 기간의 학교 구매는 나라장터·S2B 학교장터 기록으로만 잡힙니다.</li>
+        세부 정보는 당분간 전남과 광주가 별도로 제공됩니다.</li>
+        <li><b>주의사항</b> — 시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이합니다
+        (소액 공개(경기·인천·충북·세종·대구·경남·울산, 2022년 이후 서울), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
+        따라서, 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다. 즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다.
+        이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만, 그럼에도 한계가 있을 수 있는 바를 유의하시기 바랍니다.
+        또한 제공되는 정보의 기간도 교육청마다 상이하여, 검색되지 않는 기간의 구매 기록은 학교의 에듀테크 구매는 나라장터·S2B 학교장터의 공개 정보로만 검색된 결과가 표시됩니다.</li>
         <li><b>정정 요청</b> — 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
-        <a href="/contact">정정 요청</a>으로 알려 주세요.</li>
+        <a href="/contact" class="keep">정정 요청</a>으로 알려 주세요.</li>
       </ul>
     </div>`);
 }
@@ -2153,7 +2153,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261008a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261008b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2556,6 +2556,8 @@ document.addEventListener("click", e => {
   go(href);
 });
 perfMark("화면 코드 준비");
+// 자료가 오기 전에 검색창에 쳐 둔 글자 — render()가 검색창을 비우므로 먼저 챙겨 둔다(2026-10-08: 그래서 '먼저 입력'이 안 먹었다)
+const _earlyQ = ((document.querySelector("#q") || {}).value || "").trim();
 render();
 perfMark("첫 화면 그리기");
 // 요약 파일이 원자료와 어긋나면 첫 화면 수치가 뒤늦게 바뀐다 — ?perf=1일 때 미리 알려 준다
@@ -2574,22 +2576,20 @@ if (PERF && typeof DB_SUM !== "undefined") {
 }
 
 // ---- 자동완성 ----
-const groupBySchool = {};
-R.forEach(r => { if (!(r.school in groupBySchool)) groupBySchool[r.school] = recLeaf(r); });
+const groupBySchool = {}, sidoBySchool = {};
+// 학교마다 R.find로 시도를 찾으면 9,500교 × 66,000건이라 2초 넘게 멈춘다(2026-10-08 실측 2,159ms) — 한 번 훑으며 같이 적어 둔다
+R.forEach(r => { if (!(r.school in groupBySchool)) { groupBySchool[r.school] = recLeaf(r); sidoBySchool[r.school] = r.sido; } });
 perfMark("학교 색인");
 const suggItems = [
   ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `/tag/${encodeURIComponent(t)}`})),
-  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: (R.find(r => r.school === s) || {}).sido})),
+  ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: sidoBySchool[s]})),
   ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `/code/${s.c}`, g: idxGroup(s), rg: s.s})),
   ...[...VENDORS.values()].filter(v => v.n >= 5 && vendorKind(v.key) === "공급 기업")
      .map(v => ({label: v.name, kind: "공급 기업", href: `/vendor/${encodeURIComponent(v.key)}`})),
 ];
 const q = $("#q"), sugg = $("#sugg");
-// 요약 화면이 걸어 둔 '불러오는 중' 안내를 걷고, 그 사이에 입력한 글자가 있으면 바로 반영한다
-if (q) {
-  if (q.dataset.ph) { q.placeholder = q.dataset.ph; delete q.dataset.ph; }
-  if (q.value.trim()) setTimeout(() => q.dispatchEvent(new Event("input")), 0);
-}
+// 자료가 오기 전에 입력한 글자가 있으면 되살려 바로 찾는다
+if (q && _earlyQ && !q.value) { q.value = _earlyQ; setTimeout(() => q.dispatchEvent(new Event("input")), 0); }
 let selIdx = -1, current = [];
 q.addEventListener("input", () => {
   const v = q.value.trim().toLowerCase();

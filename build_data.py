@@ -2496,6 +2496,7 @@ _prev_ym = _now_ym - 1 if _now_ym % 100 > 1 else (_now_ym // 100 - 1) * 100 + 12
 _YM_LABEL = min(_YM_MAX, _prev_ym)
 # 표기는 자료가 닿는 달(_YM_MAX)까지 적는다 — '~2026.8'이라 적고 9월 기록 635건을 싣는 것은 어긋난다(2026-09-15 구조검증 S03).
 # 마지막 달이 아직 다 차지 않았으면 ymPartial로 알려 화면이 '수집 중'이라 밝힌다.
+# 제공 기간 표기는 자료가 닿는 달(_YM_MAX)까지 적되 "N월은 수집 중"은 달지 않는다(사용자 결정 2026-10-08).
 _YM_TXT = f"{_YM_MAX // 100}.{_YM_MAX % 100}"
 meta = {
     "asOf": _dt.date.today().isoformat(),
@@ -2523,7 +2524,7 @@ meta = {
     "basePeriod": f"{_BASE_YEAR}.1 ~ {_YM_TXT}",
     "ymMax": _YM_MAX,          # 자료가 닿는 마지막 달 (달력 고르개 끝)
     "ymLabel": _YM_LABEL,      # 다 찬 마지막 달
-    "ymPartial": _YM_MAX if _YM_MAX > _YM_LABEL else 0,   # 아직 수집 중인 마지막 달 (없으면 0)
+    "ymPartial": 0,            # "N월은 수집 중" 표시는 쓰지 않는다(사용자 결정 2026-10-08)
     "pilot": pilot_count,
 }
 # --- 신규 태그 검증 리포트 ---------------------------------------------------
