@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009j";
+  s.src = "/data_detail.js?b=20261009k";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009j";
+    s2.src = "/data_detail_old.js?b=20261009k";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009j";
+  s.src = "/data_old.js?b=20261009k";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2028,10 +2028,9 @@ function contactView() {
 
       <h3>처리 방식</h3>
       <ul>
-        <li>보내주신 내용은 원본 조달 기록과 대조해 확인합니다.</li>
-        <li>확인되면 해당 기록을 수정하여 다음 갱신에 반영합니다.</li>
-        <li>이 목록은 공개된 조달 기록을 근거로 삼습니다. 기록에 없는 내용을 요청하시는 경우
-          계약서·납품 확인서 등의 자료를 첨부해 주시기 바랍니다. 홍보 목적의 등재 요청은 받지 않습니다.</li>
+        <li>정보제공 주체가 공공기관이나 학교인 경우 자료를 원본으로 간주하여 즉시 반영합니다.</li>
+        <li>기타 보내주신 내용은 원본 조달 기록과 대조합니다. 확인후 해당 기록을 수정하여 중대한 오류일 경우 최대한 신속하게, 일반적으로는 다음 갱신에 반영합니다.</li>
+        <li>기록에 없는 내용을 요청하시는 경우 계약서·납품 확인서 등의 자료를 첨부해 주시기 바랍니다. 홍보 목적의 등재 요청은 받지 않습니다.</li>
       </ul>
 
       <h3>보내실 곳</h3>
@@ -2161,7 +2160,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009j").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009k").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
