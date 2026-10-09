@@ -143,6 +143,15 @@ def sido2(s):
         if s.startswith(k): return v
     return s[:2]
 
+def org_sido(org):
+    """나이스 명단에 없는 학교(폐교·개명 전 이름)라도 수요기관의 교육청 이름으로 시도는 안다 —
+    '서울특별시성동교육청 서울화양초등학교' → '서울'. 교육청이 아닌 기관(교육대학교 부설 등)이나 통합 교육청(광주·전남 둘 중 모름)은 비워 둔다(사용자 결정 2026-10-09)"""
+    head = (org or "").split()[0] if org else ""
+    if "교육청" not in head or head.startswith("전남광주통합"):
+        return ""
+    s = sido2(head)
+    return s if s in SIDO_PREFIX else ""
+
 SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인천": "인천", "광주": "광주",
                "대전": "대전", "울산": "울산", "세종": "세종", "경기": "경기", "강원": "강원",
                "충북": "충청북", "충남": "충청남", "전북": "전라북|전북", "전남": "전라남",
@@ -1551,8 +1560,8 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             "id": _idbase + office_count,
             "origSchool": _orig(row),
             "school": row["학교명"], "type": stype,
-            "region": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),
-            "sido": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "미상"),
+            "region": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "") or org_sido(row.get("수요기관")) or "미상",
+            "sido": _sido or NEIS_SIDO_SHORT.get(row.get("시도", ""), row.get("시도") or "") or org_sido(row.get("수요기관")) or "미상",
             "product": row["계약명"], "category": f"자동수집({row['구분']})",
             "period": row.get("계약일") or "", "year": int(row["계약일"][:4]) if row.get("계약일") else None,
             "amt": amt or None, "ym": ym,
@@ -2042,6 +2051,12 @@ _before_yr = len(records)
 records = [r for r in records if not (r.get("year") and r["year"] < COVERAGE_FROM)]
 if _before_yr - len(records):
     print(f"조사 기간({COVERAGE_FROM}.1~) 밖 기록 제외: {_before_yr - len(records)}건")
+# 초·중·고가 아닌 기관 — 수요기관 이름에 '학교'가 들어 있어 나라장터 수집에 딸려 왔다(사용자 결정 2026-10-09: 대학·경찰 교육기관은 뺀다)
+NON_SCHOOLS = {"한국예술종합학교", "중앙경찰학교"}
+_before_ns = len(records)
+records = [r for r in records if r.get("school") not in NON_SCHOOLS]
+if _before_ns - len(records):
+    print(f"초·중·고 아닌 기관 제외: {_before_ns - len(records)}건 ({', '.join(sorted(NON_SCHOOLS))})")
 
 # 벽면 장식 시공 제외 (레고월 등)
 _before_wd = len(records)
