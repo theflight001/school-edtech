@@ -139,6 +139,7 @@ run "교육청 정제"    python3 refine_office_buy.py
 if ! python3 build_data.py; then
   echo "✗ 빌드 실패 — 배포하지 않고 멈춘다"; exit 1
 fi
+python3 gen_sitemap.py || echo "   ※ sitemap.xml 생성 실패(배포는 계속)"
 
 python3 make_coverage.py || echo "   ✗ 수집현황.csv 생성 실패"
 
