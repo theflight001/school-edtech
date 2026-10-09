@@ -260,6 +260,7 @@ SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인�
                "충북": "충청북", "충남": "충청남", "전북": "전라북|전북", "전남": "전라남",
                "경북": "경상북", "경남": "경상남", "제주": "제주"}
 
+NEIS_STALE = {"8261079"}   # 나이스 명단에 남은 가칭·미개교 항목(홍성 신리초 — 실제는 한울초 8261098). 판별 사전·학교 목록 모두에서 뺀다
 master_by_name = collections.defaultdict(list)
 master_by_nkey = collections.defaultdict(list)
 master_by_code = {}
@@ -269,6 +270,8 @@ def _nkey(n):
     return re.sub(r"[\s·ㆍ・‧•∙\-_()（）]", "", n or "")
 if os.path.exists(MASTER):
     for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
+        if (s.get("code") or "").strip() in NEIS_STALE:   # 가칭으로 남은 항목은 판별 사전에도 넣지 않는다(2026-10-09, 홍성 신리초)
+            continue
         s["name"] = s["name"].strip()       # NEIS 원자료에 '세종중학교 '처럼 끝 공백이 남은 교명이 있다
         s["code"] = (s.get("code") or "").strip()   # 설립 예정 학교 103곳은 코드 칸이 공백 7자다 — 코드 없음으로 본다(2026-09-15 구조검증 S02)
         master_by_name[s["name"]].append(s)
@@ -2586,7 +2589,6 @@ if __import__("os").path.exists(_geo_path):
 master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
 # 나이스 명단에 남아 있지만 실제로 운영되지 않는 항목 — 홍성 홍북읍 '신리초등학교'(8261079)는 내포신도시 신설교의 가칭으로 등록된 채 남은 것
 # (실제 개교는 한울초등학교 8261098, 학교알리미에 없음·주소지는 소방서). 이 항목 때문에 아산 신리초 51건이 동명 학교로 묶여 코드를 못 받았다(사용자 확인 2026-10-09)
-NEIS_STALE = {"8261079"}
 master_all = [s for s in master_all if s.get("code") not in NEIS_STALE]
 _excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0,
                     "검정고시 등 비학교": 0, "학교급 미기재": 0,
