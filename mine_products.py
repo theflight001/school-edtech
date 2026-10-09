@@ -1,13 +1,13 @@
 # 미등록 제품명 자동 발굴 — 범주 태그로만 처리된 계약에서 제품명 후보를 캐내 근거로 검증한다.
 # 사용: python3 mine_products.py [--apply]
 #   (기본) 후보를 검증해 product_candidates.md 리포트만 생성
-#   --apply  근거가 확실한 A등급만 mined_rules.csv에 반영 (build_data.py가 자동으로 읽음)
+#   --apply  (폐지 2026-10-09) 판정 뒤 add_rule.py로 후보마다 넣는다
 #
 # 판정 근거 (사람 눈에 의존하지 않기 위한 기준):
 #   A등급 = 에듀집 제품 사전(2,490종)에 있는 이름 → 실존 제품 확정
 #   B등급 = 계약 상대 업체가 한 곳으로 쏠림(≥60%) + 3건 이상 → 특정 공급사 제품일 가능성 높음
 #   C등급 = 그 외 (빈도만 높음) → 사람 확인 필요
-import argparse, collections, csv, json, os, re
+import argparse, collections, csv, json, os, re, sys
 
 GENERIC = {"코스웨어", "SW·플랫폼", "로봇·교구·키트", "VR/XR 장비",
            "기기(PC·태블릿·전자칠판 등)", "인프라(교실·설비)", "드론", "3D 프린팅/CAD",
@@ -85,10 +85,7 @@ def main():
         if not r["tags"] or (set(r["tags"]) - GENERIC):
             continue                                   # 이미 제품명이 붙은 기록은 대상 아님
         name = r.get("product") or ""
-        vendor = ""
-        m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
-        if m:
-            vendor = m.group(1).strip()
+        vendor = (r.get("vendor") or "").strip()      # 구조화된 업체 열을 그대로 쓴다 — 문구에서 다시 뽑으면 '(주)'가 '(주'로 잘린다(2026-10-09 외부 검증)
         # 괄호·따옴표 안 이름 + 문장 속 영문 제품명(Mathematica, MATLAB 등)
         picks = [next((x for x in p if x), "") for p in
                  re.findall(r"\(([^)]{2,16})\)|'([^']{2,16})'|\"([^\"]{2,16})\"", name)]
@@ -114,19 +111,21 @@ def main():
     for r in recs:
         if not r["tags"] or (set(r["tags"]) - GENERIC):
             continue
-        m = re.search(r"계약업체[:：]\s*([^·)]+)", r.get("content") or "")
-        if not m:
+        vraw = (r.get("vendor") or "").strip()
+        if not vraw:
             continue
-        v = re.sub(r"주식회사|㈜|\(주|유한회사|\(유|Co\.?,?\s?Ltd\.?|Inc\.?", "", m.group(1)).strip()
+        v = re.sub(r"주식회사|㈜|\(주\)|\(주|유한회사|\(유\)|\(유|Co\.?,?\s?Ltd\.?|Inc\.?", "", vraw).strip()
         v = re.sub(r"[,\s]+$", "", v)
         if len(v) < 3 or RESELLER.search(v) or norm(v) in known_norm:
             continue
         c = cand[v]
         c["n"] += 1
-        c["vendors"][m.group(1).strip()] += 1
-        c["sw"] += 1                       # 업체명 후보는 SW 문맥으로 간주
+        c["vendors"][vraw] += 1
+        if SW_CTX.search(r.get("product") or ""):   # 업체명 후보도 계약명의 실제 문맥으로만 센다 — 전엔 무조건 더해 필름·가구 업체가 SW 100%로 보였다(2026-10-09)
+            c["sw"] += 1
+        c["brand_of"] = c["brand_of"] or "업체명"
         if len(c["samples"]) < 3:
-            c["samples"].append((r["school"], (r.get("product") or "")[:60], m.group(1).strip()))
+            c["samples"].append((r["school"], (r.get("product") or "")[:60], vraw))
 
     # 에듀집 등록명은 정식명(브랜드+수식어)인데 계약서엔 브랜드만 적히는 경우
     # (예: '코들 AI 클래스룸' → 계약명 '프로그램 코들 구입'). 첫 토큰이 고유 브랜드일 때만.
@@ -201,7 +200,7 @@ def main():
              f"(A {sum(1 for r in rows if r['등급']=='A')} · "
              f"B {sum(1 for r in rows if r['등급']=='B')} · "
              f"C {sum(1 for r in rows if r['등급']=='C')})", "",
-             "- **A**: 에듀집 제품 사전에 있는 이름 — 실존 제품 확정, `--apply`로 자동 반영",
+             "- **A**: 에듀집 제품 사전에 있는 이름 — 사전에 있다는 뜻일 뿐 그 계약이 그 제품 구매라는 보장은 아니다. 표본 확인 뒤 add_rule.py로 넣는다",
              "- **B**: 계약 업체가 한 곳으로 쏠림 — 특정 공급사 제품일 가능성 높음, 확인 후 반영",
              "- **C**: 빈도만 높음 — 사람 확인 필요", ""]
     for r in rows:
@@ -230,26 +229,10 @@ def main():
         return any(re.search(p, name, re.I) for p in pats if p)
 
     if a.apply:
-        agrade = [r for r in rows if r["등급"] == "A"
-                  and r["후보"] not in AUTO_BLOCK and not rule_covered(r["후보"])]
-        seen_norm = set()
-        agrade = [r for r in agrade if not (norm(r["후보"]) in seen_norm or seen_norm.add(norm(r["후보"])))]
-        exist = []
-        if os.path.exists("mined_rules.csv"):
-            exist = list(csv.DictReader(open("mined_rules.csv", encoding="utf-8-sig")))
-        have = {r["태그"] for r in exist}
-        added = 0
-        for r in agrade:
-            if r["후보"] in have:
-                continue
-            pat = r"[\s·\-]*".join(re.escape(t) for t in r["후보"].split())
-            exist.append({"태그": r["후보"], "패턴": pat, "건수": r["건수"],
-                          "근거": r["근거"], "문맥필요": "Y" if len(re.sub(r"\s", "", r["후보"])) <= 4 else ""})
-            added += 1
-        with open("mined_rules.csv", "w", encoding="utf-8-sig", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=["태그", "패턴", "건수", "근거", "문맥필요"])
-            w.writeheader(); w.writerows(exist)
-        print(f"A등급 {added}종 → mined_rules.csv (빌드 시 자동 적용)")
+        # A등급(에듀집 사전에 있는 이름)이라도 그 계약이 그 제품 구매라는 뜻은 아니다 — '스쿨프렌즈'는 태블릿 보호필름,
+        # 'SMART'는 모니터였다(2026-10-09 외부 검증). 일괄 반영은 없애고, 후보마다 표본을 본 뒤 add_rule.py로 넣는다.
+        sys.exit("--apply는 더 쓰지 않는다. 후보마다 표본을 확인한 뒤\n"
+                 "  python3 add_rule.py --tag \"정식명\" --pattern \"정규식\" --by \"근거\" [--apply]\n로 넣는다.")
 
 if __name__ == "__main__":
     main()

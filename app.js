@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009c";
+  s.src = "/data_detail.js?b=20261009d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -231,6 +231,11 @@ VMERGE = new Map();
     if (inRegion(a, at) || inRegion(b, at)) return false;
     return ja.filter((x, i) => x === jb[i]).length >= 2;
   };
+  // 손으로 확인한 같은 회사의 오타 표기 — 자동 오타 판정이 못 잡는 괄호 오타·두 글자 차이(2026-10-09 외부 검증 V02·V03, 망고보드 리아모어소프트)
+  for (const [from, to] of [["(주0리아모어소프트", "리아모어소프트"], ["(주)리아모어스프드", "리아모어소프트"]]) {
+    const f = vnorm(from), t = vnorm(to);
+    if (f !== t && VENDORS.has(f) && VENDORS.has(t)) VMERGE.set(f, t);
+  }
   const bucket = new Map();
   for (const v of list) {
     if (v.key.length < 6) continue;
@@ -295,7 +300,7 @@ const makerRecs = name => R.filter(r => r.maker === name || MAKER_KEY.get(r.vk) 
 // 키는 소문자로 정규화돼 있으므로 대소문자를 가리지 않는다 — LG전자·한국HP가 제조사로 안 잡혔다(2026-09-15 구조검증 S11)
 // 결제 대행·카드사 표기(NHN한국사이버결제·KCP·NICE 통신판매·비씨카드 해외결제·정기과금)도 사는 창구일 뿐 공급사가 아니다(2026-09-15)
 // g마켓·gmarket·나라장터·g2b·한글 케이씨피·페이먼츠·카드사 표기가 빠져 981건이 공급 기업에 남았다(2026-09-30 외부 검증 V02)
-const CHANNEL = /지마켓|g마켓|gmarket|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|나라장터|g2b|학교장터|s2b|교직원공제회|다나와|하이마트|사이버결제|사이버결재|kcp|케이씨피|페이먼츠|나이스정보통신|nice통신판매|통신판매|해외결제|카드결제|인터넷쇼핑몰결제|정기과금|^결제$|(?:비씨|bc|삼성|신한|국민|kb|하나|롯데|현대|우리|nh|농협|씨티)카드/i;
+const CHANNEL = /지마켓|g마켓|gmarket|쿠팡|11번가|인터파크|위메프|티몬|네이버|카카오|이베이|옥션|스마트스토어|우체국|조달청|나라장터|g2b|학교장터|s2b|교직원공제회|다나와|하이마트|사이버결제|사이버결재|kcp|케이씨피|이니시스|inicis|페이먼츠|나이스정보통신|nice통신판매|통신판매|해외결제|카드결제|인터넷쇼핑몰결제|정기과금|^결제$|(?:비씨|bc|삼성|신한|국민|kb|하나|롯데|현대|우리|nh|농협|씨티)카드/i;
 const MAKER = /삼성전자|엘지전자|LG전자|애플|레노버|한국HP|에이수스|델테크/i;
 // 교육청·교육지원청은 공동구매 대금을 받은 기관이지 공급 기업이 아니다(2026-09-30 외부 검증 V03, 30개 표기 741건)
 const PUBLIC = /교육청|교육지원청|시청$|군청$|구청$|도청$/;
@@ -527,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009c";
+    s2.src = "/data_detail_old.js?b=20261009d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009c";
+  s.src = "/data_old.js?b=20261009d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1251,7 +1256,7 @@ function officeBuyCard(tag) {
       ${rows.map((r, i) => `<tr${i >= 12 ? ` class="ob-more ${id}" hidden` : ""}>
         <td style="white-space:nowrap">${esc(r.sido || "—")}</td>
         <td>${esc(r.n)}</td>
-        <td class="conf" style="white-space:nowrap">${esc((r.d || "").replace("-", "."))}</td>
+        <td class="conf" style="white-space:nowrap">${r.d ? esc(r.d.replace("-", ".")) : "미상"}</td>
         <td class="conf" style="white-space:nowrap">${esc(won(r.amt))}</td>
         <td class="conf">${esc(r.by || "")}</td>
       </tr>`).join("")}
@@ -1262,7 +1267,7 @@ function officeBuyCard(tag) {
   const buy = all.filter(r => r.k !== "관련"), rel = all.filter(r => r.k === "관련");
   const sidos = uniq(buy.map(r => r.sido).filter(Boolean));
   return `<div class="card"><h2>시도교육청이 직접 구매한 기록
-      <span class="note">학교 계약이 아니라 시도 단위입니다 — 위 학교 수에는 들어 있지 않습니다</span></h2>
+      <span class="note">학교 계약이 아니라 시도 단위입니다 — 위 학교 수에는 들어 있지 않고, 기간·지역 선택과 무관하게 전 기간·전 시도 기록입니다</span></h2>
     ${buy.length ? `<p class="cv" style="margin:0 0 10px">교육청이 계약 당사자로 산 기록입니다. 라이선스·계정을 관내 학교에 나눠 준 것일 수 있지만,
       계약명에 학교 이름이 없어 어느 학교가 쓰는지는 알 수 없습니다 ·
       ${buy.length.toLocaleString()}건${sidos.length ? ` · ${sidos.length}개 시도(${sidos.slice(0, 6).map(esc).join(" · ")}${sidos.length > 6 ? " 외" : ""})` : ""}</p>
@@ -1385,7 +1390,7 @@ function vendorsView() {
     ${makerRows.length ? `<div class="card"><h2>에듀테크 제조·개발사<span class="note">명부에 오른 ${makerRows.length}곳 · 표기가 달라도 한 회사로 모았습니다</span></h2>
       <div class="plist">${makerRows.map(m => `<a href="/vendor/${encodeURIComponent(m.key)}">${esc(m.n)}
         <span class="n">${m.cnt.toLocaleString()}건 · ${m.sch.toLocaleString()}개교</span></a>`).join("")}</div>
-      <p class="sub2" style="margin-top:10px">회사명이 곧 제품명인 ${makerRows.filter(m => m.t).length}곳은 계약명에 제품이 없는 기록도 그 제품으로 보았습니다.
+      <p class="sub2" style="margin-top:10px">회사명(또는 그 표기)이 곧 제품명인 ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳은 계약명에 제품이 없는 기록도 그 제품으로 보았습니다(현재 ${(DB.meta.makerTagged || 0).toLocaleString()}건 — 데이터 안내와 같은 숫자).
         나머지는 여러 제품을 만드는 회사라 제품을 추정하지 않았습니다.</p></div>
     <h2 style="margin:18px 0 8px">그 밖의 계약 상대자</h2>` : ""}
     <div class="plist">
@@ -2154,7 +2159,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009c").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009d").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
