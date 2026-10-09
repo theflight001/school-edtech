@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009f";
+  s.src = "/data_detail.js?b=20261009g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009f";
+    s2.src = "/data_detail_old.js?b=20261009g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009f";
+  s.src = "/data_old.js?b=20261009g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1230,7 +1230,7 @@ function tagView(tag) {
       <a href="javascript:void(0)" onclick="openPicker()">조사 기간 넓히기</a></div>`}
     ${note ? `<div class="notice"><b>공식 보급 플랫폼 안내</b><p>${note.body}</p><p class="cv">${note.caveat}</p>${noteSchoolList(note)}</div>` : ""}
     <div class="grid2">
-      <div class="card"><h2>계열별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 (기록 수)<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySchoolType, {drillFn: t => `/drill2/tt/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
       <div class="card"><h2>지역별<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido.slice(0,10), {drillFn: t => `/drill2/ts/${encodeURIComponent(tag)}/${encodeURIComponent(t)}`})}</div>
     </div>
     ${officeBuyCard(tag)}
@@ -1724,7 +1724,7 @@ function aboutView() {
         <div>
           <h2>데이터 안내</h2>
           <p>이 서비스는 수집된 공개 조달 기록을 바탕으로 전국 초·중·고등학교의 에듀테크 도입 현황을 제공합니다.
-          학교의 계약여부는 공개 정보이지만 여러 곳에 흩어져 있어 찾기 어려우므로, 한곳에서 검색하고 확인할 수 있는 서비스를 제공합니다.</p>
+          학교의 공개 계약 정보는 여러 곳에 흩어져 있어 찾기 어려우므로, 한곳에서 검색하고 확인할 수 있는 서비스를 제공합니다.</p>
         </div>
         <img src="/hero_person_m.png?v=2" width="239" height="186" alt="">
       </div>
@@ -1732,7 +1732,7 @@ function aboutView() {
       <h3>어디에서 수집했나</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
-        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약 전수와 입찰 계약 결과 · 계약대상자(공급 업체)와 계약 금액 정보를 제공합니다</span></div>
+        <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약(경쟁입찰 없이 맺는 계약) 전수와 입찰 계약 결과 · 계약대상자(공급 업체)와 계약 금액 정보를 제공합니다</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함</span></div>
         <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 제외한 ${n(m.idxCount, 12540)}개교의 정보가 제공됩니다</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — ${n(m.mediaCount, 44)}건(${m.mediaPct == null ? "0.01" : m.mediaPct}%)</span></div>
@@ -1746,7 +1746,7 @@ function aboutView() {
           공급사 명단에 있는 제조·개발사 ${(DB.meta.makerCompanies || 0).toLocaleString()}곳 중
           ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 해당되며, 이 규칙으로 제품이 표시된 기록은 현재
           ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명단은 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
-        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등)으로만 표시됩니다. 이같은 계약 유형은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
+        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등 — 개별 제품명을 확인하지 못했을 때 붙이는 범주)으로만 표시됩니다. 이같은 계약 유형은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
         <li>학교의 이름이 변경된 경우 과거의 학교명으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
       </ul>
 
@@ -1755,17 +1755,17 @@ function aboutView() {
         <ul>
           <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 표시됩니다.</li>
           <li>같은 제품이라도 표기가 서로 다른 경우가 있습니다(챗GPT · ChatGPT · 챗지피티). 이러한 경우들은 모두 <b>ChatGPT</b>로 태그가 표시되고, 한글 또는 영문으로 검색하는 방법 모두 동일한 결과를 제공합니다.</li>
-          <li><b>“외 3종”은 기록하지 않습니다.</b> 어떤 에듀테크 제품을 구매하였는지 정보가 없으므로 확인이 되지 않습니다.</li>
+          <li><b>계약명 원문은 보존하지만, “외 3종”에 든 제품명은 공개 기록만으로 확인이 안되므로 태그를 붙이지 않습니다.</b></li>
         </ul>
       </div>
 
       <h3>무엇이 제외되나</h3>
       <p>본 서비스에서 제공되는 정보는 공개된 기록을 바탕으로 합니다. 누락된 계약, 해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매 등
-        실제로 활용하지만 공개되지 않은 정보가 있을 수 있으므로 기록이 없는 경우에도 그 학교가 에듀테크를 쓰지 않는다는 의미는 아닐 수 있습니다.</p>
+        실제로 활용하지만 공개되지 않은 정보가 있을 수 있으므로 기록이 없더라도 그 학교가 에듀테크를 쓰지 않는다고 단정할 수 없습니다.</p>
       <ul>
         <li>교육청이 무상으로 보급하는 플랫폼(하이러닝·바당 등)은 학교별 기록에 제시되지 않습니다.</li>
-        <li><b>“외 3종”처럼 묶어 표시된 계약</b> 내용은 해당 정보가 누락됩니다. 전체 계약의 <b>약 ${n(m.bundledPct, 10)}%</b>가 이러한 형태로 이름 없이 묶여 있어 확인되지 못하고 있습니다.</li>
-        <li>시도교육청이 관내 학교에 <b>한번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 수록되었습니다.</li>
+        <li><b>“외 3종”처럼 묶어 표시된 계약</b> 내용은 해당 정보가 누락됩니다. 수록 계약 가운데 <b>약 ${n(m.bundledPct, 10)}%</b>가 이처럼 일부 품목명이 생략된 계약이라 그 품목은 확인되지 못하고 있습니다.</li>
+        <li>시도교육청이 관내 학교에 <b>한 번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 수록되었습니다.</li>
       </ul>
 
       <h3>수록 범위</h3>
@@ -1788,13 +1788,13 @@ function aboutView() {
         <b>전남광주통합특별시교육청</b>으로 변경되었습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
         2026.3.5. 공포 · 2026.7.1. 시행).
-        나이스(NEIS)와 K-에듀파인 등 주요 시스템은 2028년 통합을 목표로 단계적으로 개편되므로
+        나이스(NEIS)와 학교 회계·계약 업무 시스템인 K-에듀파인 등 주요 시스템은 2028년 통합을 목표로 단계적으로 개편되므로
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
         세부 정보는 당분간 전남과 광주가 별도로 제공됩니다.</li>
         <li><b>주의사항</b> — 시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이합니다
         (소액 공개(경기·인천·충북·세종·대구·경남·울산, 2022년 이후 서울), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
         따라서, 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다. 즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다.
-        이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만, 그럼에도 한계가 있을 수 있는 바를 유의하시기 바랍니다.
+        이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만, 자료원의 공개 범위와 수집 시점에 따라 누락이나 차이가 있을 수 있습니다.
         또한 제공되는 정보의 기간도 교육청마다 상이하여, 그 기간 학교의 에듀테크 구매는 나라장터·S2B 학교장터의 공개 정보로만 검색됩니다.</li>
         <li><b>정정 요청</b> — 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
@@ -2161,7 +2161,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009f").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009g").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2419,7 +2419,9 @@ function mountMap() {
             map.setPaintProperty(ly.id, "line-opacity", ["interpolate", ["linear"], ["zoom"], 11, /casing/.test(ly.id) ? 0 : 0.22, 13.5, 1]);
           }
           // 설명은 한 줄로 — 수치와 구역 이름은 적지 않는다(2026-09-21 사용자)
-          const note = "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다.";   // 어느 화면이든 이 문구 그대로(2026-09-21 사용자)
+          // 회사 화면만 다르게 — 회사 지도는 제품 활용이 아니라 그 회사와 거래한 학교의 분포다(2026-10-09 사용자). 그 밖의 화면은 이 문구 그대로(2026-09-21 사용자)
+          const note = /^\/vendor\//.test(location.pathname) ? "이 회사와 거래한 학교가 많은 시군구는 진하게 표시됩니다."
+            : "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다.";
           const sumEl = document.getElementById("mapsum");
           if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${note}</span>`);
         }).catch(() => {});
