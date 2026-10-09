@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009h";
+  s.src = "/data_detail.js?b=20261009i";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009h";
+    s2.src = "/data_detail_old.js?b=20261009i";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009h";
+  s.src = "/data_old.js?b=20261009i";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2161,7 +2161,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009h").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009i").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2500,12 +2500,15 @@ function render() {
     if (OLD_STATE !== "done") withOld("", () => render());
   }
   else if (kind === "about") view.innerHTML = aboutView();
-  else if (kind === "schools" || kind === "records" || kind === "products" || kind === "vendors") {
-    // '전체 보기'는 가진 것을 다 본다는 뜻이다 — 기간도 전 기간으로 연다(검색과 같은 이유).
-    // 다만 사용자가 기간을 직접 고른 뒤라면 그 선택을 덮지 않는다.
-    if (!PF_TOUCHED && (PF || PT)) { PF = ""; PT = ""; }
-    view.innerHTML = kind === "schools" ? schoolsView() : kind === "records" ? recordsView()
-      : kind === "products" ? productsView() : vendorsView();
+  else if (kind === "schools" || kind === "records" || kind === "products") {
+    // 전체 보기는 첫 화면과 같은 조사 기간(기본 2026.1~)을 그대로 본다 — 전에는 들어가자마자 전 기간으로 풀어
+    // 첫 화면 순위와 달라졌고, 옛 자료가 도착하는 순간 순서가 바뀌어 보였다(2026-10-09 사용자). 더 보려면 조사 기간에서 넓힌다.
+    view.innerHTML = kind === "schools" ? schoolsView() : kind === "records" ? recordsView() : productsView();
+    if (PF === "" && PF_TOUCHED && OLD_STATE !== "done") withOld("", () => render());   // 사용자가 전 기간을 고른 뒤라면 옛 자료를 받아 온다
+  }
+  else if (kind === "vendors") {
+    // 공급 기업 명단은 기간과 무관한 전 기간 목록(계약 5건 이상, 2026-09-30 결정)이라 옛 자료까지 받아 센다
+    view.innerHTML = vendorsView();
     if (OLD_STATE !== "done") withOld("", () => render());
   }
   else if (kind === "regions") view.innerHTML = regionsView();
