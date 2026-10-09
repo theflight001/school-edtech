@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009g";
+  s.src = "/data_detail.js?b=20261009h";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009g";
+    s2.src = "/data_detail_old.js?b=20261009h";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009g";
+  s.src = "/data_old.js?b=20261009h";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2005,7 +2005,7 @@ function contactView() {
       <p class="lead">본 서비스는 출처마다 기간과 내용, 공개 방식이 다른 공공정보를 수집한 후 에듀테크 제품 여부를 확인한 뒤 제공합니다.
       즉, 체계적인 시스템 자료가 아니라 산개되고 제한적인 정보를 바탕으로 구성하므로, 실제 학교의 에듀테크 구매 기록과 차이가 있을 수 있습니다.
       교육청·기업 등에서 목록화된 체계적인 정보를 제공해 주시면 보다 정확한 자료들이 구성될 수 있습니다.
-      추가·삭제·정정 등 요청을 통해 본 서비스의 품질을 높여 주시기 바랍니다.</p>
+      추가·삭제·정정 등 요청을 통해 서비스 품질을 높여 주시기 바랍니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
       <p class="who">교육청·학교</p>
@@ -2161,7 +2161,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009g").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009h").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
