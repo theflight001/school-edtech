@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009i";
+  s.src = "/data_detail.js?b=20261009j";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009i";
+    s2.src = "/data_detail_old.js?b=20261009j";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009i";
+  s.src = "/data_old.js?b=20261009j";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2018,12 +2018,12 @@ function contactView() {
       <ul>
         <li>제품명·회사명 표기가 잘못된 경우</li>
         <li>계약명에 제품 이름이 없어 제품군으로만 남아 있는 기록이 우리 제품인 경우</li>
-        <li>납품한 학교가 목록에 빠져 있는 경우</li>
+        <li>납품한 학교가 목록에 빠져 있는 경우 등</li>
       </ul>
       <p class="who">기타</p>
       <ul>
         <li>서비스에 표시된 내용이 잘못된 것을 발견했을 경우</li>
-        <li>운영과 관련된 개선사항이나 제언 등 메시지 전달을 하시고자 할 경우</li>
+        <li>운영과 관련된 개선사항이나 제언 등 메시지 전달을 하시고자 할 경우 등</li>
       </ul>
 
       <h3>처리 방식</h3>
@@ -2161,7 +2161,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009i").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009j").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
