@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009t";
+  s.src = "/data_detail.js?b=20261010a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009t";
+    s2.src = "/data_detail_old.js?b=20261010a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009t";
+  s.src = "/data_old.js?b=20261010a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1123,10 +1123,15 @@ function schoolView(name, code) {
     return notFound("학교", name, schools, c => `/school/${encodeURIComponent(c)}`);
   }
   if (!code) {
-    const codes = uniq(allR.filter(r => r.schoolCode).map(r => r.schoolCode));
+    // 이름이 같은 학교가 명단에 둘 이상이면(기록이 한쪽에만 있어도) 고르게 한다 — 교육청 기록은 교육지원청을 안 적어
+    // 어느 학교인지 못 가린 것이 있고, 그런 기록은 두 학교를 다 보여 주고 사용자가 고른다(2026-10-10 사용자 결정)
+    const codes = uniq(allR.filter(r => r.schoolCode).map(r => r.schoolCode).concat(IDX.filter(x => x.n === name && x.c).map(x => x.c)));
     if (codes.length > 1) return sameNameView(name, codes);
   }
   const info = fillDetail([allR[0]])[0];
+  // 같은 시도에 이름이 같은 학교가 또 있어 어느 학교인지 확인되지 않은 기록(학교코드 없음)이 따로 있으면 알린다
+  const _me = code ? idxByCode.get(code) : null;
+  const ambig = _me ? R.filter(r => r.school === name && !r.schoolCode && r.sido === _me.s && isCounted(r)) : [];
   // 지금 조건(조사 기간·지역·계열·미확인 제품) 안에 기록이 하나도 없으면 조건 없이 전부 보여 준다 — 검색 결과(전 기간)나
   // 지도에서 들어온 학교가 '기록 0건 · 조건 밖 6건'으로 떨어졌다(2026-10-02 사용자, 대청중). 무엇을 풀었는지는 아래에 적는다
   let expanded = false;
@@ -1156,6 +1161,7 @@ function schoolView(name, code) {
       ${outN || OLD_STATE !== "done" ? `<a class="allrec" href="javascript:void(0)" onclick="showAllSchool()" title="조사 기간·지역·계열·미확인 제품 조건을 모두 풀고 이 학교의 기록을 전부 봅니다">이 학교의 전체 기록 보기 ›</a>` : ""}
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}${expanded ? ` <span style="color:var(--muted)">· 지금 조사 기간·조건 안에는 기록이 없어 전체 기록을 보여 줍니다</span>` : ""}
         ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
+        ${ambig.length ? `<div class="conf">${esc(OFFICE_FULL[_me.s] || _me.s)}에 이름이 같은 학교가 ${IDX.filter(x => x.n === name && x.s === _me.s).length}곳이라 어느 학교인지 확인되지 않은 기록 ${ambig.length}건이 따로 있습니다 — <a href="/school/${encodeURIComponent(name)}">보기 ›</a></div>` : ""}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         ${viaNames.length ? `<div class="conf">${viaNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")} 명의로 조달됐지만 계약명에 이 학교가 적혀 있어 이 학교 기록으로 둔 것이 있습니다</div>` : ""}
         <div>${schoolTags.map(t => `<button type="button" class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}${SCHOOL_TAG === t ? " on" : ""}"
@@ -1168,16 +1174,31 @@ function schoolView(name, code) {
     <div class="card">${pagedTable(recs.slice().sort((a,b)=>(b.year||0)-(a.year||0)), {showSchool: false})}</div>`;
 }
 // 이름이 같은 학교가 여럿일 때 — 합치면 다른 학교 기록이 섞인다. 어느 학교인지 고르게 한다.
+const OFFICE_FULL = {"서울": "서울특별시교육청", "부산": "부산광역시교육청", "대구": "대구광역시교육청", "인천": "인천광역시교육청",
+  "광주": "전남광주통합특별시교육청", "전남": "전남광주통합특별시교육청", "대전": "대전광역시교육청", "울산": "울산광역시교육청",
+  "세종": "세종특별자치시교육청", "경기": "경기도교육청", "강원": "강원특별자치도교육청", "충북": "충청북도교육청", "충남": "충청남도교육청",
+  "전북": "전북특별자치도교육청", "경북": "경상북도교육청", "경남": "경상남도교육청", "제주": "제주특별자치도교육청"};
 function sameNameView(name, codes) {
   const rows = codes.map(c => ({c, s: idxByCode.get(c),
     n: R.filter(r => r.schoolCode === c && isCounted(r)).length})).sort((x, y) => y.n - x.n);
+  // 학교코드를 못 받은 기록 — 교육청 계약공개가 교육지원청을 안 적어 같은 시도의 동명 학교 중 어느 곳인지 모르는 것.
+  // 두 학교를 다 보여 주고 사용자가 고르게 한다(2026-10-10 사용자 결정, 경남 내동초·상북초·화정초)
+  const un = R.filter(r => r.school === name && !r.schoolCode && isCounted(r)).sort((a, b) => (b.year || 0) - (a.year || 0));
+  const unBySido = count(un, r => r.sido);
+  const msg = unBySido.map(([sd, n]) => {
+    const k = rows.filter(x => x.s && x.s.s === sd).length;
+    return `${esc(OFFICE_FULL[sd] || sd)} ${esc(name)}가 ${k}곳이 있습니다. 학교를 선택하세요. <span class="conf">(${n}건)</span>`;
+  }).join("<br>");
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(name)}</h2>
       <div class="sub2">이름이 같은 학교가 ${rows.length}곳입니다 — 어느 학교인지 고르세요</div></div>
     <div class="card"><div class="plist pick">${rows.map(({c, s, n}) =>
       `<a href="/code/${encodeURIComponent(c)}">${esc(name)}<span class="n">${
-        esc(s ? [s.s, s.h || s.l, s.a].filter(Boolean).join(" · ") : "학교 정보 없음")} · ${n.toLocaleString()}건</span></a>`).join("")}</div></div>`;
+        esc(s ? [s.s, s.h || s.l, s.a].filter(Boolean).join(" · ") : "학교 정보 없음")} · ${n.toLocaleString()}건</span></a>`).join("")}</div></div>
+    ${un.length ? `<div class="card"><h2>어느 학교인지 확인되지 않은 기록 <span class="note">${un.length.toLocaleString()}건</span></h2>
+      <p class="cv" style="margin:0 0 10px">${msg}<br>교육청 계약공개 자료가 교육지원청을 적지 않아 위 학교 가운데 어느 곳의 계약인지 가리지 못한 기록입니다. 위 목록의 학교 건수에는 들어 있지 않습니다.</p>
+      ${pagedTable(un, {showSchool: false})}</div>` : ""}`;
 }
 // 교육청 등이 무상 보급하는 플랫폼 — 조달 기록에 나타나지 않아 공식 발표로 보완
 const PLATFORM_NOTES = {
@@ -2160,7 +2181,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009t").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
