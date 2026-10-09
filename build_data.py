@@ -298,7 +298,15 @@ SIDO_PREFIX = {"서울": "서울", "부산": "부산", "대구": "대구", "인�
                "충북": "충청북", "충남": "충청남", "전북": "전라북|전북", "전남": "전라남",
                "경북": "경상북", "경남": "경상남", "제주": "제주"}
 
-NEIS_STALE = {"8261079"}   # 나이스 명단에 남은 가칭·미개교 항목(홍성 신리초 — 실제는 한울초 8261098). 판별 사전·학교 목록 모두에서 뺀다
+NEIS_STALE = {"8261079"}
+# 나이스 학교 명단에 없는 교육기관을 학교로 세기로 한 것 — 학력인정 평생교육시설은 나이스·학교알리미 명단 대상이 아니라 학교코드가 없다.
+# 사용자 결정(2026-10-10): 부산미용고는 누리집(school.busanedu.net/bba-h)이 있는 교육청 소속 기관이니 학교로 세고 주소도 보여 준다.
+# 코드는 나이스와 겹치지 않게 'M'으로 시작하는 수동 번호를 쓴다. 주소·학교급은 누리집 꼬리말·나무위키 기준.
+EXTRA_SCHOOLS = [
+    {"code": "M0000001", "name": "학력인정부산미용고등학교", "level": "각종학교(학력인정 평생교육시설)", "sido": "부산광역시",
+     "office": "부산광역시교육청", "address": "부산광역시 부산진구 백양순환로119번길 62", "founding": "사립",
+     "hsType": "", "hsDetail": "", "homepage": "https://school.busanedu.net/bba-h/main.do"},
+]   # 나이스 명단에 남은 가칭·미개교 항목(홍성 신리초 — 실제는 한울초 8261098). 판별 사전·학교 목록 모두에서 뺀다
 master_by_name = collections.defaultdict(list)
 master_by_nkey = collections.defaultdict(list)
 master_by_code = {}
@@ -307,7 +315,7 @@ def _nkey(n):
     # 가운뎃점은 표기가 넷이다: · (U+00B7) ㆍ (U+318D) ・ (U+30FB, NEIS 등재명) ‧ (U+2027)
     return re.sub(r"[\s·ㆍ・‧•∙\-_()（）]", "", n or "")
 if os.path.exists(MASTER):
-    for s in json.load(open(MASTER, encoding="utf-8"))["schools"]:
+    for s in json.load(open(MASTER, encoding="utf-8"))["schools"] + EXTRA_SCHOOLS:
         if (s.get("code") or "").strip() in NEIS_STALE:   # 가칭으로 남은 항목은 판별 사전에도 넣지 않는다(2026-10-09, 홍성 신리초)
             continue
         s["name"] = s["name"].strip()       # NEIS 원자료에 '세종중학교 '처럼 끝 공백이 남은 교명이 있다
@@ -2628,6 +2636,7 @@ master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
 # 나이스 명단에 남아 있지만 실제로 운영되지 않는 항목 — 홍성 홍북읍 '신리초등학교'(8261079)는 내포신도시 신설교의 가칭으로 등록된 채 남은 것
 # (실제 개교는 한울초등학교 8261098, 학교알리미에 없음·주소지는 소방서). 이 항목 때문에 아산 신리초 51건이 동명 학교로 묶여 코드를 못 받았다(사용자 확인 2026-10-09)
 master_all = [s for s in master_all if s.get("code") not in NEIS_STALE]
+# 수동 항목(EXTRA_SCHOOLS)은 나이스 명단 수(neisTotal)에는 넣지 않고 학교 색인에만 들어간다 — 안내문의 "나이스 명단 N곳"이 그대로 맞도록
 _excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0,
                     "검정고시 등 비학교": 0, "학교급 미기재": 0,
                     "NEIS 시험용 항목": 0}
@@ -2705,6 +2714,7 @@ meta = {
     #    자료가 바뀌면 화면도 같이 바뀌어야 한다 — 그러라고 빌드가 센다.
     "neisTotal": len(master_all),
     "idxCount": len(school_index),
+    "extraSchools": len(EXTRA_SCHOOLS),   # 나이스 명단 밖인데 학교로 세기로 한 기관(안내문이 idxCount와 neisTotal의 차이를 설명한다)
     "excluded": _excluded_counts,
     "levelMix": _level_mix,
     "mediaCount": _media_n,

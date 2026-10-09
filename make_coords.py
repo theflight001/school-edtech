@@ -71,6 +71,11 @@ def main():
 
     M = [s for s in json.load(open("school_master.json", encoding="utf-8"))["schools"]
          if s["level"] and not any(e in s["level"] for e in EXCLUDE)]
+    # 나이스 명단 밖인데 학교로 세기로 한 기관(build_data.py EXTRA_SCHOOLS — 정본은 거기 하나뿐이라 소스를 읽어 온다)
+    import ast as _ast
+    _extra = next((_ast.literal_eval(n.value) for n in _ast.parse(open("build_data.py", encoding="utf-8").read()).body
+                   if isinstance(n, _ast.Assign) and n.targets[0].id == "EXTRA_SCHOOLS"), [])
+    M += [s for s in _extra if s["level"] and not any(e in s["level"] for e in EXCLUDE)]
 
     # 명단에 주소가 없는 학교는 사람이 찾아 적어 둔 주소를 쓴다(geo/위치미확인_학교.csv의 명단주소 칸).
     # 부산 학력인정 계열 네 곳처럼 NEIS 명단에 주소가 통째로 비어 있는 곳이 있다(2026-09-12).
@@ -88,7 +93,7 @@ def main():
                 _n += 1
         if _n:
             print(f"  손으로 찾은 주소로 채운 학교 {_n}곳")
-    assert len(M) == 12543, f"색인이 12,543곳이 아니다: {len(M)}"
+    assert len(M) == 12543 + len(_extra), f"색인이 12,543+{len(_extra)}곳이 아니다: {len(M)}"
 
     z = zipfile.ZipFile(os.path.join(GEO, "school_locations_official_20260320_src.zip"))
     O = list(csv.DictReader(io.StringIO(z.read(z.namelist()[0]).decode("utf-8-sig"))))
@@ -329,6 +334,18 @@ def main():
                 print(f"  좌표를 읽지 못했다: {r.get('학교명')} {la},{lo}")
         if n_man:
             print(f"  손으로 넣은 좌표 {n_man}곳 ({mp})")
+
+    # 5-3) 지금 파일에 손으로 직접 적어 둔 좌표(등급 K — 커밋 9186163에서 지도 검색·주소 대조로 43곳을 넣었다)는
+    #      이 스크립트가 만들지 않으므로 다시 돌릴 때 사라진다(2026-10-10 실제로 43곳이 빠질 뻔했다). 그대로 이어받는다.
+    _prev_path = os.path.join(GEO, "school_coords.json")
+    if os.path.exists(_prev_path):
+        _prev = json.load(open(_prev_path, encoding="utf-8"))
+        _kept = 0
+        for k, p in _prev.items():
+            if p[2] == "K" and k not in out:
+                out[k] = p; _kept += 1
+        if _kept:
+            print(f"  이전 파일의 손으로 찾은 좌표(K) {_kept}곳을 이어받음")
 
     # 6) 검산 — A·B는 OSM 같은 이름이 1km 안에 있으면 한 번 더 확인된 것으로 센다
     osm_ok = sum(1 for s in M if key_of(s) in out and out[key_of(s)][2] in "AB"

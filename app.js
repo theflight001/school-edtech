@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261010c";
+  s.src = "/data_detail.js?b=20261010d";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261010c";
+    s2.src = "/data_detail_old.js?b=20261010d";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261010c";
+  s.src = "/data_old.js?b=20261010d";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1758,7 +1758,7 @@ function aboutView() {
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약(경쟁입찰 없이 맺는 계약) 전수와 입찰 계약 결과 · 계약대상자(공급 업체)와 계약 금액 정보를 제공합니다</span></div>
         <div class="srccard"><b>시도교육청 계약공개</b><span>학교 수의계약 내역 — 소액 구매까지 포함</span></div>
-        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 제외한 ${n(m.idxCount, 12540)}개교의 정보가 제공됩니다</span></div>
+        <div class="srccard"><b>나이스 교육정보 개방 포털</b><span>교육부 — 전국 학교 명단·소재지 · 등재 ${n(m.neisTotal, 12666)}개교 중 ${excSum.toLocaleString()}개교(재외한국학교·외국인/국제학교·공동실습소·검정고시·시험용 항목)를 제외한 ${n(m.idxCount - (m.extraSchools || 0), 12540)}개교${m.extraSchools ? `에 명단 밖 교육기관 ${m.extraSchools}곳(학력인정 평생교육시설)을 더한 ${n(m.idxCount, 12540)}개교` : ""}의 정보가 제공됩니다</span></div>
         <div class="srccard"><b>언론 보도·공식 자료</b><span>학교 홈페이지, 교육청 발표, 보도자료 — ${n(m.mediaCount, 44)}건(${m.mediaPct == null ? "0.01" : m.mediaPct}%)</span></div>
         <div class="srccard aux"><b>학교 위치(지도)</b><span>한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
       </div>
@@ -1801,7 +1801,7 @@ function aboutView() {
         <li>학교 명단은 교육부 NEIS 개방 포털 기준입니다. 초·중·고 ${n(mix["초·중·고"], 12078)}개교에 더해
           ${mixText}를 포함합니다.
           등재된 ${n(m.neisTotal, 12666)}개교 중 <b>재외한국학교 ${n(exc["재외한국학교"], 79)}개교, 외국인·국제학교 ${n(exc["외국인·국제학교"], 33)}개교</b>는 국내 공교육이 아니어서,
-          <b>공동실습소 ${n(exc["공동실습소"], 9)}곳, 검정고시 시행 단위 ${n(exc["검정고시 등 비학교"], 2)}곳${exc["NEIS 시험용 항목"] ? `, NEIS에 시험용으로 등록된 항목 ${n(exc["NEIS 시험용 항목"], 0)}곳(AIDT초·중·고)` : ""}</b>은 학교가 아니어서 제외하였습니다.</li>
+          <b>공동실습소 ${n(exc["공동실습소"], 9)}곳, 검정고시 시행 단위 ${n(exc["검정고시 등 비학교"], 2)}곳${exc["NEIS 시험용 항목"] ? `, NEIS에 시험용으로 등록된 항목 ${n(exc["NEIS 시험용 항목"], 0)}곳(AIDT초·중·고)` : ""}</b>은 학교가 아니어서 제외하였습니다.${m.extraSchools ? ` 나이스 명단에 없지만 교육청 소속으로 운영 중인 <b>학력인정 평생교육시설 ${m.extraSchools}곳</b>(부산미용고)은 학교로 더해 세었습니다.` : ""}</li>
       </ul>
 
       <h3>기타</h3>
@@ -2184,7 +2184,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010c").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010d").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
