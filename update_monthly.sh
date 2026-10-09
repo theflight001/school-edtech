@@ -14,6 +14,12 @@
 #   - 자료가 하나도 늘지 않으면 빌드·배포를 하지 않는다(빈 커밋 방지).
 set -uo pipefail
 cd "$(dirname "$0")" || exit 1
+# 이번 달 자동 실행을 건너뛰는 표지 — .skip_monthly_YYYYMM 이 있으면 그 달만 쉰다(다음 달엔 이름이 달라 저절로 풀린다).
+# 2026-10: 9월분을 10/6에 미리 돌려 배포했으므로 10/10 실행은 건너뛴다(사용자 결정 2026-10-09).
+if [ -e ".skip_monthly_$(date +%Y%m)" ]; then
+  echo "▷ 이번 달 자동 갱신은 건너뛴다(.skip_monthly_$(date +%Y%m)) $(date '+%m-%d %H:%M')" >> logs/update_monthly.log 2>/dev/null
+  exit 0
+fi
 . ./collect_lock.sh
 # 밀린 곳을 받는 중이면 최대 두 시간까지 기다린다. 그래도 안 놓으면 수집은 건너뛰고
 # 정제·빌드·배포만 한다 — 이달 갱신을 통째로 거르는 것보다 낫다.
