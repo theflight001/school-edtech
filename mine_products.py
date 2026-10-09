@@ -40,9 +40,27 @@ def load_edzip():
                 names.setdefault(norm(n), n)
     return names
 
+def _load_js(path, name):
+    src = open(path, encoding="utf-8").read()
+    m = re.search(r"const %s = JSON\.parse\('([\s\S]*?)'\);" % name, src)
+    return json.loads(m.group(1).replace("\\'", "'").replace("\\\\", "\\"))
+
 def load_records():
-    s = open("data.js", encoding="utf-8").read()
-    return json.loads(s[s.index("{"):s.rindex("}") + 1])["records"]
+    # data.js는 열 이름을 한 번만 적고 되풀이 문자열을 사전으로 치환한 압축 형식이다(2026-09-13 이후).
+    # 2020~2025년 행은 data_old.js에 따로 있다. app.js가 되돌리는 것과 같은 모양으로 되돌린다(2026-10-09 고침 —
+    # 옛 형식(records 키)을 읽던 코드가 그대로 남아 발굴이 한 달 가까이 멈춰 있었다).
+    d = _load_js("data.js", "DB_RAW"); o = _load_js("data_old.js", "DB_OLD")
+    cols = d["cols"]; dic = d.get("dict", {}); tags = d["tagList"]; ci = {c: i for i, c in enumerate(cols)}
+    out = []
+    for blk in (d, o):
+        for r in blk["rows"]:
+            g = lambda k: (dic[k][r[ci[k]]] if k in dic and isinstance(r[ci[k]], int) else r[ci[k]]) if k in ci else None
+            amt, vendor, ctpl = g("amt"), g("vendor"), g("ctpl")
+            won = "" if not amt else (f" ({round(amt / 10000):,}만원)" if amt >= 10000 else f" ({amt:,}원)")
+            out.append({"product": g("product") or "", "school": g("school") or "", "vendor": vendor or "",
+                        "tags": [tags[i] if isinstance(i, int) else i for i in (r[ci["tags"]] or [])],
+                        "content": (ctpl or "") + won + (f" · 계약업체: {vendor}" if vendor else "")})
+    return out
 
 def known_tags():
     src = open("build_data.py", encoding="utf-8").read()
