@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009b";
+  s.src = "/data_detail.js?b=20261009c";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009b";
+    s2.src = "/data_detail_old.js?b=20261009c";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009b";
+  s.src = "/data_old.js?b=20261009c";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2154,7 +2154,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009b").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009c").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2518,6 +2518,7 @@ function render() {
   if (allLink) allLink.classList.toggle("on", ["records", "schools", "products", "vendors"].includes(kind));
   // 히어로는 첫 화면에서만 크게, 하위 화면에서는 접어 둔다
   document.body.classList.toggle("sub-page", !!kind);
+  setPageMeta(kind, arg);
   // 검색창은 현재 화면의 검색 상태만 반영 — 검색 결과 페이지에서만 검색어 유지
   const qEl = document.querySelector("#q");
   if (qEl) qEl.value = kind === "search" ? (arg || "") : "";
@@ -2545,6 +2546,39 @@ function go(path) {
 }
 window.go = go;
 window.addEventListener("popstate", () => { resetView(); render(); trackView(); });
+// 화면마다 제목·설명·대표 주소(canonical)를 바꾼다 — 검색엔진이 학교·제품 화면을 따로 찾게 하려는 것(2026-10-09 사용자 결정: 검색 노출).
+// 한 페이지 앱이라 index.html의 머리는 첫 화면 것 하나뿐이고, canonical이 "/"로 박혀 있으면 모든 화면이 첫 화면의 복사본으로 읽힌다.
+const SITE_TITLE = "공교육 에듀테크 활용 현황";
+function setPageMeta(kind, arg) {
+  let title = SITE_TITLE, desc = "전국 초·중·고가 어떤 에듀테크를 쓰는지 공공 조달 기록으로 확인하는 서비스입니다.";
+  let canon = location.pathname;
+  const idxMatch = n => IDX.filter(s => s.n === n);
+  if (kind === "school" || kind === "code") {
+    const s = kind === "code" ? idxByCode.get(arg) : (idxMatch(arg || "").length === 1 ? idxMatch(arg)[0] : null);
+    const name = s ? s.n : (arg || "학교");
+    title = `${name} 에듀테크 도입 기록 | ${SITE_TITLE}`;
+    desc = `${name}${s ? `(${s.s} ${s.l})` : ""}가 공공 조달로 도입한 에듀테크 제품과 계약 기록.`;
+    if (s) canon = `/code/${s.c}`;                    // 같은 학교를 두 주소로 두지 않는다 — 이름 주소는 학교코드 주소의 별칭
+  }
+  else if (kind === "tag") { title = `${tagName(arg)} 도입 학교 | ${SITE_TITLE}`; desc = `${tagName(arg)}를 도입한 전국 초·중·고 목록과 계약 기록(공공 조달 자료).`; }
+  else if (kind === "vendor") { title = `${arg} 공급 기록 | ${SITE_TITLE}`; desc = `${arg}가 학교에 공급한 에듀테크 제품과 계약 기록.`; }
+  else if (kind === "search") { title = `“${arg}” 검색 결과 | ${SITE_TITLE}`; }
+  else if (kind === "about") { title = `데이터 안내 | ${SITE_TITLE}`; desc = "자료를 어디에서 모았고 어떻게 판단했는지, 무엇이 빠지는지 설명합니다."; }
+  else if (kind === "contact") { title = `정정 요청 | ${SITE_TITLE}`; }
+  else if (kind === "schools") { title = `학교 전체 보기 | ${SITE_TITLE}`; desc = "전국 초·중·고 12,000여 곳의 에듀테크 도입 기록을 학교별로 봅니다."; }
+  else if (kind === "products") { title = `제품 전체 보기 | ${SITE_TITLE}`; desc = "학교가 도입한 에듀테크 제품을 도입 학교 수 순으로 봅니다."; }
+  else if (kind === "vendors") { title = `공급 기업 전체 보기 | ${SITE_TITLE}`; desc = "학교에 에듀테크를 공급한 기업을 기록 수 순으로 봅니다."; }
+  else if (kind === "records") { title = `기록 전체 보기 | ${SITE_TITLE}`; }
+  else if (kind === "regions") { title = `지역별 보기 | ${SITE_TITLE}`; }
+  else if (kind) { title = `${SITE_TITLE}`; canon = "/"; }
+  document.title = title;
+  const set = (sel, attr, v) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, v); };
+  set('meta[name="description"]', "content", desc);
+  set('meta[property="og:title"]', "content", title);
+  set('meta[property="og:description"]', "content", desc);
+  set('link[rel="canonical"]', "href", "https://school-edtech.kr" + (canon === "/" ? "/" : canon));
+  set('meta[property="og:url"]', "content", "https://school-edtech.kr" + (canon === "/" ? "/" : canon));
+}
 // 화면을 옮길 때 방문 통계에 페이지뷰를 알린다 — 한 페이지 앱이라 첫 로드 말고는 저절로 세지 않는다(GA4). Vercel 쪽은 스크립트가 pushState를 스스로 잡는다.
 function trackView() {
   if (typeof gtag === "function") gtag("event", "page_view", {page_path: location.pathname + location.search, page_title: document.title});

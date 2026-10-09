@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /drill/
+Disallow: /drill2/
+Disallow: /search/
+
+Sitemap: https://school-edtech.kr/sitemap.xml

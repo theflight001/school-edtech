@@ -174,7 +174,7 @@ print(f"   캐시 파라미터 → {stamp}")
 PY
   # 파일 하나가 없으면 git add가 통째로 실패해 아무것도 담기지 않는다 — 있는 것만 골라 담는다
   for f in data.js data_old.js data_detail.js data_detail_old.js data_summary.js \
-           index.html app.js school_geo.js og_card.png mined_rules.csv tag_review.md product_origin.csv \
+           index.html app.js school_geo.js og_card.png mined_rules.csv tag_review.md product_origin.csv sitemap.xml \
            수집현황.csv office_refined.csv *_refined.csv; do
     [ -e "$f" ] && git add "$f"
   done
