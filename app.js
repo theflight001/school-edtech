@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009d";
+  s.src = "/data_detail.js?b=20261009e";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009d";
+    s2.src = "/data_detail_old.js?b=20261009e";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009d";
+  s.src = "/data_old.js?b=20261009e";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2003,7 +2003,7 @@ function contactView() {
     <div class="page">
       <h2>정정 요청 · 문의</h2>
       <p class="lead">정보수집 구조의 특성상 실제 발생한 모든 계약을 싣지 못하거나 오기가 있을 수 있습니다.
-      <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.</p>
+      추가·삭제·정정 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.</p>
 
       <h3>이런 경우 알려 주세요</h3>
       <p class="who">교육청·학교</p>
@@ -2015,8 +2015,8 @@ function contactView() {
       <p class="who">기업</p>
       <ul>
         <li>제품명·회사명 표기가 잘못된 경우</li>
-        <li>계약명에 제품 이름이 없어 <b>제품군으로만 남아 있는</b> 기록이 우리 제품인 경우</li>
-        <li>납품한 학교가 목록에 <b>빠져 있는</b> 경우</li>
+        <li>계약명에 제품 이름이 없어 제품군으로만 남아 있는 기록이 우리 제품인 경우</li>
+        <li>납품한 학교가 목록에 빠져 있는 경우</li>
       </ul>
       <p class="who">기타</p>
       <ul>
@@ -2028,7 +2028,7 @@ function contactView() {
       <ul>
         <li>보내주신 내용은 원본 조달 기록과 대조해 확인합니다.</li>
         <li>확인되면 해당 기록을 수정하여 다음 갱신에 반영합니다.</li>
-        <li>이 목록은 <b>공개된 조달 기록</b>을 근거로 삼습니다. 기록에 없는 내용을 요청하시는 경우
+        <li>이 목록은 공개된 조달 기록을 근거로 삼습니다. 기록에 없는 내용을 요청하시는 경우
           계약서·납품 확인서 등의 자료를 첨부해 주시기 바랍니다. 홍보 목적의 등재 요청은 받지 않습니다.</li>
       </ul>
 
@@ -2036,7 +2036,7 @@ function contactView() {
       <div class="cta-row">
         <div>
           <p>아래 버튼을 누르면 서식이 채워진 메일 창이 열립니다.
-          메일 앱이 없으시면 <b>schooledtech.info@gmail.com</b> 으로 직접 보내주셔도 됩니다.</p>
+          메일 앱이 없으시면 schooledtech.info@gmail.com 으로 직접 보내주셔도 됩니다.</p>
           <div class="btnrow">
             <a class="mailbtn" href="mailto:schooledtech.info@gmail.com?subject=${subj}&body=${body}">정정 요청 · 문의</a>
           </div>
@@ -2159,7 +2159,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009d").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009e").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
