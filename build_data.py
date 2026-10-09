@@ -2507,6 +2507,10 @@ if __import__("os").path.exists(_geo_path):
 
 # 데이터 안내가 쓰는 숫자를 여기서 센다 (app.js는 이 값을 받아 쓰기만 한다)
 master_all = json.load(open(MASTER, encoding="utf-8"))["schools"]
+# 나이스 명단에 남아 있지만 실제로 운영되지 않는 항목 — 홍성 홍북읍 '신리초등학교'(8261079)는 내포신도시 신설교의 가칭으로 등록된 채 남은 것
+# (실제 개교는 한울초등학교 8261098, 학교알리미에 없음·주소지는 소방서). 이 항목 때문에 아산 신리초 51건이 동명 학교로 묶여 코드를 못 받았다(사용자 확인 2026-10-09)
+NEIS_STALE = {"8261079"}
+master_all = [s for s in master_all if s.get("code") not in NEIS_STALE]
 _excluded_counts = {"재외한국학교": 0, "외국인·국제학교": 0, "공동실습소": 0,
                     "검정고시 등 비학교": 0, "학교급 미기재": 0,
                     "NEIS 시험용 항목": 0}
