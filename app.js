@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261009a";
+  s.src = "/data_detail.js?b=20261009b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -527,7 +527,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261009a";
+    s2.src = "/data_detail_old.js?b=20261009b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -539,7 +539,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261009a";
+  s.src = "/data_old.js?b=20261009b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1778,6 +1778,7 @@ function aboutView() {
       <h3>기타</h3>
       <ul>
         <li><b>갱신 주기</b> — 수록되는 정보는 매월 10일에 업데이트됩니다.</li>
+        <li><b>방문 통계</b> — 서비스 개선을 위해 Google Analytics와 Vercel Web Analytics로 방문 수와 본 화면을 집계합니다. 이름·이메일 등 개인을 식별하는 정보는 수집하지 않습니다.</li>
         <li><b>전남광주 통합</b> — 2026년 7월 1일 광주광역시와 전라남도가 「전남광주통합특별시」로 통합되면서 교육청도
         <b>전남광주통합특별시교육청</b>으로 변경되었습니다
         (근거: <a href="https://www.law.go.kr/lsInfoP.do?lsiSeq=284111" target="_blank" rel="noopener">전남광주통합특별시 설치를 위한 특별법</a>,
@@ -2153,7 +2154,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261009b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2540,10 +2541,14 @@ function go(path) {
   const q = new URLSearchParams(location.search);
   q.delete("view");                                  // 옮겨 간 화면은 목록부터 보여 준다
   history.pushState(null, "", path + (q.toString() ? "?" + q : ""));
-  resetView(); render();
+  resetView(); render(); trackView();
 }
 window.go = go;
-window.addEventListener("popstate", () => { resetView(); render(); });
+window.addEventListener("popstate", () => { resetView(); render(); trackView(); });
+// 화면을 옮길 때 방문 통계에 페이지뷰를 알린다 — 한 페이지 앱이라 첫 로드 말고는 저절로 세지 않는다(GA4). Vercel 쪽은 스크립트가 pushState를 스스로 잡는다.
+function trackView() {
+  if (typeof gtag === "function") gtag("event", "page_view", {page_path: location.pathname + location.search, page_title: document.title});
+}
 // 사이트 안 링크는 페이지를 새로 부르지 않고 그 자리에서 넘긴다.
 // 새 탭으로 열기(⌘·Ctrl·가운데 클릭)와 바깥 링크는 브라우저에 맡긴다.
 document.addEventListener("click", e => {
