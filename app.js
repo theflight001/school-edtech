@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261010a";
+  s.src = "/data_detail.js?b=20261010b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261010a";
+    s2.src = "/data_detail_old.js?b=20261010b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261010a";
+  s.src = "/data_old.js?b=20261010b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1471,11 +1471,14 @@ function codeView(code) {
     return schoolView(names[0], code);
   }
   const wait = loadingOld("이 학교의"); if (wait) return wait;
+  // 기록이 한 건도 없는 학교라도, 같은 시도에 이름이 같은 학교가 있어 특정되지 않은 기록이 있으면 알린다(2026-10-10 사용자 결정)
+  const ambig0 = R.filter(r => r.school === s.n && !r.schoolCode && r.sido === s.s && isCounted(r));
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(s.n)}</h2>
       <div class="meta">${esc(s.l)}${hsPhrase(s.l, s.h) ? " · " + esc(hsPhrase(s.l, s.h)) : ""} · ${esc(s.s)}
         <div class="conf">NEIS ${[s.f, s.a, "학교코드 " + s.c].filter(Boolean).map(esc).join(" · ")}</div>
+        ${ambig0.length ? `<div class="conf">${esc(OFFICE_FULL[s.s] || s.s)}에 이름이 같은 학교가 ${IDX.filter(x => x.n === s.n && x.s === s.s).length}곳이라 어느 학교인지 확인되지 않은 기록 ${ambig0.length}건이 따로 있습니다 — <a href="/school/${encodeURIComponent(s.n)}">보기 ›</a></div>` : ""}
       </div></div>
     <div class="card"><div class="empty">아직 수집된 에듀테크 활용 기록이 없습니다.<br>
       <span style="font-size:12.5px">본 서비스는 공개 조달 기록 기반의 <b>하한 추정치</b>입니다 — 기록이 없다는 것이 에듀테크를 사용하지 않는다는 뜻은 아닙니다.</span></div></div>`;
@@ -2181,7 +2184,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
