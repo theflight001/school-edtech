@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261010f";
+  s.src = "/data_detail.js?b=20261010g";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -532,7 +532,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261010f";
+    s2.src = "/data_detail_old.js?b=20261010g";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +544,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261010f";
+  s.src = "/data_old.js?b=20261010g";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -1753,7 +1753,7 @@ function aboutView() {
         <img src="/hero_person_m.png?v=2" width="239" height="186" alt="">
       </div>
 
-      <h3>어디에서 수집했나</h3>
+      <h3>자료는 이렇게 수집했습니다</h3>
       <div class="srcgrid">
         <div class="srccard"><b>나라장터</b><span>조달청 계약정보 공개 API — 학교가 맺은 물품·용역 계약</span></div>
         <div class="srccard"><b>S2B 학교장터</b><span>한국교직원공제회 운영 학교 조달 사이트 — 수의계약(경쟁입찰 없이 맺는 계약) 전수와 입찰 계약 결과 · 계약대상자(공급 업체)와 계약 금액 정보를 제공합니다</span></div>
@@ -1763,7 +1763,7 @@ function aboutView() {
         <div class="srccard aux"><b>학교 위치(지도)</b><span>한국교육시설안전원 초중등학교 위치(2026.3 기준) 및 OpenStreetMap·주소 검색, OpenFreeMap 지도 활용</span></div>
       </div>
 
-      <h3>어떻게 판단하나</h3>
+      <h3>정보제공 방식은 이렇습니다</h3>
       <p>계약명 원문에 표기된 제품명에 태그를 부여합니다.</p>
       <ul>
         <li>회사가 단일 제품을 공급하거나 회사명이 제품명인 경우에는 계약명에 제품이 없어도 그 제품으로 판단하였습니다.
@@ -1783,7 +1783,6 @@ function aboutView() {
         </ul>
       </div>
 
-      <h3>무엇이 제외되나</h3>
       <p>본 서비스에서 제공되는 정보는 공개된 기록을 바탕으로 합니다. 누락된 계약, 해외 서비스 직접 결제, 교사 개인 결제, 소액 현장 구매 등
         실제로 활용하지만 공개되지 않은 정보가 있을 수 있으므로 기록이 없더라도 그 학교가 에듀테크를 쓰지 않는다고 단정할 수 없습니다.</p>
       <ul>
@@ -1792,7 +1791,7 @@ function aboutView() {
         <li>시도교육청이 관내 학교에 <b>한 번에 보급한 제품</b>(AI·디지털 교육자료 등)은 계약명에 학교명이 없어 어느 학교가 활용하는지 확인할 수 없습니다. 제품 화면에 <b>시도교육청이 직접 구매한 기록</b>으로 따로 수록되었습니다.</li>
       </ul>
 
-      <h3>수록 범위</h3>
+      <h3>수록 범위는 이렇습니다</h3>
       <ul>
         <li>조사 기간: <b>${esc(m.coveragePeriod || "2020.1 ~ 2026.7")}</b>${m.ymPartial ? ` <span class="cv">(${ymKoWord(m.ymPartial)}은 수집 중)</span>` : ""}
           ${m.basePeriod ? `— 첫 화면은 <b>${esc(m.basePeriod)}</b>만 제공됩니다.
@@ -1815,7 +1814,7 @@ function aboutView() {
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
         세부 정보는 당분간 전남과 광주가 별도로 제공됩니다.</li>
         <li><b>주의사항</b>: 시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이합니다
-        (소액 공개(경기·인천·충북·세종·대구·경남·울산, 2022년 이후 서울), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
+        (소액 공개(경기·인천·충북·세종·대구·경남·울산·전남, 2022년 이후 서울), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
         따라서, 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다. 즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다.
         이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만, 자료원의 공개 범위와 수집 시점에 따라 누락이나 차이가 있을 수 있습니다.
         또한 제공되는 정보의 기간도 교육청마다 상이하여, 그 기간 학교의 에듀테크 구매는 나라장터·S2B 학교장터의 공개 정보로만 검색됩니다.</li>
@@ -2184,7 +2183,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010f").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010g").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
