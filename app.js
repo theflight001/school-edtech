@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261010h";
+  s.src = "/data_detail.js?b=20261016a";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -321,7 +321,7 @@ function barChart(pairs, {linkFn, max: mx, drillFn, labelFn = esc} = {}) {
   const max = mx || Math.max(...pairs.map(p => p[1]), 1);
   const n = pairs.length;
   return `<div class="bars">` + pairs.map(([k, v], i) => `
-    <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="go('${drillFn(k)}')" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여줍니다"` : ""}>
+    <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="go('${drillFn(k)}')" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여 줍니다"` : ""}>
       <span class="lbl" title="${esc(tagName(k))}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
     </div>`).join("") + `</div>`;
@@ -389,7 +389,8 @@ function pagedTable(recs, opts) {
       ${nums.map(n => n === "…" ? `<span class="pgdots">…</span>` : `<button class="${n === page ? "cur" : ""}" onclick="setPage(${n})">${n}</button>`).join("")}
       <button ${page === pages ? "disabled" : ""} onclick="setPage(${page + 1})">다음 ›</button>
     </div>
-    <div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시</div>`;
+    <div class="pginfo">전체 ${total.toLocaleString()}건 중 ${((page - 1) * PAGE_SIZE + 1).toLocaleString()}–${Math.min(page * PAGE_SIZE, total).toLocaleString()}건 표시${
+      (nc => nc ? ` <span class="conf">(집계에서 뺀 중복·입찰공고 ${nc.toLocaleString()}건 포함)</span>` : "")(recs.filter(r => !isCounted(r)).length)}</div>`;
   }
   return topbar + recordTable(slice, opts) + bottom;
 }
@@ -532,7 +533,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261010h";
+    s2.src = "/data_detail_old.js?b=20261016a";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -544,7 +545,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261010h";
+  s.src = "/data_old.js?b=20261016a";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -611,6 +612,8 @@ const ETC_LV = /방송통신|각종학교|평생학교|고등기술|고등공민
 const HS_COURSE = {"특성화고": "특성화 과정", "일반고": "일반 과정", "자율고": "자율 과정",
   "특목고": "특수목적 과정", "마이스터고": "마이스터 과정"};
 const hsPhrase = (level, hs) => !hs ? "" : ETC_LV.test(level || "") ? (HS_COURSE[hs] || hs) : hs;
+// 나이스는 영재학교(영재교육진흥법)도 '특목고'로 적는다 — 화면 표기만 '영재학교'로 바꾼다(2026-10-16 외부 검토). 분류(idxGroup)는 그대로다
+const hsLabel = (hs, name) => hs === "특목고" && /영재학교/.test(name || "") ? "영재학교" : hs;
 // NEIS 학교유형 값을 다섯 갈래로 가른다 ('각종학교(고)'·'평생학교(초)-4년12학기' 같은 꼴)
 const etcLeaf = lv => /방송통신/.test(lv) ? "alt_b" : /각종학교/.test(lv) ? "alt_v"
   : /평생학교/.test(lv) ? "alt_l" : /고등기술|고등공민/.test(lv) ? "alt_t" : null;
@@ -931,13 +934,13 @@ const tagLabel = t => GENERIC_TAGS.has(t)
   : esc(t);
 let SCOPE = "product";                       // product = 제품 확인 기록만, all = 전체
 let SCHOOL_EXPANDED = false;                 // 학교 상세가 조건 밖 기록까지 펼쳐 보이는 중 — 옛 기록도 마저 읽어야 한다
-function toggleTip(e) {
+function toggleTip(e, id) {
   e.preventDefault();
-  const t = document.getElementById("inclTip");
+  const t = document.getElementById(id || "inclTip");
   t.hidden = !t.hidden;
   if (!t.hidden) {
     const close = ev => {
-      if (!ev.target.closest(".inclwrap")) { t.hidden = true; document.removeEventListener("click", close); }
+      if (!ev.target.closest(".inclwrap, .tipwrap")) { t.hidden = true; document.removeEventListener("click", close); }
     };
     setTimeout(() => document.addEventListener("click", close), 0);
   }
@@ -1048,9 +1051,9 @@ function homeView() {
     <div class="section-div">통계 결과</div>
     <div class="grid2">
       <div class="card"><h2><a class="h2link" href="/products">${SCOPE === "product" ? "제품별" : "제품·제품군별"} 도입 학교 수</a><span class="note">막대를 눌러 학교 목록 보기</span></h2>${barChart(topTags, {drillFn: t => `/drill/tag/${encodeURIComponent(t)}`, labelFn: tagLabel})}</div>
-      <div class="card"><h2>계열별 사례 수<span class="note">막대를 눌러 목록 보기</span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
+      <div class="card"><h2>계열별 기록 수<span class="note">막대를 눌러 목록 보기</span><span class="tipwrap"><button class="qmark" type="button" aria-label="설명 보기" onclick="toggleTip(event, 'recTip1')">?</button><div class="tip" id="recTip1" hidden>계약 기록의 건수입니다. 월별로 결제하는 제품은 한 학교에서도 여러 건으로, 연 1회 결제는 한 건으로 잡히므로 이용 규모보다 결제 주기의 영향을 받습니다. 학교 수를 비교하려면 '도입 학교 수'를 보세요.</div></span></h2>${barChart(byType, {drillFn: t => `/drill/level/${encodeURIComponent(t)}`})}</div>
     </div>
-    <div class="card"><h2><a class="h2link" href="/regions">지역별 사례 수</a><span class="note">막대를 눌러 목록 보기</span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
+    <div class="card"><h2><a class="h2link" href="/regions">지역별 기록 수</a><span class="note">막대를 눌러 목록 보기</span><span class="tipwrap"><button class="qmark" type="button" aria-label="설명 보기" onclick="toggleTip(event, 'recTip2')">?</button><div class="tip" id="recTip2" hidden>계약 기록의 건수입니다. 월별로 결제하는 제품은 한 학교에서도 여러 건으로, 연 1회 결제는 한 건으로 잡히므로 이용 규모보다 결제 주기의 영향을 받습니다. 학교 수를 비교하려면 '도입 학교 수'를 보세요.</div></span></h2>${barChart(bySido, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>`;
 }
 // 학교 화면의 칩은 그 학교 기록을 걸러 준다 — 누를 때마다 켜고 끈다
 // (전국 제품 화면으로 넘어가면 지금 보던 학교를 잃는다)
@@ -1160,7 +1163,7 @@ function schoolView(name, code) {
     <div class="pagehead" style="position:relative"><h2>${esc(name)}${info.schoolName && info.schoolName !== name ? ` <span style="font-size:14px;font-weight:400;color:var(--muted)">현재 교명: ${esc(info.schoolName)}</span>` : ""}</h2>
       ${outN || OLD_STATE !== "done" ? `<a class="allrec" href="javascript:void(0)" onclick="showAllSchool()" title="조사 기간·지역·계열·미확인 제품 조건을 모두 풀고 이 학교의 기록을 전부 봅니다">이 학교의 전체 기록 보기 ›</a>` : ""}
       <div class="meta">${esc(info.type)} · ${esc(info.region)} · 기록 ${all.length}건${outN ? ` <span style="color:var(--muted)">· 조건 밖 ${outN}건</span>` : ""}${expanded ? ` <span style="color:var(--muted)">· 지금 조사 기간·조건 안에는 기록이 없어 전체 기록을 보여 줍니다</span>` : ""}
-        ${info.schoolCode ? `<div class="conf">${[hsPhrase(info.type, info.hsType), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
+        ${info.schoolCode ? `<div class="conf">${[(h => h && h !== info.type ? h : "")(hsPhrase(info.type, hsLabel(info.hsType, info.schoolName || name))), info.founding, info.neisAddress].filter(Boolean).map(esc).join(" · ")}</div>` : `<div class="conf">학교 기본정보를 찾지 못했습니다 — 집합 항목이거나 교명 확인이 필요합니다</div>`}
         ${ambig.length ? `<div class="conf">${esc(OFFICE_FULL[_me.s] || _me.s)}에 이름이 같은 학교가 ${IDX.filter(x => x.n === name && x.s === _me.s).length}곳이라 어느 학교인지 확인되지 않은 기록 ${ambig.length}건이 따로 있습니다 — <a href="/school/${encodeURIComponent(name)}">보기 ›</a></div>` : ""}
         ${oldNames.length ? `<div class="conf">옛 이름 ${oldNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")}으로 계약된 기록이 함께 있습니다</div>` : ""}
         ${viaNames.length ? `<div class="conf">${viaNames.map(([o, n]) => `${esc(o)}(${n}건)`).join(" · ")} 명의로 조달됐지만 계약명에 이 학교가 적혀 있어 이 학교 기록으로 둔 것이 있습니다</div>` : ""}
@@ -1195,7 +1198,7 @@ function sameNameView(name, codes) {
       <div class="sub2">이름이 같은 학교가 ${rows.length}곳입니다. 아래 목록 중 학교를 선택하세요.</div></div>
     <div class="card"><div class="plist pick">${rows.map(({c, s, n}) =>
       `<a href="/code/${encodeURIComponent(c)}">${esc(name)}<span class="n">${
-        esc(s ? [s.s, s.h || s.l, s.a].filter(Boolean).join(" · ") : "학교 정보 없음")} · ${n.toLocaleString()}건</span></a>`).join("")}</div></div>
+        esc(s ? [s.s, hsLabel(s.h, s.n) || s.l, s.a].filter(Boolean).join(" · ") : "학교 정보 없음")} · ${n.toLocaleString()}건</span></a>`).join("")}</div></div>
     ${un.length ? `<div class="card"><h2>어느 학교인지 확인되지 않은 기록 <span class="note">${un.length.toLocaleString()}건</span></h2>
       <p class="cv" style="margin:0 0 10px">${msg}<br>교육청 계약공개 자료가 교육지원청을 적지 않아 위 학교 가운데 어느 곳의 계약인지 가리지 못한 기록입니다. 위 목록의 학교 건수에는 들어 있지 않습니다.</p>
       ${pagedTable(un, {showSchool: false})}</div>` : ""}`;
@@ -1204,11 +1207,11 @@ function sameNameView(name, codes) {
 const PLATFORM_NOTES = {
   "하이러닝": {
     body: "하이러닝(Hi-Learning)은 경기도교육청이 개발해 무상 운영하는 AI 교수학습 플랫폼입니다. 교육청 발표 기준 운영 1년 만에 관내 학교의 97%가 활용하고 있습니다(2024).",
-    caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여줍니다.",
+    caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여 줍니다.",
   },
   "바당": {
     body: "바당(BADANG)은 제주특별자치도교육청이 개발해 무상 운영하는 제주형 AI 교수학습 플랫폼입니다. 2026년 도내 전 학교로 수업·과제·평가 통합 플랫폼 활용을 확대하고 있습니다.",
-    caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여줍니다.",
+    caveat: "무상 보급 플랫폼은 학교별 구매 기록이 없어 조달 기반인 본 서비스에는 활용 규모가 나타나지 않습니다. 아래 목록은 조달·공개자료에 잡힌 관련 계약과 사례만 보여 줍니다.",
   },
   "교보문고 전자도서관": {
     body: "대구시교육청은 관내 학생·교직원·학부모가 쓰는 대구학생전자도서관(교보문고 소장형·구독형)을 운영합니다. "
@@ -1325,7 +1328,7 @@ function vendorsOfTag(recs) {
         <span class="n">${v.n.toLocaleString()}건 · ${v.sch.toLocaleString()}개교</span></a>`).join("")}</div>` : ""}
     ${etc.length ? `<p class="sub2" style="margin-top:10px">구매 창구·제조사로 분류된 곳:
       ${etc.map(v => `${esc(nameOf(v.k))} ${v.n.toLocaleString()}건`).join(" · ")}
-      <br>이 기업이 생산한 제품이 아닌 학교가 이 곳으로부터 구매했다는 기록입니다.</p>` : ""}
+      <br>이 기업이 생산한 제품이 아닌 학교가 이곳에서 구매했다는 기록입니다.</p>` : ""}
   </div>`;
 }
 function vendorView(key) {
@@ -1476,7 +1479,7 @@ function codeView(code) {
   return `
     <div class="crumb"><a href="/">홈</a> › 학교 상세</div>
     <div class="pagehead"><h2>${esc(s.n)}</h2>
-      <div class="meta">${esc(s.l)}${hsPhrase(s.l, s.h) ? " · " + esc(hsPhrase(s.l, s.h)) : ""} · ${esc(s.s)}
+      <div class="meta">${esc(s.l)}${hsPhrase(s.l, hsLabel(s.h, s.n)) ? " · " + esc(hsPhrase(s.l, hsLabel(s.h, s.n))) : ""} · ${esc(s.s)}
         <div class="conf">NEIS ${[s.f, s.a, "학교코드 " + s.c].filter(Boolean).map(esc).join(" · ")}</div>
         ${ambig0.length ? `<div class="conf">${esc(OFFICE_FULL[s.s] || s.s)}에 이름이 같은 학교가 ${IDX.filter(x => x.n === s.n && x.s === s.s).length}곳이라 어느 학교인지 확인되지 않은 기록 ${ambig0.length}건이 따로 있습니다 — <a href="/school/${encodeURIComponent(s.n)}">보기 ›</a></div>` : ""}
       </div></div>
@@ -1770,7 +1773,7 @@ function aboutView() {
           공급사 명단에 있는 제조·개발사 ${(DB.meta.makerCompanies || 0).toLocaleString()}곳 중
           ${(DB.meta.makerTagCompanies || 0).toLocaleString()}곳이 해당되며, 이 규칙으로 제품이 표시된 기록은 현재
           ${(DB.meta.makerTagged || 0).toLocaleString()}건입니다. 명단은 <a href="/vendors">공급 기업</a>에서 볼 수 있습니다.</li>
-        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등 — 개별 제품명을 확인하지 못했을 때 붙이는 범주)으로만 표시됩니다. 이같은 계약 유형은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
+        <li>한 회사가 여러 제품을 공급하는 경우, 계약명에 제품이 표시되지 않으면 <b>제품군</b>(코스웨어·기기·인프라·SW·플랫폼 등 — 개별 제품명을 확인하지 못했을 때 붙이는 범주)으로만 표시됩니다. 이 같은 계약 유형은 <b>회사명으로 검색</b>하면 함께 찾아볼 수 있습니다.</li>
         <li>학교의 이름이 변경된 경우 과거의 학교명으로 맺은 계약도 현재 학교명으로 표시됩니다. 계약명 원문은 그대로 보존됩니다.</li>
       </ul>
 
@@ -1779,7 +1782,7 @@ function aboutView() {
         <ul>
           <li>이 계약에는 <b>ChatGPT</b> 태그 하나만 표시됩니다.</li>
           <li>같은 제품이라도 표기가 서로 다른 경우가 있습니다(챗GPT · ChatGPT · 챗지피티). 이러한 경우들은 모두 <b>ChatGPT</b>로 태그가 표시되고, 한글 또는 영문으로 검색하는 방법 모두 동일한 결과를 제공합니다.</li>
-          <li><b>계약명 원문은 보존하지만, “외 3종”에 든 제품명은 공개 기록만으로 확인이 안되므로 태그를 붙이지 않습니다.</b></li>
+          <li><b>계약명 원문은 보존하지만, “외 3종”에 든 제품명은 공개 기록만으로 확인이 안 되므로 태그를 붙이지 않습니다.</b></li>
         </ul>
       </div>
 
@@ -1814,12 +1817,12 @@ function aboutView() {
         (<a href="https://www.newspim.com/news/view/20260630000332" target="_blank" rel="noopener">뉴스핌 2026.6.30.</a>),
         세부 정보는 당분간 전남과 광주가 별도로 제공됩니다.</li>
         <li><b>주의사항</b>: 시도교육청에 따라 금액에 따른 계약 내용 공개 범주가 상이합니다
-        (소액 공개(경기·인천·충북·세종·대구·경남·울산·전남, 2022년 이후 서울), 100만원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
+        (소액 공개(경기·인천·충북·세종·대구·경남·울산·전남, 2022년 이후 서울), 100만 원 이상만 공개(부산·경북·제주·충남·대전·광주·전북, 2020~2021년 서울), 금액 미공개(강원) 등).
         따라서, 시도 간 기록 건수를 그대로 비교하는 것은 실제 사용현황을 그대로 반영하지 않을 수 있습니다. 즉, 계약건수가 많은 시도는 작은 규모의 계약까지 공개한 곳일 수 있습니다.
         이를 보완하기 위해 나라장터·S2B 학교장터 자료와 비교하여 정보가 제공되지만, 자료원의 공개 범위와 수집 시점에 따라 누락이나 차이가 있을 수 있습니다.
         또한 제공되는 정보의 기간도 교육청마다 상이하여, 그 기간 학교의 에듀테크 구매는 나라장터·S2B 학교장터의 공개 정보로만 검색됩니다.</li>
         <li><b>방문 통계</b>: 서비스 개선을 위해 Google Analytics와 Vercel Web Analytics로 방문 수와 본 화면을 집계합니다. 이 과정에서 쿠키와 접속 기록이 Google(미국) 서버로 전송됩니다. 이름·이메일 등 개인을 식별하는 정보는 수집하지 않으며, 브라우저의 쿠키 차단 설정으로 집계를 거부할 수 있습니다.</li>
-        <li><b>정정 요청</b>: 정보수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
+        <li><b>정정 요청</b>: 정보 수집 작업의 특성상 실제 발생한 모든 계약을 싣지 못할 수 있습니다.
         시스템에서 누락되거나 기타 이유 등으로 수록되지 못할 수 있으니
         <b>추가·삭제·정정</b> 등 모든 요청을 주시면 본 서비스의 품질을 더 높일 수 있습니다.
         <a href="/contact" class="keep">정정 요청</a>으로 알려 주세요.</li>
@@ -1872,7 +1875,7 @@ function schoolsView() {
     // 기록이 있는 학교는 기록 화면으로, 없는 학교는 학교 정보 화면으로
     // 학교코드가 곧 그 학교다 — 이름으로 보내면 동명 학교의 기록이 섞인다
     const href = x.c ? `/code/${encodeURIComponent(x.c)}` : `/school/${encodeURIComponent(x.n)}`;
-    return `<a href="${href}"${k ? "" : ' class="dim"'}>${esc(x.n)}<span class="n">${esc(x.s)} · ${esc(x.h || x.l || "")} · ${k ? k.toLocaleString() + "건" : "기록 없음"}</span></a>`;
+    return `<a href="${href}"${k ? "" : ' class="dim"'}>${esc(x.n)}<span class="n">${esc(x.s)} · ${esc(hsLabel(x.h, x.n) || x.l || "")} · ${k ? k.toLocaleString() + "건" : "기록 없음"}</span></a>`;
   };
   const pager = pages > 1 ? `<div class="alpha pager">
       <button ${page <= 1 ? "disabled" : ""} onclick="SPAGE=${page - 1};render()">‹ 이전</button>
@@ -1995,10 +1998,10 @@ function regionsView() {
   for (const r of src) (sch[r.sido] = sch[r.sido] || new Set()).add(skey(r));
   return `
     <div class="crumb"><a href="/">홈</a> › 지역별 전체</div>
-    <div class="pagehead"><h2>지역별 사례 수</h2>
+    <div class="pagehead"><h2>지역별 기록 수<span class="tipwrap"><button class="qmark" type="button" aria-label="설명 보기" onclick="toggleTip(event, 'recTip3')">?</button><div class="tip" id="recTip3" hidden>계약 기록의 건수입니다. 월별로 결제하는 제품은 한 학교에서도 여러 건으로, 연 1회 결제는 한 건으로 잡히므로 이용 규모보다 결제 주기의 영향을 받습니다. 학교 수를 비교하려면 '도입 학교 수'를 보세요.</div></span></h2>
       <div class="sub2">전국 ${rows.length}개 시도 ·
         ${SCOPE === "product" ? "제품이 확인된 기록" : "전체 기록"} 기준 · 막대를 눌러 목록을 볼 수 있습니다
-        <div class="conf">시도교육청마다 소액 계약을 공개하는 기준이 달라(경기는 수만 원, 부산·경북 등은 100만 원 이상) 시도 간 건수를 그대로 비교하면 안 됩니다 —
+        <div class="conf">시도교육청에 따라 계약 공개 기준이 달라(경기·인천 등은 금액 하한 없이 소액까지, 부산·경북 등은 100만 원 이상만 공개) 시도 간 건수를 그대로 비교하면 안 됩니다 —
           <a href="/about">데이터 안내 › 기타 · 주의사항</a></div></div>${filterNote()}</div>
     <div class="card">${barChart(rows, {drillFn: t => `/drill/sido/${encodeURIComponent(t)}`})}</div>
     <div class="plist" style="margin-top:14px">
@@ -2183,7 +2186,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261010h").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261016a").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };
@@ -2221,7 +2224,7 @@ function mountMap() {
       if (!g) { noXY++; continue; }
       if (k) withRecOnMap++;
       feats.push({type: "Feature", geometry: {type: "Point", coordinates: [g[1], g[0]]},
-        properties: {n: s.n, l: s.h || s.l || "", lv: s.l || "", s: s.s, k, c: s.c,
+        properties: {n: s.n, l: hsLabel(s.h, s.n) || s.l || "", lv: s.l || "", s: s.s, k, c: s.c,
           href: s.c ? `/code/${encodeURIComponent(s.c)}` : `/school/${encodeURIComponent(name || s.n)}`}});
     }
     const N = v => v.toLocaleString();
@@ -2443,7 +2446,7 @@ function mountMap() {
           // 설명은 한 줄로 — 수치와 구역 이름은 적지 않는다(2026-09-21 사용자)
           // 회사 화면만 다르게 — 회사 지도는 제품 활용이 아니라 그 회사와 거래한 학교의 분포다(2026-10-09 사용자). 그 밖의 화면은 이 문구 그대로(2026-09-21 사용자)
           const note = /^\/vendor\//.test(location.pathname) ? "이 회사와 거래한 학교가 많은 시군구는 진하게 표시됩니다."
-            : "상대적으로 높은 제품 활용비율의 시군구는 진하게 표시됩니다.";
+            : "상대적으로 높은 제품 활용 비율의 시군구는 진하게 표시됩니다.";
           const sumEl = document.getElementById("mapsum");
           if (sumEl && !sumEl.querySelector(".terrnote")) sumEl.insertAdjacentHTML("beforeend", ` · <span class="terrnote">${note}</span>`);
         }).catch(() => {});
@@ -2656,7 +2659,7 @@ perfMark("학교 색인");
 const suggItems = [
   ...tags.map(([t]) => ({label: tagName(t), kind: GENERIC_TAGS.has(t) ? "제품군" : "제품", href: `/tag/${encodeURIComponent(t)}`})),
   ...schools.map(s => ({label: s, kind: "학교·기록 있음", href: `/school/${encodeURIComponent(s)}`, g: groupBySchool[s], rg: sidoBySchool[s]})),
-  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${s.h || s.l}`, href: `/code/${s.c}`, g: idxGroup(s), rg: s.s})),
+  ...IDX.filter(s => !recordCodes.has(s.c)).map(s => ({label: s.n, kind: `${s.s} ${hsLabel(s.h, s.n) || s.l}`, href: `/code/${s.c}`, g: idxGroup(s), rg: s.s})),
   ...[...VENDORS.values()].filter(v => v.n >= 5 && vendorKind(v.key) === "공급 기업")
      .map(v => ({label: v.name, kind: "공급 기업", href: `/vendor/${encodeURIComponent(v.key)}`})),
 ];
