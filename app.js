@@ -120,7 +120,7 @@ function detailVal(i, k) {
 const contentOf = r => r.content != null ? r.content : detailVal(r._i, "content");
 (function loadDetail() {
   const s = document.createElement("script");
-  s.src = "/data_detail.js?b=20261016a";
+  s.src = "/data_detail.js?b=20261016b";
   s.onload = () => { if (typeof DB_DETAIL !== "undefined") mergeDetail(DB_DETAIL); };
   document.body.appendChild(s);
 })();
@@ -399,7 +399,7 @@ function recordTable(recs, {showSchool = true} = {}) {
   return `<div class="tablewrap"><table${showSchool ? "" : ' class="noschool"'}><thead><tr>${showSchool ? "<th>학교</th>" : ""}<th>제품/서비스</th><th>시기</th><th>내용</th><th>출처</th></tr></thead><tbody>` +
     recs.map(r => `<tr>
       ${showSchool ? `<td><a href="${r.schoolCode ? `/code/${encodeURIComponent(r.schoolCode)}` : `/school/${encodeURIComponent(r.school)}`}">${esc(r.school)}</a><div class="conf">${esc(r.type)} · ${esc(r.region)}${r.origSchool ? (r.origSchool.startsWith("조달명의:") ? ` · 조달 명의 ${esc(r.origSchool.slice(5))}` : ` · 계약 당시 ${esc(r.origSchool)}`) : ""}</div></td>` : ""}
-      <td>${esc(r.product)}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
+      <td>${esc(r.product)}${r.product && r.product.length === 50 && /경기교육청|대구교육청/.test(r.sourceType || "") ? `<span class="conf" title="원문 계약명이 50자로 잘려 공개됨" aria-label="원문 계약명이 50자로 잘려 공개됨">…</span>` : ""}<div>${r.tags.map(t => `<a class="chip${GENERIC_TAGS.has(t) ? " gen" : ""}" href="/tag/${encodeURIComponent(t)}">${tagLabel(t)}</a>`).join("")}</div></td>
       <td style="white-space:nowrap">${esc(r.period)}</td>
       <td style="max-width:320px">${esc(r.content)}${r.vendor && vendorKind(vkey(r.vendor)) === "공급 기업" ? `<div class="conf"><a href="/vendor/${encodeURIComponent(vkey(r.vendor))}">${esc(r.vendor)}의 다른 납품 보기 ›</a></div>` : ""}${confNote(r)}${noteLine(r)}</td>
       <td>${r.url && !/S2B|나라장터/i.test(r.sourceType) ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${r.sourceType === "학교 전용 플랫폼" ? `학교 전용 주소: ${esc(r.url.replace(/^https?:\/\//, "").split("/")[0])} — 전용 페이지 존재가 도입의 근거입니다` : esc(r.url)}">${esc(r.sourceType)}</a>` : esc(r.sourceType)}</td>
@@ -533,7 +533,7 @@ function withOld(from, then) {
     }
     OLD_STATE = "done";
     const s2 = document.createElement("script");
-    s2.src = "/data_detail_old.js?b=20261016a";
+    s2.src = "/data_detail_old.js?b=20261016b";
     s2.onload = () => {
       if (typeof DB_DETAIL_OLD !== "undefined") {
         DETAIL_OLD = DB_DETAIL_OLD;
@@ -545,7 +545,7 @@ function withOld(from, then) {
     then();
   };
   const s = document.createElement("script");
-  s.src = "/data_old.js?b=20261016a";
+  s.src = "/data_old.js?b=20261016b";
   s.onload = add;
   s.onerror = () => { OLD_STATE = "none"; const e = $("#oldload"); if (e) e.remove(); };
   document.body.appendChild(s);
@@ -2186,7 +2186,7 @@ const SGG_SIDO = {11: "서울", 21: "부산", 22: "대구", 23: "인천", 24: "�
 let SGG = null, SGG_P = null;                              // {feats, of: 학교 색인 → 구역 번호, total: 구역별 학교 수}
 function sggLoad() {
   if (SGG_P) return SGG_P;
-  return SGG_P = fetch("/sgg_2018_topo.json?b=20261016a").then(r => r.json()).then(t => {
+  return SGG_P = fetch("/sgg_2018_topo.json?b=20261016b").then(r => r.json()).then(t => {
     const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
     const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => [(x += dx) * sx + tx, (y += dy) * sy + ty]); });
     const ring = idx => { const o = []; for (const k of idx) { const seg = k >= 0 ? arcs[k] : arcs[~k].slice().reverse(); o.push(...(o.length ? seg.slice(1) : seg)); } return o; };

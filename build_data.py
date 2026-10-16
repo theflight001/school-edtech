@@ -1646,6 +1646,12 @@ for _src, _sido, _label, _idbase in OFFICE_SOURCES:
             _c = None
             if _amt0:
                 _pool = [c for c in _amt_idx.get((row["학교명"], _amt0), []) if _mon(c) <= 2]
+                # 양쪽 계약명에 연도(학년도)가 적혀 있는데 서로 다르면 다른 해의 계약이다 — 12~1월에 걸친 갱신 구독이
+                # 같은 금액·업체로 묶이던 것(2026-10-16 외부 검토 10-①, 사용자 판정 ②: 목포덕인고 2026 리로스쿨 ↔ 2025 리로스쿨)
+                _yr0 = set(re.findall(r"20[2-3]\d", row["계약명"] or ""))
+                if _yr0:
+                    _pool = [c for c in _pool if not (set(re.findall(r"20[2-3]\d", c.get("product") or "")) - _yr0
+                                                     and not (set(re.findall(r"20[2-3]\d", c.get("product") or "")) & _yr0))]
                 # ① 업체가 같다 — 짝이 없는 기록부터, 없으면 같은 달에 이미 짝지은 기록(교육청 자료 안의 중복)
                 _same = [c for c in _pool if _v and _real_vendor(_vendor_of(c)) == _v]
                 _cands = [c for c in _same if not c.get("_paired")] or [c for c in _same if _mon(c) == 0]
@@ -2314,17 +2320,24 @@ if _aliased:
 # 결제 수수료 기록 표시 — 해외/카드 결제의 부대 지출은 제품 구매액이 아니다.
 # ('아이엠스쿨 이용 수수료'처럼 이용료 자체인 경우는 제외하려고 결제 수단·소액 조건을 함께 본다)
 FEE_ANCILLARY = re.compile(r"(?:해외|카드|결제|승인|송금|환전|이용액)[^)\n]{0,6}수수료")
-_fee_n = 0
+# 결제 창구·플랫폼의 수수료도 제품 구매가 아니다 — 'S2B 학교장터 이용수수료(챗GPT 구독 외 7종) 납부', '수수료 추가금액'
+# (2026-10-16 외부 검토 13번, 사용자 판정 ②). 'e알리미 이용수수료'처럼 서비스 요금 자체인 것은 그대로 둔다.
+FEE_PLATFORM = re.compile(r"(?:S2B|학교장터|에스투비|플랫폼|조달)[^)\n]{0,8}이용 ?수수료|조달 ?수수료|수수료 ?추가 ?금액|(?:결제|카드|해외)\s*수수료", re.I)
+_fee_n = _fee_retag = 0
 for r in records:
     p = r.get("product") or ""
     if "수수료" not in p:
         continue
     small = (r.get("amt") or 0) and r["amt"] < 10000
-    if FEE_ANCILLARY.search(p) or small:
+    if FEE_ANCILLARY.search(p) or FEE_PLATFORM.search(p) or small:
         r["note"] = (r["note"] + " · " if r.get("note") else "") + "결제 수수료 — 제품 이용의 부대 지출(구매액 아님)"
         r["feeOnly"] = 1
         _fee_n += 1
-print(f"결제 수수료 부대 지출 표시: {_fee_n}건")
+        # 수수료 기록에는 제품 태그를 두지 않는다 — 제품 화면·도입 학교 수에 수수료가 섞이지 않게 '운영 부대구매'로만 둔다
+        if any(t not in GENERIC_SET for t in r.get("tags") or []):
+            r["tags"] = ["운영 부대구매"]
+            _fee_retag += 1
+print(f"결제 수수료 부대 지출 표시: {_fee_n}건 (제품 태그를 뗀 것 {_fee_retag}건)")
 
 # 업체명 자체가 제품명인 경우 — 계약명에 제품이 없어도 업체로 특정된다
 # (자동 도출은 3건 이상이라야 작동하므로, 1~2건뿐인 단일 제품 업체는 여기에 적는다)
@@ -2416,6 +2429,15 @@ for r in records:
         _mk_tag += 1
         _mk_tag_companies.add(name)
 print(f"공급사 명부: 회사 {len(_mk_companies)}곳 · 기록 {_mk_n:,}건에 정식명 · 단일 제품 회사 {len(_mk_tag_companies)}곳의 {_mk_tag:,}건에 제품 태그")
+
+# 수수료 기록(feeOnly)은 위의 업체명=제품명 규칙과 공급사 명부 규칙이 제품 태그를 도로 붙인다('OPENAI *CHATGPT' 결제 표기,
+# 'WORDWALL' 업체명) — 마지막에 한 번 더 떼어 '운영 부대구매'만 남긴다(2026-10-16 외부 검토 13번, 사용자 판정 ②)
+_fee_final = 0
+for r in records:
+    if r.get("feeOnly") and any(t not in GENERIC_SET for t in r.get("tags") or []):
+        r["tags"] = ["운영 부대구매"]; _fee_final += 1
+if _fee_final:
+    print(f"수수료 기록의 제품 태그 마지막 정리: {_fee_final}건")
 # 같은 정식명이 여러 줄이면(미리디: 제품명 '미리캔버스' 표기 줄 + 회사명 줄) 한 회사로 합친다 — 제품 태그(t)는 모든 줄이 같을 때만,
 # 일부 표기에만 붙는 제품 태그는 pt로 따로 보낸다(2026-09-30 외부 검증 V06)
 _makers, _mk_by = [], {}
