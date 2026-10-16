@@ -2325,13 +2325,14 @@ FEE_ANCILLARY = re.compile(r"(?:해외|카드|결제|승인|송금|환전|이용
 FEE_PLATFORM = re.compile(r"(?:S2B|학교장터|에스투비|플랫폼|조달)[^)\n]{0,8}이용 ?수수료|수수료 ?추가 ?금액|(?:결제|카드|해외)\s*수수료", re.I)
 # 조달수수료만 따로 낸 기록('전자칠판 조달수수료 납부')은 수수료다. '비품(전자칠판 및 조달수수료) 구입'처럼 물품 구입과 한 계약이면 구매 기록이다
 FEE_PROC = re.compile(r"조달 ?수수료"); FEE_PROC_MIXED = re.compile(r"구입|구매|구축|설치|도입|납품")
+FEE_PROC_ONLY = re.compile(r"(?:에|의) ?따른 ?조달 ?수수료")   # '소프트웨어 구입에 따른 조달수수료 지급'은 수수료만 낸 것
 _fee_n = _fee_retag = 0
 for r in records:
     p = r.get("product") or ""
     if "수수료" not in p:
         continue
     small = (r.get("amt") or 0) and r["amt"] < 10000
-    if FEE_ANCILLARY.search(p) or FEE_PLATFORM.search(p) or small or (FEE_PROC.search(p) and not FEE_PROC_MIXED.search(p)):
+    if FEE_ANCILLARY.search(p) or FEE_PLATFORM.search(p) or small or (FEE_PROC.search(p) and (FEE_PROC_ONLY.search(p) or not FEE_PROC_MIXED.search(p))):
         r["note"] = (r["note"] + " · " if r.get("note") else "") + "결제 수수료 — 제품 이용의 부대 지출(구매액 아님)"
         r["feeOnly"] = 1
         _fee_n += 1
@@ -2500,6 +2501,7 @@ for r in records:
             _dup_n += 1
 print(f"언론-조달 동일 건 병합 집계: {_dup_n}건")
 
+
 # 손으로 정리한 씨앗 기록과 자동수집 기록이 같은 계약이면(학교·금액 일치, ±2개월)
 # 계약명 원문이 남는 자동수집분을 살리고, 씨앗이 특정해 둔 제품 태그를 옮겨 붙인다
 _auto_idx = collections.defaultdict(list)
@@ -2602,6 +2604,36 @@ _orphan = sum(1 for r in records if r.get("_dup_of") and r["_dup_of"] not in _al
 records = [r for r in records if not (r.get("_dup_of") and r["_dup_of"] in _alive_uid)]
 for r in records:
     r.pop("_dup_of", None); r.pop("_uid", None); r.pop("_dup_rule", None); r.pop("_dup_with", None)
+
+# ── 같은 날 같은 학교·금액·업체로 적힌 '계약'과 '대금 지급' 기록은 한 건이다 ─────────────────────────
+# 외부 검토(2026-10-16) 10-②: 같은 학교·같은 금액(100만 원 이상)·업체 일치이고 한쪽 계약명이 '지급·대금·이월·결제'인 쌍.
+# 사용자 판정(2026-10-16): 계약일이 같은 쌍만 중복으로 보고, 날짜가 다르면(월별 재료비 지급 등) 그대로 둔다.
+# 자료원이 다른 쌍은 위의 짝짓기(같은 금액·업체·2개월)가 이미 묶으므로 여기서는 주로 같은 자료원 안의 쌍이 걸린다.
+# 짝지은 쪽(_dup_of)을 뺀 뒤에 돌려야 한다 — 앞에서 돌리면 남을 쪽이 '지급' 표기라 중복 표시되고 짝은 빠져 둘 다 사라진다(2026-10-16).
+_PAY_WORD = re.compile(r"지급|대금|이월|결제")
+_sameday = collections.defaultdict(list)
+for r in records:
+    if r.get("dup") or r.get("bid") or (r.get("amt") or 0) < 1000000 or not r.get("period"):
+        continue
+    _v = _real_vendor(r.get("vendor") or _vendor_of(r))
+    if not _v:
+        continue
+    _sameday[(r.get("schoolCode") or r.get("school"), r["amt"], _v, r["period"][:10])].append(r)
+_sd_n = 0
+for _k, _lst in _sameday.items():
+    if len(_lst) < 2 or not any(_PAY_WORD.search(x.get("product") or "") for x in _lst):
+        continue
+    if len({(x.get("product") or "").strip() for x in _lst}) < 2 and len(_lst) == 2 and not _PAY_WORD.search(_lst[0].get("product") or ""):
+        continue
+    # 계약(원인행위) 쪽을 남기고 지급 쪽을 중복으로 — 둘 다 지급 표기면 앞의 것을 남긴다
+    _keep = next((x for x in _lst if not _PAY_WORD.search(x.get("product") or "")), _lst[0])
+    for x in _lst:
+        if x is _keep:
+            continue
+        x["dup"] = 1
+        x["note"] = (x["note"] + " · " if x.get("note") else "") + f"같은 날 같은 금액·업체의 기록({(_keep.get('product') or '')[:40]})과 한 건으로 봄 — 집계 1건 처리"
+        _sd_n += 1
+print(f"같은 날 계약·대금 지급 중복 처리: {_sd_n}건")
 print(f"S2B·나라장터와 같은 계약인 교육청 줄 뺌: {_before_pair - len(records):,}건 (짝이 빠져 남긴 것 {_orphan:,}건)")
 
 
