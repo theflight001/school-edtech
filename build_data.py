@@ -2322,14 +2322,16 @@ if _aliased:
 FEE_ANCILLARY = re.compile(r"(?:해외|카드|결제|승인|송금|환전|이용액)[^)\n]{0,6}수수료")
 # 결제 창구·플랫폼의 수수료도 제품 구매가 아니다 — 'S2B 학교장터 이용수수료(챗GPT 구독 외 7종) 납부', '수수료 추가금액'
 # (2026-10-16 외부 검토 13번, 사용자 판정 ②). 'e알리미 이용수수료'처럼 서비스 요금 자체인 것은 그대로 둔다.
-FEE_PLATFORM = re.compile(r"(?:S2B|학교장터|에스투비|플랫폼|조달)[^)\n]{0,8}이용 ?수수료|조달 ?수수료|수수료 ?추가 ?금액|(?:결제|카드|해외)\s*수수료", re.I)
+FEE_PLATFORM = re.compile(r"(?:S2B|학교장터|에스투비|플랫폼|조달)[^)\n]{0,8}이용 ?수수료|수수료 ?추가 ?금액|(?:결제|카드|해외)\s*수수료", re.I)
+# 조달수수료만 따로 낸 기록('전자칠판 조달수수료 납부')은 수수료다. '비품(전자칠판 및 조달수수료) 구입'처럼 물품 구입과 한 계약이면 구매 기록이다
+FEE_PROC = re.compile(r"조달 ?수수료"); FEE_PROC_MIXED = re.compile(r"구입|구매|구축|설치|도입|납품")
 _fee_n = _fee_retag = 0
 for r in records:
     p = r.get("product") or ""
     if "수수료" not in p:
         continue
     small = (r.get("amt") or 0) and r["amt"] < 10000
-    if FEE_ANCILLARY.search(p) or FEE_PLATFORM.search(p) or small:
+    if FEE_ANCILLARY.search(p) or FEE_PLATFORM.search(p) or small or (FEE_PROC.search(p) and not FEE_PROC_MIXED.search(p)):
         r["note"] = (r["note"] + " · " if r.get("note") else "") + "결제 수수료 — 제품 이용의 부대 지출(구매액 아님)"
         r["feeOnly"] = 1
         _fee_n += 1
@@ -2434,7 +2436,7 @@ print(f"공급사 명부: 회사 {len(_mk_companies)}곳 · 기록 {_mk_n:,}건�
 # 'WORDWALL' 업체명) — 마지막에 한 번 더 떼어 '운영 부대구매'만 남긴다(2026-10-16 외부 검토 13번, 사용자 판정 ②)
 _fee_final = 0
 for r in records:
-    if r.get("feeOnly") and any(t not in GENERIC_SET for t in r.get("tags") or []):
+    if r.get("feeOnly") and r.get("tags") != ["운영 부대구매"]:
         r["tags"] = ["운영 부대구매"]; _fee_final += 1
 if _fee_final:
     print(f"수수료 기록의 제품 태그 마지막 정리: {_fee_final}건")
