@@ -31,3 +31,7 @@ nara_office.csv
 # 수집기 자물쇠 — 남길 것이 아니다
 .collect.lock/
 ckpt_backup/
+
+# Generated deployment output
+dist/
+.vercel/

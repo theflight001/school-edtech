@@ -1,0 +1,24 @@
+# Upload only runtime inputs and the static builder. Raw data stays local/Git.
+*
+!vercel.json
+!scripts/
+!scripts/build-static.cjs
+!scripts/runtime-files.json
+!app.js
+!contact_person.png
+!data.js
+!data_detail.js
+!data_detail_old.js
+!data_old.js
+!data_summary.js
+!favicon.png
+!hero_person.png
+!hero_person_m.png
+!index.html
+!logo_stack.png
+!navere4571ef8762840acb3724040ce920a4a.html
+!robots.txt
+!school_geo.js
+!sgg_2018_topo.json
+!sitemap.xml
+!vendors.csv
