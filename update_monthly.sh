@@ -97,7 +97,9 @@ if [ "$COLLECT" = "1" ]; then
   par_run 나라장터입찰 month_나라장터입찰 python3 collect_nara_bid.py --begin "$BEGIN" --end "$END" &
   # S2B는 한 서버라 수의계약 엑셀을 받은 뒤 같은 자물쇠 안에서 입찰(계약·낙찰)을 이어 받는다(2026-09-15)
   par_run S2B month_S2B sh -c "python3 collect_s2b_excel.py --begin '$FROM3' --end '$MONTH' && python3 collect_s2b_bid.py --begin '$FROM3' --end '$MONTH'" &
-  par_run 서울 month_서울 python3 collect_sen.py --relist --years "$YEARS" &
+  # 서울은 학교 단위로 '끝냄'을 적는다. --relist만 하면 새 달 게시물을 세고도 학교가 다 끝났다며 요청 0회로 끝난다
+  # (2026-11-07 발견: 9·10월 게시물 2,792건이 올라왔는데 한 건도 받지 않았다). --redo --begin 으로 석 달 창만 다시 받는다 — 겹침은 seen이 막는다.
+  par_run 서울 month_서울 python3 collect_sen.py --relist --redo --begin "$BEGIN" --years "$YEARS" &
   par_run 경기 month_경기 python3 collect_ice.py --office 경기 --years "$YEARS" --half --page-size 10 --keyword-file $KF &
   par_run 인천 month_인천 python3 collect_ice.py --office 인천 --years "$YEARS" --keyword-file $KF &
   par_run 충북 month_충북 python3 collect_ice.py --office 충북 --years "$YEARS" --keyword-file $KF &

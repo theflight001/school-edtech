@@ -2,7 +2,7 @@
 # 사용: python3 collect_gen.py [--keyword-file edzip_brand_keywords.txt]
 # 특징: 목록에 계약기관·계약명·금액·계약일이 모두 나와 상세 조회가 필요 없다.
 #       school_add=1 이 학교, 한 페이지 10건 고정. 요청마다 CSRFToken이 필요하다.
-import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
+import argparse, csv, html, json, os, re, sys, time, urllib.parse, urllib.request
 
 BASE = "https://www.gen.go.kr/opengen/kedu/index.php"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -65,10 +65,19 @@ def fetch(keyword, page, year=""):
             d = {"CSRFToken": tok, "mode": "jaai001f_list", "ordr_list": "", "school_add": "1",
                  "sdate": "", "edate": "", "cntr_amt_sc": "", "totsearch": keyword,
                  "page": str(page), "DateYear": year}   # 연도를 안 주면 올해분만 나온다
-            req = urllib.request.Request(BASE, data=urllib.parse.urlencode(d).encode(),
+            # 2026-11: 서버가 POST 본문을 버리고 기본 목록 첫 쪽만 돌려준다(검색어·쪽 번호 무시).
+            # 같은 값을 GET으로 주면 검색어·연도·쪽이 모두 먹는다 — 11/7~8 월간 갱신이 검색어마다 300쪽을 헛돈 끝에 알았다.
+            req = urllib.request.Request(BASE + "?" + urllib.parse.urlencode(d),
                                          headers={"Referer": BASE + "?mode=jaai001f_list",
                                                   "User-Agent": UA})
-            return op.open(req, timeout=120).read().decode("utf-8", "replace")
+            body = op.open(req, timeout=120).read().decode("utf-8", "replace")
+            # 응답의 검색창에 우리 검색어가 되돌아와야 검색이 먹은 것이다. 아니면 기본 목록이므로 받지 않는다.
+            # (결과가 없으면 검색창도 비어 돌아오므로, 표 행이 있을 때만 따진다)
+            m = re.search(r'id="totsearch" value="([^"]*)"', body)
+            echo = html.unescape(m.group(1)).strip() if m else ""
+            if keyword and echo != keyword.strip() and parse(body):
+                raise RuntimeError(f"검색어가 무시됨(되돌아온 값 {echo[:30]!r}) — 사이트 양식이 바뀐 듯")
+            return body
         except Exception as e:
             if wait is None:
                 raise
@@ -172,3 +181,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한에 닿은 것은 '끝남'이 아니다 — 월간 갱신이 ✓로 적고 배포하지 않게 실패로 알린다(2026-11-08)
