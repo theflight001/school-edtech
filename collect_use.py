@@ -3,6 +3,7 @@
 # 특징: GET 방식이라 세션·토큰이 필요 없고, 한 페이지에 100건까지 받을 수 있다.
 #       계약명이 잘리지 않고 원문 그대로 나온다. 다만 목록에 금액이 없어
 #       상세(BD_selectJaai001f.do)를 행마다 한 번 더 불러 계약금액을 가져온다.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://use.go.kr/user/edufine/"
@@ -174,3 +175,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

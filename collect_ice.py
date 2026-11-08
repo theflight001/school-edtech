@@ -256,6 +256,7 @@ def main():
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {a.out}")
     if failed:
         print(f"   ※ 오류로 못 받은 칸 {len(failed):,}개 — 다음 실행에서 다시 받는다")
+        sys.exit(3)   # 못 받은 칸이 남은 것도 끝이 아니다 — par_run이 이어 받는다. 거듭 실패하면 par_run이 실패로 적는다(2026-11-09)
 
 if __name__ == "__main__":
     try:
@@ -263,6 +264,7 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)
     except Blocked as e:
         # 인터넷 자체가 끊긴 것과 우리 IP가 막힌 것을 가른다. 끊긴 거면 15분, 막힌 거면 24시간 쉰다(.pause_until에 적는다)
         try:

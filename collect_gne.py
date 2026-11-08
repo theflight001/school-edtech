@@ -3,6 +3,7 @@
 # 특징: GET 방식이라 세션·토큰이 필요 없다. 계약명·기관명이 잘리지 않고 원문 그대로 나오며
 #       계약상대자까지 목록에 있어 상세를 따로 부르지 않아도 된다.
 #       기관 구분 필터가 없어 교육지원청·직속기관이 섞여 나오므로 교명으로 걸러낸다.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://www.gne.go.kr/user/cntr/"
@@ -203,3 +204,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

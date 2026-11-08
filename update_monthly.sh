@@ -48,6 +48,8 @@ command -v node >/dev/null || echo "! node를 찾지 못했다 — data_summary.
 # 검색어를 전부 쓰면 한 곳에 5천 번 안팎을 물어야 한다. 기본 상한(1,200회)으로는
 # 중간에 끊겨 매달 같은 앞부분만 다시 받게 된다. 간격 10초는 그대로 지킨다.
 export EDTECH_SPACING=${EDTECH_SPACING:-10} EDTECH_MAXREQ=${EDTECH_MAXREQ:-8000}
+# 상한에 닿으면(종료 코드 3) par_run이 EDTECH_RESUME_PAUSE초(기본 300) 쉬고 이어 받는다 — 최대 EDTECH_RESUME_RETRY번(기본 6).
+# 상한은 끝이 아니다. 그 안에 끝나지 않으면 실패로 적혀 배포가 멈춘다(약속은 collect_lock.sh 머리에).
 
 FAILED=()
 run() {                                      # run <이름> <명령…>
@@ -93,6 +95,7 @@ if [ "$COLLECT" = "1" ]; then
   # 확정 검색어 목록(1,445종, 2026-09-20 동결) — 재수집과 같은 조건으로 받아야 연도·자료원 간 비교가 맞는다(2026-10-06)
   KF=keywords_final.txt
   # 나라장터·S2B도 남의 서버다. 한 곳이 응답을 안 해도 나머지가 기다리지 않게 함께 돌린다.
+  rm -f .locks/fail.*                      # par_run이 남기는 실패 표지 — 이번 실행 것만 본다
   par_run 나라장터 month_나라장터 python3 collect_nara_full.py --begin "$BEGIN" --end "$END" &
   par_run 나라장터입찰 month_나라장터입찰 python3 collect_nara_bid.py --begin "$BEGIN" --end "$END" &
   # S2B는 한 서버라 수의계약 엑셀을 받은 뒤 같은 자물쇠 안에서 입찰(계약·낙찰)을 이어 받는다(2026-09-15)
@@ -117,7 +120,13 @@ if [ "$COLLECT" = "1" ]; then
   par_run 광주 month_광주 python3 collect_gen.py --years "$YEARS" --keyword-file $KF &
   par_run 울산 month_울산 python3 collect_use.py --keyword-file $KF &
   wait
-  echo "── 시도교육청 수집 끝 $(date '+%H:%M')"
+  # par_run은 뒤에서 돌아 FAILED를 직접 못 채운다 — 표지 파일(.locks/fail.<서버>)로 거둬 간다.
+  # 이 줄이 없어 수집 ✗(상한·막힘·오류)가 한 번도 배포를 막지 못했다(2026-11-09 발견).
+  for f in .locks/fail.*; do
+    [ -e "$f" ] || continue
+    FAILED+=("$(basename "$f" | sed 's/^fail\.//')($(cat "$f"))")
+  done
+  echo "── 시도교육청 수집 끝 $(date '+%H:%M') · 실패 ${#FAILED[@]}곳 ${FAILED[*]:-없음}"
 else
   echo "── 시도교육청 수집 (자물쇠 때문에 건너뜀)"
 fi

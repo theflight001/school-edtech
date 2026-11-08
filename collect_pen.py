@@ -2,6 +2,7 @@
 # 사용: python3 collect_pen.py [--office 부산|경북] [--begin 2023-01] [--end 2026-08]
 # 두 시도가 같은 화면(selectPrvcntrInfoList)을 써서 주소만 바꿔 재사용한다.
 # 제약: 공개 기준 100만원 이상, 검색 기간 최대 1개월 → 월 단위로 나눠 조회한다.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.error, urllib.parse, urllib.request
 from datetime import date
 
@@ -129,6 +130,7 @@ def main():
         print(f"검색어 {len(kws):,}종 (기본 {len(a.keywords.split(','))} + 파일 {len(extra):,})", flush=True)
     print(f"월 {len(wins)}개 × {'전수 스윕' if a.sweep else f'키워드 {len(kws)}개'} = {len(wins)*len(kws)}조합", flush=True)
     kept = req_n = 0
+    skipped = 0                    # 오류로 건너뛴 칸 — 끝냄으로 적지 않았으니 끝난 게 아니다
     for kw in kws:
         for bdt, edt, year in wins:
             key = (kw, bdt) if year == int(bdt[:4]) else (kw, bdt, f"FY{year}")   # 전년도 회계연도로 묻는 1·2월 칸은 열쇠를 따로 둔다
@@ -146,6 +148,7 @@ def main():
                     # (2026-09-12 경북, 1,884회에서 끝). 그 칸만 건너뛰고 '끝냄'으로 적지 않는다.
                     print(f"  [{kw}] 건너뜀 ({e})", flush=True)
                     bad = True
+                    skipped += 1
                     break
                 req_n += 1
                 rows = parse(body)
@@ -185,6 +188,9 @@ def main():
         print(f"[{kw or '전수'}] 완료 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
+    if skipped:
+        print(f"   ※ 오류로 못 받은 칸 {skipped}개 — 끝냄으로 적지 않았다. par_run이 이어 받는다")
+        sys.exit(3)   # 못 받은 칸이 남은 것은 끝이 아니다(2026-11-09)
 
 if __name__ == "__main__":
     try:
@@ -192,3 +198,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

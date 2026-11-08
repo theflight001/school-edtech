@@ -2,6 +2,7 @@
 # 사용: python3 collect_dge.py [--begin 2023-01] [--end 2026-08] [--keyword-file ...]
 # 제약: 목록에 계약명·기관·계약일만 나오고 금액·업체는 상세 페이지에 있다 → 행마다 상세를 1회 더 부른다.
 #       조회는 '연+월' 단위이고 한 페이지 최대 50건. instClssDiv=5가 학교.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 from datetime import date
 
@@ -210,3 +211,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

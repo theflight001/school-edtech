@@ -2,6 +2,7 @@
 # 사용: python3 collect_gwe.py [--keyword-file edzip_brand_keywords.txt]
 # 한계: 목록에 계약기관·계약번호·계약명·계약일자만 있고 금액·업체가 없다.
 #       (다른 시도와 달리 상세 화면도 열려 있지 않아 금액은 채우지 못한다)
+import sys
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 BASE = "https://www.gwe.go.kr/open/keris/jaai001f.do"
@@ -153,3 +154,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

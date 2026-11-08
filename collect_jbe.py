@@ -2,6 +2,7 @@
 # 사용: python3 collect_jbe.py [--years 2020,2021,2022,2023,2024,2025,2026]
 # 특징: 폼이 GET 방식이다(POST로 보내면 조건이 통째로 무시된다).
 #       목록의 3번째 칸에 '계약기관+계약명'이 붙어 나와 기관명을 잘라내야 한다.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.error, urllib.parse, urllib.request
 
 BASE = "https://www.jbe.go.kr"
@@ -106,6 +107,7 @@ def main():
     years = a.years.split(",")
     print(f"검색어 {len(kws)}종 × 회계연도 {len(years)}개 = {len(kws)*len(years)}조합", flush=True)
     kept = req_n = 0
+    skipped = 0                    # 오류로 건너뛴 칸 — 끝냄으로 적지 않았으니 끝난 게 아니다
     for kw in kws:
         q = safe_kw(kw)
         if not q:
@@ -126,6 +128,7 @@ def main():
                     # (2026-09-12 전북, 610회에서 끝). 그 칸만 건너뛰고 '끝냄'으로 적지 않는다.
                     print(f"  [{kw}] 건너뜀 ({e})", flush=True)
                     bad = True
+                    skipped += 1
                     break
                 req_n += 1
                 if not rows:
@@ -162,6 +165,9 @@ def main():
             print(f"[{tag}] {page}페이지까지 · 누적 {kept}건 (요청 {req_n}회)", flush=True)
     f.close()
     print(f"\n완료 — 요청 {req_n}회, 학교 계약 {kept}건 → {OUT}")
+    if skipped:
+        print(f"   ※ 오류로 못 받은 칸 {skipped}개 — 끝냄으로 적지 않았다. par_run이 이어 받는다")
+        sys.exit(3)   # 못 받은 칸이 남은 것은 끝이 아니다(2026-11-09)
 
 if __name__ == "__main__":
     main()

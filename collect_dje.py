@@ -3,6 +3,7 @@
 # 주의: 목록의 계약명·기관명은 화면용으로 잘려 나오고 원문은 title 속성에 들어 있다.
 #       (제품명이 잘린 뒷부분에 있는 경우가 많아 title을 반드시 써야 한다)
 #       계약상대자만 title이 없어 상세(InfoView04.do)를 행마다 한 번 더 부른다.
+import sys
 import argparse, csv, html, json, os, re, time, urllib.parse, urllib.request
 
 # 같은 시스템(InfoList04.do)을 쓰는 시도를 함께 다룬다 — 대전·충남
@@ -299,3 +300,4 @@ if __name__ == "__main__":
     except BudgetOut as e:
         # 상한에 걸려 멈춘다. 체크포인트가 있으니 다음 실행에서 이어 받는다.
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.")
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)

@@ -168,7 +168,7 @@ def main():
             print(f"[{STAGES[l]} {b}~{e}] {got}건 (쪽 {page}) · 누적 공고 {n}건 (요청 {_req[0]}회)", flush=True)
     except BudgetOut as e:
         print(f"멈춤: {e} — 체크포인트로 이어 받는다", flush=True)
-        sys.exit(0)
+        sys.exit(3)   # 상한은 끝이 아니다 — par_run이 이어 받는다(2026-11-09)
     print(f"끝 · 공고 {save_all(rows)}건 → {OUT}", flush=True)
 
 

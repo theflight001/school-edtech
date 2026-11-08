@@ -157,6 +157,7 @@ def main():
         ck["done"], ck["page"] = sorted(done), page
         json.dump(ck, open(CKPT + ".tmp", "w"), ensure_ascii=False); os.replace(CKPT + ".tmp", CKPT)
         print(f"\n■ {e} — 여기서 멈춘다. 다음 실행에서 이어 받는다.", flush=True)
+        sys.exit(3)   # 상한은 끝이 아니다 — 3을 돌려주면 par_run(collect_lock.sh)이 잠시 쉬고 체크포인트에서 이어 받는다(2026-11-09)
     f.close()
     print(f"\n완료 — 요청 {_used[0]}회, 계약 {kept}건 → {OUT}", flush=True)
 
