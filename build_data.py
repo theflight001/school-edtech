@@ -540,7 +540,7 @@ SPECIFIC_RULES = [
                            r"Google ?AI ?(?:Pro|Plus|Ultra)|Gemini ?Advanced|제미나이 ?어드밴스드)"),
         # 클로드 모네 미술품·책이 걸렸다(2건)
     # 흙침대 '동서가구 클로드'(2026 2건)와 동아리 이름 '클로드'(2023 실습비 1건)도 막는다(2026-11-10 논문 세션 지적)
-    ("Claude",              r"(?!.*(?:침대|황토|동서가구|보료|동아리 ?클로드))^.*(?:Claude(?!\s*Monet)|클로드(?!\s*모네))"),
+    ("Claude",              r"(?!.*(?:침대|황토|동서가구|보료|클로드 실습비))^.*(?:Claude(?!\s*Monet)|클로드(?!\s*모네))"),
     ("Replit",             r"\bReplit\b"),   # 한글 '리플릿'은 인쇄물을 뜻해 오탐
     ("카피킬러",            r"카피킬러|무하유"),
     ("GPT킬러",            r"GPT ?킬러"),
@@ -1584,11 +1584,40 @@ _SVC_CTX_ANY = re.compile(r"협의회|간담회|워크숍|워크샵|공개수업
                           r"다과|간식|빙과|체험활동|체험비|이어폰|이어셋|파우치")   # 'AI디지털교과서 이어셋 및 보관 파우치 구입'(2026-09-30 외부 검증)
 # 이름 뒤 '~을 위한 헤드셋'·'전용 노트북'·'물품구입비(헤드셋)' — 서비스 이름이 제품 낱말 뒤에 있어도 산 것은 부속품이다
 _SVC_ACC_AFTER = re.compile(r"(?:위한|전용)\s*(?:\S+\s+){0,2}?(?:헤드셋|이어폰|이어셋|노트북(?!\s*LM|엘엠)|태블릿|크롬북|모니터|스피커|카메라|파우치|충전함|거치대|기자재|비품|장비)|물품\s*구입비")
+def _core_pat(p):
+    """'(?!.*(?:의자|축구))^.*(?:Gemini|제미나이)'처럼 앞에 제외 조건을 단 규칙에서 제외 조건과 '^.*'를 떼어 이름 부분만 남긴다.
+    그대로 쓰면 match.start()가 0이 되어 이름 앞뒤 문맥을 잘못 본다(2026-11-10: Claude·Gemini 기록이 사업 이름으로 오판돼 빠졌다)."""
+    out, i, n = [], 0, len(p)
+    while i < n:
+        if p.startswith("(?!", i):
+            depth, j = 0, i
+            while j < n:
+                if p[j] == "\\":
+                    j += 2; continue
+                if p[j] == "(":
+                    depth += 1
+                elif p[j] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            if p.startswith("^.*", j + 1):
+                i = j + 4; continue
+        out.append(p[i]); i += 1
+    return "".join(out)
+_CORE_PAT_I = {}
 def _service_ctx_off(name, tags):
     """계약명에서 사업·활동의 이름으로만 쓰인 서비스 태그 목록"""
     off = []
     for t in SERVICE_TAGS & set(tags):
         pat = _RULE_PAT_I.get(t)
+        if pat is not None and "(?!" in pat.pattern:
+            if t not in _CORE_PAT_I:
+                try:
+                    _CORE_PAT_I[t] = re.compile(_core_pat(pat.pattern), re.I)
+                except re.error:
+                    _CORE_PAT_I[t] = pat
+            pat = _CORE_PAT_I[t]
         if not pat and t.endswith(AIDT_TAG):          # 출판사별 AIDT 태그는 계약명의 '디지털교과서·AIDT' 자리에서 본다
             pat = re.compile(r"AIDT|AI\s*·?\s*디지털\s*(?:교과서|교육자료)|디지털\s*교과서|디지털\s*교육자료", re.I)
         if not pat:
