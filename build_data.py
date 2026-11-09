@@ -1542,6 +1542,40 @@ for _t, _p in SPECIFIC_RULES:
         _RULE_PAT_I.setdefault(_t, re.compile(_p, re.I))
     except re.error:
         pass
+def _core_pat(p):
+    """'(?!.*(?:의자|축구))^.*(?:Gemini|제미나이)'처럼 앞에 제외 조건을 단 규칙에서 제외 조건과 '^.*'를 떼어 이름 부분만 남긴다.
+    그대로 쓰면 match.start()가 0이 되어 이름 앞뒤 문맥을 잘못 본다(2026-11-10: Claude·Gemini 기록이 사업 이름으로 오판돼 빠졌다)."""
+    out, i, n = [], 0, len(p)
+    while i < n:
+        if p.startswith("(?!", i):
+            depth, j = 0, i
+            while j < n:
+                if p[j] == "\\":
+                    j += 2; continue
+                if p[j] == "(":
+                    depth += 1
+                elif p[j] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            if p.startswith("^.*", j + 1):
+                i = j + 4; continue
+        out.append(p[i]); i += 1
+    return "".join(out)
+# 이름 위치(match.start/end)를 보는 판정에는 제외 조건을 뗀 이름 패턴을 쓴다 — 제외 조건을 앞에 단 규칙은 match.start()가 0이라
+# '운영 물품(Claude Pro) 구입'이 '운영 물품' 앞에 이름이 온 것으로 읽혀 태그가 빠졌다(2026-11-10: Claude 49건·Gemini 25건)
+_RULE_CORE, _RULE_CORE_I = {}, {}
+for _t, _pat in _RULE_PAT.items():
+    try:
+        _RULE_CORE[_t] = re.compile(_core_pat(_pat.pattern)) if "(?!" in _pat.pattern else _pat
+    except re.error:
+        _RULE_CORE[_t] = _pat
+for _t, _pat in _RULE_PAT_I.items():
+    try:
+        _RULE_CORE_I[_t] = re.compile(_core_pat(_pat.pattern), re.I) if "(?!" in _pat.pattern else _pat
+    except re.error:
+        _RULE_CORE_I[_t] = _pat
 
 OPER_KEEP = re.compile(r"라이선스|라이센스|구독|이용권|사용료|이용료|소프트웨어|플랫폼|S/?W|"
                        r"계정|콘텐츠|설치|재계약|및 ?물품 ?구[입매]")
@@ -1584,40 +1618,11 @@ _SVC_CTX_ANY = re.compile(r"협의회|간담회|워크숍|워크샵|공개수업
                           r"다과|간식|빙과|체험활동|체험비|이어폰|이어셋|파우치")   # 'AI디지털교과서 이어셋 및 보관 파우치 구입'(2026-09-30 외부 검증)
 # 이름 뒤 '~을 위한 헤드셋'·'전용 노트북'·'물품구입비(헤드셋)' — 서비스 이름이 제품 낱말 뒤에 있어도 산 것은 부속품이다
 _SVC_ACC_AFTER = re.compile(r"(?:위한|전용)\s*(?:\S+\s+){0,2}?(?:헤드셋|이어폰|이어셋|노트북(?!\s*LM|엘엠)|태블릿|크롬북|모니터|스피커|카메라|파우치|충전함|거치대|기자재|비품|장비)|물품\s*구입비")
-def _core_pat(p):
-    """'(?!.*(?:의자|축구))^.*(?:Gemini|제미나이)'처럼 앞에 제외 조건을 단 규칙에서 제외 조건과 '^.*'를 떼어 이름 부분만 남긴다.
-    그대로 쓰면 match.start()가 0이 되어 이름 앞뒤 문맥을 잘못 본다(2026-11-10: Claude·Gemini 기록이 사업 이름으로 오판돼 빠졌다)."""
-    out, i, n = [], 0, len(p)
-    while i < n:
-        if p.startswith("(?!", i):
-            depth, j = 0, i
-            while j < n:
-                if p[j] == "\\":
-                    j += 2; continue
-                if p[j] == "(":
-                    depth += 1
-                elif p[j] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        break
-                j += 1
-            if p.startswith("^.*", j + 1):
-                i = j + 4; continue
-        out.append(p[i]); i += 1
-    return "".join(out)
-_CORE_PAT_I = {}
 def _service_ctx_off(name, tags):
     """계약명에서 사업·활동의 이름으로만 쓰인 서비스 태그 목록"""
     off = []
     for t in SERVICE_TAGS & set(tags):
-        pat = _RULE_PAT_I.get(t)
-        if pat is not None and "(?!" in pat.pattern:
-            if t not in _CORE_PAT_I:
-                try:
-                    _CORE_PAT_I[t] = re.compile(_core_pat(pat.pattern), re.I)
-                except re.error:
-                    _CORE_PAT_I[t] = pat
-            pat = _CORE_PAT_I[t]
+        pat = _RULE_CORE_I.get(t)
         if not pat and t.endswith(AIDT_TAG):          # 출판사별 AIDT 태그는 계약명의 '디지털교과서·AIDT' 자리에서 본다
             pat = re.compile(r"AIDT|AI\s*·?\s*디지털\s*(?:교과서|교육자료)|디지털\s*교과서|디지털\s*교육자료", re.I)
         if not pat:
@@ -1808,8 +1813,8 @@ for r in records:
         for a in _parents[b]:
             if a not in ts:
                 continue
-            rest = _RULE_PAT[b].sub(" ", r["product"])
-            if not _RULE_PAT[a].search(rest):
+            rest = _RULE_CORE[b].sub(" ", r["product"])
+            if not _RULE_CORE[a].search(rest):
                 ts.discard(a)
                 _subsumed += 1
     if len(ts) != len(r["tags"]):
@@ -1899,8 +1904,8 @@ for r in records:
     if g and not OPER_KEEP.search(name):
         cut = g.end(1)
         off |= {t for t in hit
-                if t in _RULE_PAT_I
-                and (ms := list(_RULE_PAT_I[t].finditer(name))) and all(m.start() < cut for m in ms)}
+                if t in _RULE_CORE_I
+                and (ms := list(_RULE_CORE_I[t].finditer(name))) and all(m.start() < cut for m in ms)}
     off |= set(_service_ctx_off(name, r["tags"]))
     if off:
         r["tags"] = sorted(set(r["tags"]) - off)
@@ -3062,7 +3067,7 @@ if os.path.exists("office_refined.csv"):
                     "d": (_r.get("계약일") or "")[:7], "amt": _r.get("금액", ""),
                     "by": _r.get("업체명", "")}
             # 관련 사업이라도 '에듀테크 도구(퀴즈앤) 구입'처럼 제품 낱말 뒤에 이름이 적혀 있으면 그 제품은 산 것이다(2026-09-30 외부 검증, 하이러닝 공모전의 퀴즈앤)
-            _tp = _RULE_PAT_I.get(_t)
+            _tp = _RULE_CORE_I.get(_t)
             _bought = bool(_tp and re.search(r"(?:도구|프로그램|플랫폼|소프트웨어|코스웨어|계정|라이선스)\s*\(\s*(?:" + _tp.pattern + r")\s*\)\s*(?:구입|구매|대여)", _nm, re.I))
             if _rel and not _bought:
                 _row["k"] = "관련"
