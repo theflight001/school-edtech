@@ -35,8 +35,19 @@ def load_records():
         body = s[s.index("{"):s.rindex("}") + 1]
     d = json.loads(body)
     cols, dict_, tagList = d["cols"], d.get("dict", {}), d["tagList"]
+    rows = list(d["rows"])
+    # 지난 연도 기록은 data_old.js에 따로 담긴다(cols·dict·tagList는 data.js와 같다).
+    # 여기를 빼고 보면 표본이 최근 1년치뿐이어서 오매칭을 놓친다(2026-11-11: 코드위즈 96건 중 1건만 보였다).
+    if os.path.exists("data_old.js"):
+        s2 = open("data_old.js", encoding="utf-8").read()
+        if "JSON.parse(" in s2[:200]:
+            lit2 = s2[s2.index("'") + 1:s2.rindex("'")]
+            body2 = lit2.replace("\\'", "'").replace("\\\\", "\\")
+        else:
+            body2 = s2[s2.index("{"):s2.rindex("}") + 1]
+        rows += json.loads(body2)["rows"]
     out = []
-    for row in d["rows"]:
+    for row in rows:
         r = {}
         for c, k in enumerate(cols):
             v = row[c]
