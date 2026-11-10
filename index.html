@@ -497,9 +497,11 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
   var S = typeof DB_SUM !== "undefined" ? DB_SUM : null;
   // 자료가 언제까지의 것이고 언제 갱신됐는지는 모든 화면 아래에 밝힌다
   var updEl = document.getElementById("upd");
-  if (updEl && S && S.meta) {
-    var b = (S.meta.builtOn || "").replace(/-0?/g, ".").replace(/^\./, "");
-    updEl.innerHTML = "";
+  if (updEl && S && S.meta && /^\d{4}-\d{2}-\d{2}$/.test(S.meta.builtOn || "")) {
+    // 'Updated 11/10/26' — 미국식 월/일/두자리연도(2026-11-11 사용자 지정). 날짜는 build_data.py가 적은 builtOn에서만 뽑는다.
+    var p = S.meta.builtOn.split("-");
+    var us = String(+p[1]) + "/" + String(+p[2]) + "/" + p[0].slice(2);
+    updEl.innerHTML = 'Updated <time datetime="' + S.meta.builtOn + '">' + us + "</time> · ";
   }
   var view = document.getElementById("view");
   var q = document.getElementById("q");
