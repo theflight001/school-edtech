@@ -89,12 +89,15 @@ header h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing:
   .topbar.open .menubtn i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   .topbar.open .menubtn i:nth-child(2) { opacity: 0; }
   .topbar.open .menubtn i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-  .navlinks { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; gap: 0;
-    padding: 6px 10px 10px; background: var(--plane); border-bottom: 1px solid var(--grid); box-shadow: 0 14px 24px rgba(0,0,0,.08); }
-  .topbar.open .navlinks { display: flex; }
+  /* 위에서 아래로 펼쳐지고, 닫으면 아래에서 위로 접힌다 — 보이는 범위(clip-path)만 움직이고 글자는 제자리.
+     접힌 동안은 visibility로 감춰 탭 이동·화면 낭독에 걸리지 않게 한다. 아래쪽 -40px은 그림자가 잘리지 않을 자리 */
+  .navlinks { position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; gap: 0;
+    padding: 6px 10px 10px; background: var(--plane); border-bottom: 1px solid var(--grid); box-shadow: 0 14px 24px rgba(0,0,0,.08);
+    clip-path: inset(0 0 100% 0); visibility: hidden; transition: clip-path .3s cubic-bezier(.4,0,.2,1), visibility 0s linear .3s; }
+  .topbar.open .navlinks { clip-path: inset(0 0 -40px 0); visibility: visible; transition: clip-path .3s cubic-bezier(.4,0,.2,1), visibility 0s; }
   .navlinks a { font-size: 16px; padding: 13px 14px; border-radius: 12px; }
 }
-@media (max-width: 700px) and (prefers-reduced-motion: reduce) { .menubtn i { transition: none; } }
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) { .menubtn i, .navlinks, .topbar.open .navlinks { transition: none; } }
 .page p, .page li { max-width: 880px; }   /* 카드·표는 본문 폭 전체, 글줄만 읽기 좋게 제한 */
 /* 머리글: 왼쪽 제목·설명, 오른쪽 일러스트를 나란히 놓는다 */
 .page-intro { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
@@ -364,13 +367,16 @@ tr[hidden] { display: none; }
 .brow.rowlink:hover .lbl { color: var(--accent); }
 .brow.rowlink:hover .val { color: var(--accent); }
 .brow .val { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
-/* 좁은 화면: 이름 칸을 150px로 못 박으면 왼쪽이 비어 그래프가 오른쪽으로 쏠린다.
-   그 카드에서 가장 긴 이름만큼만 잡아(최대 150px) 양쪽 여백을 맞춘다(2026-11-11 사용자 요청) */
-@supports (grid-template-columns: subgrid) {
-  @media (max-width: 700px) {
-    .bars { grid-template-columns: fit-content(150px) 1fr; }
-    .bars > .brow { grid-column: 1 / -1; grid-template-columns: subgrid; }
-  }
+/* 좁은 화면: 카드마다 좌우 여백이 같아야 한다(2026-11-11 사용자 요청).
+   - 이름은 왼쪽 맞춤, 이름 칸은 모든 카드가 같은 폭 → 글의 왼쪽 끝과 막대가 시작하는 자리가 카드마다 같다.
+   - 막대 오른쪽에 남기는 자리는 그 카드에서 가장 긴 숫자의 자릿수(--vd, 그래프를 그릴 때 적는다)만큼 →
+     가장 긴 줄의 숫자가 카드 안쪽 여백 끝에 딱 닿는다. 숫자 한 자리는 8.6px(13.5px 굵은 글씨). */
+@media (max-width: 700px) {
+  .brow { grid-template-columns: 96px 1fr; }
+  .brow .lbl { text-align: left; }
+  .brow .fill { max-width: calc(100% - 9px - var(--vd, 5) * 8.6px); }
+  /* '제품군' 딱지가 붙은 이름은 길다 — 그런 그래프가 하나라도 있으면 그 화면의 모든 그래프를 함께 넓힌다 */
+  #view:has(.bars .gbadge) .brow { grid-template-columns: 150px 1fr; }
 }
 .tablewrap { overflow-x: auto; }
 table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 13.5px;
@@ -581,7 +587,8 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
     var FROM = [37, 99, 235], TO = [110, 231, 183];
     var bars = function (pairs) {
       var max = Math.max.apply(null, pairs.map(function (p) { return p[1]; }).concat([1])), n = pairs.length;
-      return '<div class="bars">' + pairs.map(function (p, i) {
+      var vd = Math.max.apply(null, pairs.map(function (p) { return String(p[1]).length; }).concat([1]));
+      return '<div class="bars" style="--vd:' + vd + '">' + pairs.map(function (p, i) {
         var t = n <= 1 ? 0 : i / (n - 1);
         var c = FROM.map(function (f, j) { return Math.round(f + (TO[j] - f) * t); });
         var lab = S.generic.indexOf(p[0]) >= 0
@@ -623,7 +630,7 @@ span.vmode button.on { background: var(--plane); color: var(--accent); font-weig
     if (started) return;
     started = true;
     load("/data.js?b=20261111b");
-    load("/app.js?b=20261111b");
+    load("/app.js?b=20261111c");
   };
   requestAnimationFrame(function () { setTimeout(go, 0); });
   setTimeout(go, 300);

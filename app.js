@@ -320,7 +320,9 @@ function barColor(i, n) {
 function barChart(pairs, {linkFn, max: mx, drillFn, labelFn = esc} = {}) {
   const max = mx || Math.max(...pairs.map(p => p[1]), 1);
   const n = pairs.length;
-  return `<div class="bars">` + pairs.map(([k, v], i) => `
+  // 좁은 화면에서 막대 오른쪽에 남길 자리 — 이 그래프에서 가장 긴 숫자의 자릿수(index.html의 .brow .fill 참고)
+  const vd = Math.max(...pairs.map(p => String(p[1]).length), 1);
+  return `<div class="bars" style="--vd:${vd}">` + pairs.map(([k, v], i) => `
     <div class="brow${drillFn ? " rowlink" : ""}"${drillFn ? ` onclick="go('${drillFn(k)}')" role="link" tabindex="0" title="누르면 해당 학교 목록을 보여 줍니다"` : ""}>
       <span class="lbl" title="${esc(tagName(k))}">${linkFn ? `<a href="${linkFn(k)}">${labelFn(k)}</a>` : labelFn(k)}</span>
       <span class="track"><span class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${barColor(i, n)}"></span><span class="val">${v}</span></span>
